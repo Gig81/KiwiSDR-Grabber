@@ -4,6 +4,7 @@ Questa pagina è l'indice della documentazione ufficiale e delle guide operative
 
 ## Documenti ufficiali
 
+- [USER_GUIDE.md](./USER_GUIDE.md) — guida rapida e istruzioni per gli utenti (italiano, poi inglese) / quick start and user instructions (Italian, then English).
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — architettura, componenti e regole di sviluppo.
 - [DEVELOPMENT.md](./DEVELOPMENT.md) — setup, compilazione, test e packaging desktop.
 - [GUI_DESIGN_SYSTEM.md](./GUI_DESIGN_SYSTEM.md) — sistema visivo e componenti della GUI.

@@ -34,12 +34,12 @@ Registrazione, VAD, trascrizione, storico utenti e notifiche Telegram richiedono
 3. Apri l'installer e segui le istruzioni di Windows. L'installer non è firmato digitalmente, quindi Windows potrebbe mostrare un avviso sul publisher o SmartScreen. Verifica la provenienza e l'hash prima di scegliere se continuare (vedi [Verifica dell'installer](#verifica-dellinstaller)).
 4. Nei pacchetti dalla versione 1.0.1, al termine dell'installazione puoi scegliere separatamente se avviare l'applicazione e/o aprire le note della versione nel browser. Questa scelta non è presente nell'installer 1.0.0.
 5. Avvia KiwiSDR Grabber dal menu o dalla voce dell'applicazione installata.
-5. Al primo avvio completa la configurazione guidata:
+6. Al primo avvio completa la configurazione guidata:
    - Inserisci il nominativo o nome utente.
    - Inserisci l'indirizzo del ricevitore come nome host, eventualmente seguito da due punti e dal numero di porta, ad esempio `sdr.example.net:8073`. La procedura propone un indirizzo predefinito, che potrebbe non essere raggiungibile.
    - Inserisci la password KiwiSDR solo se il ricevitore la richiede.
    - La configurazione Telegram è facoltativa e può essere completata in seguito nelle Impostazioni.
-6. Seleziona **Completa**. La procedura si chiude, ma l'applicazione non si collega automaticamente al ricevitore.
+7. Seleziona **Completa**. La procedura si chiude, ma l'applicazione non si collega automaticamente al ricevitore.
 
 L'installer include il runtime Java. La libreria applicativa Vosk è inclusa, ma per trascrivere serve anche un modello vocale Vosk scaricato separatamente.
 
@@ -241,12 +241,12 @@ Recording, VAD, transcription, user-history logging, and Telegram alerts require
 3. Open the installer and follow the Windows prompts. The installer is not digitally signed, so Windows may show a publisher or SmartScreen warning. Check the release source and checksum before deciding whether to continue (see [Verifying the installer](#verifying-the-installer)).
 4. Installers starting with version 1.0.1 let you independently choose whether to launch the application and/or open that version's release notes in your browser when setup finishes. This prompt is not included in installer 1.0.0.
 5. Start KiwiSDR Grabber from the installed application entry.
-5. On first launch, complete the setup dialog:
+6. On first launch, complete the setup dialog:
    - Enter a callsign or user name.
    - Enter the receiver address as a host name, optionally followed by a colon and port, for example `sdr.example.net:8073`. The setup dialog supplies a default address; it may not be available when you connect.
    - Enter the KiwiSDR password only if that receiver requires one.
    - Telegram setup is optional and can be completed later in Settings.
-6. Select **Complete** (`Completa`). The setup dialog closes; it does not automatically connect to the receiver.
+7. Select **Complete** (`Completa`). The setup dialog closes; it does not automatically connect to the receiver.
 
 The installer includes its Java runtime. Vosk's application library is also bundled, but a separate Vosk speech model is required if you want transcription.
 

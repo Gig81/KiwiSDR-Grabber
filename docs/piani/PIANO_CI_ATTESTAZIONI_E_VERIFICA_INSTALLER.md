@@ -1,6 +1,6 @@
 # Piano — CI su GitHub Actions, attestazioni e verifica degli installer
 
-**Stato:** implementati workflow, script e documentazione (12/11/2026); da verificare su GitHub (sezione 9) e con la prima release reale. **Prima versione interessata:** la prossima release dopo la `1.0.1`.
+**Stato:** implementati workflow, script e documentazione (12/11/2026). Verificati su GitHub il 12/11/2026: `CI` e `CodeQL` verdi, `Release` avviato a mano su `main` completato con successo, installer prodotti dalla CI collaudati in Windows Sandbox. Restano da verificare con la prima release reale: tag, release bozza, `gh attestation verify` e invio a Microsoft. **Prima versione interessata:** la prossima release dopo la `1.0.1`.
 
 File introdotti: `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `scripts/release/Prepare-ReleaseAssets.ps1`. Differenza rispetto alla bozza della sezione 4: le versioni delle librerie LGPL sono ricavate dai jar presenti nell'app image (quello che viene effettivamente distribuito) invece che da `gradle/libs.versions.toml`, che non contiene le dipendenze transitive `jlayer` e `tritonus-share`.
 

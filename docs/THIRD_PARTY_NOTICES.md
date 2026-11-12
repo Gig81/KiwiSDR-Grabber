@@ -1,6 +1,6 @@
-# Third-Party Notices — KiwiSDR Grabber & Station Recorder 1.0.0
+# Third-Party Notices — KiwiSDR Grabber & Station Recorder 1.0.1
 
-Questo documento elenca i componenti di terze parti inclusi nell'installer Windows x64 della versione `1.0.0`, le loro licenze e il modo per ottenerne i sorgenti dove la licenza lo richiede. L'inventario è stato ricavato l'11 novembre 2026 dai JAR, dalle DLL e dai file di dati effettivamente presenti nell'immagine dell'applicazione generata da `:composeApp:createDistributable`.
+Questo documento elenca i componenti di terze parti inclusi nell'installer Windows x64 della versione `1.0.1`, le loro licenze e il modo per ottenerne i sorgenti dove la licenza lo richiede. L'inventario è stato verificato il 12 novembre 2026 confrontando i JAR, le DLL e i file di dati effettivamente presenti nell'immagine dell'applicazione generata da `:composeApp:createDistributable`. La versione 1.0.1 non modifica le dipendenze rispetto alla 1.0.0.
 
 Il codice originale dell'applicazione è distribuito secondo la [PolyForm Noncommercial License 1.0.0](../LICENSE), integrata dal [permesso supplementare per le librerie LGPL](../LICENSE-LGPL-EXCEPTION.md). I componenti elencati qui sotto restano soggetti alle rispettive licenze: nessuna di esse viene modificata o sostituita dalla licenza dell'applicazione.
 
@@ -53,7 +53,7 @@ I testi di FreeType, HarfBuzz, libpng, zlib, libjpeg-turbo e libwebp sono presi 
 
 L'installer contiene un runtime Java ridotto, generato con `jlink` dal JDK usato per il packaging. Il runtime ha licenza propria e i relativi avvisi si trovano nella cartella `runtime\legal\` dell'installazione: **non va rimossa**.
 
-Per le release pubbliche il packaging va eseguito con **Eclipse Temurin** (OpenJDK, GPL-2.0 con Classpath Exception), non con Oracle JDK. La release 1.0.0 include il runtime **Eclipse Temurin 21.0.13+9**. Verifica: `runtime\legal\java.base\LICENSE` inizia con "The GNU General Public License (GPL)". Il sorgente di OpenJDK è disponibile su <https://github.com/adoptium/jdk21u>.
+Per le release pubbliche il packaging va eseguito con **Eclipse Temurin** (OpenJDK, GPL-2.0 con Classpath Exception), non con Oracle JDK. La release 1.0.1 include il runtime **Eclipse Temurin 21.0.13+9**. Verifica: `runtime\legal\java.base\LICENSE` inizia con "The GNU General Public License (GPL)". Il sorgente di OpenJDK è disponibile su <https://github.com/adoptium/jdk21u>.
 
 ## 4. Librerie LGPL: sorgenti e sostituzione
 

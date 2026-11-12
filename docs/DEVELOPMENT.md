@@ -64,6 +64,8 @@ Se su Windows compaiono ritardi di input insieme a errori di selezione del rende
 
 ### Packaging Windows
 
+Per una build locale di sviluppo:
+
 ```powershell
 .\gradlew.bat :composeApp:packageExe
 ```
@@ -73,6 +75,8 @@ oppure
 ```powershell
 .\gradlew.bat :composeApp:packageMsi
 ```
+
+Per i pacchetti destinati a una release, usare invece `:composeApp:packageExeRelease` e/o `:composeApp:packageMsiRelease`: includono la scelta post-installazione per avviare l'app e/o aprire le note della versione. La procedura è descritta in [DISTRIBUZIONE_E_RILASCI.md](./DISTRIBUZIONE_E_RILASCI.md).
 
 Gli installer vengono generati sotto `composeApp\build\compose\binaries\main\exe` e `composeApp\build\compose\binaries\main\msi`.
 

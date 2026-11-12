@@ -1,5 +1,6 @@
 package com.grabber.recording
 
+import com.grabber.app.AppLogger
 import com.grabber.model.AudioFrame
 import de.sciss.jump3r.lowlevel.LameEncoder
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -131,7 +132,7 @@ class AudioRecorder(
                 } catch (_: InterruptedException) {
                     break
                 } catch (e: Exception) {
-                    println("[RECORDER SCRITTURA ERRORE] ${e.message}")
+                    AppLogger.error("AudioRecorder", "Errore durante la scrittura della registrazione", e)
                 }
             }
 
@@ -281,7 +282,7 @@ class AudioRecorder(
                         fos.close()
                     }
                 } catch (e: Exception) {
-                    println("[RECORDER MP3 CHIUSURA] ${e.message}")
+                    AppLogger.error("AudioRecorder", "Errore durante la finalizzazione della registrazione MP3", e)
                 } finally {
                     currentLameEncoder = null
                     currentFos = null
@@ -304,7 +305,7 @@ class AudioRecorder(
                         raf.close()
                     }
                 } catch (e: Exception) {
-                    println("[RECORDER WAV CHIUSURA] ${e.message}")
+                    AppLogger.error("AudioRecorder", "Errore durante la finalizzazione della registrazione WAV", e)
                 } finally {
                     currentRaf = null
                     currentFile = null

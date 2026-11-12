@@ -1,5 +1,6 @@
 package com.grabber.audio
 
+import com.grabber.app.AppLogger
 import com.grabber.model.AudioFrame
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -59,7 +60,7 @@ class DesktopAudioPlayer(
                 start()
             }
         } catch (e: Exception) {
-            println("[AUDIO PLAYER ERRORE] ${e.message}")
+            AppLogger.error("DesktopAudioPlayer", "Impossibile avviare la riproduzione audio", e)
             isRunning.set(false)
         }
     }
@@ -137,7 +138,9 @@ class DesktopAudioPlayer(
         try {
             line?.stop()
             line?.close()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLogger.warn("DesktopAudioPlayer", "Errore durante l'arresto della riproduzione audio", e)
+        }
         line = null
         _audioLevel.value = 0f
     }

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <UI Id="JpUI" />
+    <CustomAction
+      Id="KiwiShowPostInstallChoices"
+      Directory="INSTALLDIR"
+      ExeCommand="KiwiSDRRecorder.exe --installer-complete"
+      Execute="immediate"
+      Impersonate="yes"
+      Return="check" />
+    <InstallExecuteSequence>
+      <Custom Action="KiwiShowPostInstallChoices" After="InstallFinalize">
+        NOT Installed AND NOT REMOVE AND UILevel &gt; 2
+      </Custom>
+    </InstallExecuteSequence>
+  </Fragment>
+</Wix>

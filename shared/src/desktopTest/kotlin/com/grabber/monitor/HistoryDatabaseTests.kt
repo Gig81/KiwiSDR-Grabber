@@ -11,6 +11,23 @@ import kotlin.test.assertTrue
 class HistoryDatabaseTests {
 
     @Test
+    fun createsMissingDatabaseDirectoryOnFirstUse() {
+        val directory = Files.createTempDirectory("kiwigrabber-history-test").toFile()
+        val databaseDirectory = directory.resolve("app-data")
+        val databaseFile = databaseDirectory.resolve("history.db")
+        val database = HistoryDatabase(databaseFile)
+        try {
+            assertTrue(databaseDirectory.isDirectory)
+            assertTrue(databaseFile.isFile)
+            database.insertUserLog(1, 10, "Test station", 7100.0, "USB")
+            assertEquals(1, database.getRecentUserLogs().single().activeUsers)
+        } finally {
+            database.close()
+            check(directory.deleteRecursively()) { "Unable to remove test directory ${directory.absolutePath}" }
+        }
+    }
+
+    @Test
     fun persistsTranscriptionsAndSearchesFullText() {
         val directory = Files.createTempDirectory("kiwigrabber-history-test").toFile()
         val database = HistoryDatabase(directory.resolve("history.db"))

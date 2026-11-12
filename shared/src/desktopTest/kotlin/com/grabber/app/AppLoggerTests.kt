@@ -10,6 +10,27 @@ import kotlin.test.assertTrue
 class AppLoggerTests {
 
     @Test
+    fun recordsExceptionsRaisedBeforeLoggerInitialization() {
+        val directory = Files.createTempDirectory("kiwigrabber-early-log-test").toFile()
+        val logDir = File(directory, "logs")
+        AppLogger.shutdown()
+
+        try {
+            AppLogger.error("Startup", "Database initialization failed", IllegalStateException("missing data directory"))
+            assertTrue(AppLogger.init(logDir, LogLevel.WARN))
+            AppLogger.shutdown()
+
+            val logFile = File(logDir, "grabber_${LocalDate.now()}.log")
+            val contents = logFile.readText()
+            assertTrue(contents.contains("Database initialization failed"))
+            assertTrue(contents.contains("IllegalStateException: missing data directory"))
+        } finally {
+            AppLogger.shutdown()
+            check(directory.deleteRecursively()) { "Unable to remove test directory ${directory.absolutePath}" }
+        }
+    }
+
+    @Test
     fun rotatesLargeDailyLogsAndRemovesExpiredFiles() {
         val logDir = Files.createTempDirectory("kiwigrabber-logs-test").toFile()
         val todayLog = File(logDir, "grabber_${LocalDate.now()}.log")

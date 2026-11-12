@@ -414,7 +414,7 @@ class KiwiClient(
             _activeUsers.value = users
             AppLogger.trace(TAG, "Utenti aggiornati: ${users.size} attivi")
         } catch (e: Exception) {
-            AppLogger.warn(TAG, "Errore parsing user_cb: ${e.message}")
+            AppLogger.warn(TAG, "Errore parsing user_cb", e)
         }
     }
 
@@ -446,7 +446,7 @@ class KiwiClient(
                 _serverLogs.tryEmit("[DX] Ricevuti ${labels.size} canali/segnalibri DX dal server.")
             }
         } catch (e: Exception) {
-            AppLogger.warn(TAG, "Errore parsing load_dxcfg: ${e.message}")
+            AppLogger.warn(TAG, "Errore parsing load_dxcfg", e)
         }
     }
 

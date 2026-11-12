@@ -39,7 +39,7 @@ class StationMonitor(
                 try {
                     _stationInfo.value = fetchStatus()
                 } catch (e: Exception) {
-                    AppLogger.warn(TAG, "Stato della stazione non disponibile: ${e.message}")
+                    AppLogger.warn(TAG, "Stato della stazione non disponibile", e)
                 }
                 delay(pollIntervalSeconds * 1000L)
             }

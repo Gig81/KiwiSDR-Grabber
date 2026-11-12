@@ -198,7 +198,7 @@ La gestione degli errori è locale per servizio:
 - `AudioRecorder` usa `try/catch` locali intorno alla scrittura di chunk audio
 - `HistoryDatabase` registra nel log le migrazioni, i file audio non eliminabili e la chiusura non riuscita; non ci sono `catch` vuoti
 - `AppSettings` non interrompe il caricamento se una credenziale non è decifrabile: il campo viene svuotato e va reinserito
-- `AppLogger` centralizza il logging in file su directory utente
+- `AppLogger` viene inizializzato dal punto d'ingresso prima di creare il controller, salva anche gli stack trace e accoda gli errori che precedono l'apertura del file. `AppErrorReporter` intercetta le eccezioni JVM/coroutine non gestite, le registra e mostra un rapporto copiabile all'utente
 
 L'infrastruttura non usa una `Result` monad globale né un framework di dependency injection. I flussi di errore sono quindi reattivi e pubblici attraverso `ConnectionState` e log.
 
@@ -213,12 +213,12 @@ L'infrastruttura non usa una `Result` monad globale né un framework di dependen
 - La sezione Licenza mostra il Machine ID e verifica localmente i codici firmati Ed25519; non invia richieste a un bot interno. Le funzioni avanzate sono disponibili solo dopo l'attivazione. Le notifiche Telegram usano il bot personale configurato dall'utente e sono soggette allo stesso gate.
 - Gli alert Telegram QSO/keyword includono testo e allegati audio configurabili; ogni messaggio, compresi gli alert delle trascrizioni, rispetta l'intervallo minimo impostato. Il timestamp del cooldown usa un clock monotono e gli alert nel periodo di cooldown vengono soppressi, non accodati. La logica è coperta da test automatici e la verifica operativa è stata confermata il 10/11/2026. Email/SMTP è esclusa dal progetto; Toast Windows non rientra nella Fase 8.
 - Preferenze predefinite: livello log `WARN`, registrazione degli utenti connessi disattivata per nuove installazioni; preferenze già salvate sono mantenute.
-- Database: `HistoryDatabase` usa SQLite in `~/.kiwigrabber/kiwigrabber_history.db` e crea le tabelle `user_logs` e `recording_history`. Un database delle versioni precedenti in `~/kiwigrabber_history.db` viene spostato con un'unica rinomina; se restano file WAL/SHM o lo spostamento fallisce si continua a usare il vecchio percorso.
+- Database: `HistoryDatabase` crea la cartella dati se manca e usa SQLite in `~/.kiwigrabber/kiwigrabber_history.db`, con le tabelle `user_logs` e `recording_history`. Un database delle versioni precedenti in `~/kiwigrabber_history.db` viene spostato con un'unica rinomina; se restano file WAL/SHM o lo spostamento fallisce si continua a usare il vecchio percorso.
 - Storico utenti: una riga viene scritta solo quando cambia l'elenco dei nominativi connessi (non a intervalli fissi); se il server non comunica il proprio nome si registra l'host del ricevitore.
 - Trascrizioni: lo stato è l'enum `TranscriptionStatus`, salvato nel database con il proprio nome.
 - Database: la connessione SQLite è mantenuta aperta con WAL e `busy_timeout`; non aprire/chiudere una connessione a ogni polling o aggiornamento UI.
 - Registrazioni: salvate in `~/KiwiGrabberRecordings/YYYY-MM-DD/HH-mm-ss.mp3` o `.wav`
-- Log applicativi: `~/.kiwigrabber/logs`; file giornalieri con rotazione a 5 MiB, tre backup per giornata e rimozione dei file oltre 14 giorni
+- Log applicativi: `~/.kiwigrabber/logs`; file giornalieri creati all'avvio, con rotazione a 5 MiB, tre backup per giornata e rimozione dei file oltre 14 giorni
 - Waterfall: le frequenze preferite salvate nelle impostazioni sono mostrate come marker ed etichette quando rientrano nella banda visibile
 - Waterfall: il livello di zoom viene salvato nelle impostazioni e ripristinato alla riapertura
 - Squelch: quando lo squelch RF e il voice gate sono entrambi attivi, lo stato RF prevale; il VAD non può chiudere un gate RF aperto

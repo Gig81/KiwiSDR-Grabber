@@ -25,16 +25,20 @@ object AppLogger {
     private val timestampFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
     private val pendingLogs = ConcurrentLinkedQueue<String>()
     @Volatile private var initialized = false
+    @Volatile private var initializationError: Exception? = null
 
     @Synchronized
-    fun init(logDir: File, level: LogLevel = LogLevel.DEBUG) {
+    fun init(logDir: File, level: LogLevel = LogLevel.DEBUG): Boolean {
         writer?.close()
+        writer = null
+        initialized = false
+        initializationError = null
         logLevel = level
-        logDir.mkdirs()
         val today = LocalDate.now().toString()
         val activeLogFile = File(logDir, "grabber_$today.log")
         logFile = activeLogFile
-        try {
+        return try {
+            Files.createDirectories(logDir.toPath())
             pruneOldLogs(logDir)
             writer = PrintWriter(
                 Files.newBufferedWriter(
@@ -51,12 +55,23 @@ object AppLogger {
                 writer?.println(pendingLogs.poll())
             }
             info("AppLogger", "Logging inizializzato. Livello: $level. File: ${activeLogFile.absolutePath}")
+            true
         } catch (e: Exception) {
             initialized = false
+            writer?.close()
             writer = null
+            initializationError = e
             System.err.println("[LOGGER ERROR] Impossibile inizializzare il log su file: ${e.message}")
+            e.printStackTrace(System.err)
+            false
         }
     }
+
+    fun isInitialized(): Boolean = initialized
+
+    fun currentLogFile(): File? = logFile
+
+    fun initializationError(): Exception? = initializationError
 
     @Synchronized
     fun setLevel(level: LogLevel) {
@@ -97,16 +112,29 @@ object AppLogger {
     fun error(tag: String, message: String) = log(LogLevel.ERROR, tag, message)
 
     @Synchronized
-    fun error(tag: String, message: String, throwable: Throwable) {
-        log(LogLevel.ERROR, tag, "$message: ${throwable.message}")
+    fun warn(tag: String, message: String, throwable: Throwable) =
+        logWithThrowable(LogLevel.WARN, tag, message, throwable)
+
+    @Synchronized
+    fun error(tag: String, message: String, throwable: Throwable) =
+        logWithThrowable(LogLevel.ERROR, tag, message, throwable)
+
+    private fun logWithThrowable(level: LogLevel, tag: String, message: String, throwable: Throwable) {
+        if (level.priority < logLevel.priority) return
+        log(level, tag, "$message: ${throwable.message}")
         if (initialized) {
             try {
                 rotateIfNeeded(throwable.stackTraceToString().toByteArray(Charsets.UTF_8).size.toLong())
                 throwable.printStackTrace(writer)
                 writer?.flush()
+                if (writer?.checkError() == true) {
+                    System.err.println("[LOGGER ERROR] Scrittura dello stack trace fallita per ${logFile?.absolutePath}")
+                }
             } catch (e: Exception) {
                 System.err.println("[LOGGER ERROR] Impossibile scrivere lo stack trace: ${e.message}")
             }
+        } else {
+            pendingLogs.offer(throwable.stackTraceToString())
         }
     }
 
@@ -157,6 +185,7 @@ object AppLogger {
                 System.err.println("[LOGGER ERROR] Impossibile riaprire il log: ${e.message}")
                 null
             }
+            if (writer == null) initialized = false
         }
     }
 
@@ -167,7 +196,7 @@ object AppLogger {
             ?.forEach { file ->
                 val date = runCatching { LocalDate.parse(file.name.substring(8, 18)) }.getOrNull()
                 if (date != null && date < cutoff && !file.delete()) {
-                    System.err.println("[LOGGER WARN] Impossibile eliminare il log scaduto ${file.absolutePath}")
+                    warn("AppLogger", "Impossibile eliminare il log scaduto ${file.absolutePath}")
                 }
             }
     }

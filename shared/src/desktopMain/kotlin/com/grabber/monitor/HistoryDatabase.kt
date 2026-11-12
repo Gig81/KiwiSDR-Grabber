@@ -68,17 +68,19 @@ class HistoryDatabase(
                 AppLogger.info(TAG, "Database storico spostato in ${targetFile.absolutePath}")
                 targetFile
             } catch (e: Exception) {
-                AppLogger.error(TAG, "Spostamento del database storico non riuscito, uso ${legacyFile.absolutePath}: ${e.message}")
+                AppLogger.error(TAG, "Spostamento del database storico non riuscito, uso ${legacyFile.absolutePath}", e)
                 legacyFile
             }
         }
     }
 
-    private val url = "jdbc:sqlite:${dbFile.absolutePath}"
+    private val absoluteDbFile = dbFile.absoluteFile
+    private val url = "jdbc:sqlite:${absoluteDbFile.absolutePath}"
     private val lock = Any()
     private var sharedConn: Connection? = null
 
     init {
+        absoluteDbFile.parentFile?.let { Files.createDirectories(it.toPath()) }
         initSchema()
     }
 
@@ -259,7 +261,7 @@ class HistoryDatabase(
                 pstmt.setInt(1, limit)
                 val rs = pstmt.executeQuery()
                 while (rs.next()) {
-                    val uNames = try { rs.getString("user_names") ?: "" } catch (_: Exception) { "" }
+                    val uNames = rs.getString("user_names") ?: ""
                     list.add(
                         UserLogEntry(
                             id = rs.getLong("id"),
@@ -400,7 +402,7 @@ class HistoryDatabase(
                 AppLogger.warn(TAG, "Impossibile eliminare il file audio $path")
             }
         } catch (e: SecurityException) {
-            AppLogger.warn(TAG, "Eliminazione del file audio $path non consentita: ${e.message}")
+            AppLogger.warn(TAG, "Eliminazione del file audio $path non consentita", e)
         }
     }
 
@@ -432,7 +434,7 @@ class HistoryDatabase(
             try {
                 sharedConn?.close()
             } catch (e: Exception) {
-                AppLogger.warn(TAG, "Chiusura del database non riuscita: ${e.message}")
+                AppLogger.warn(TAG, "Chiusura del database non riuscita", e)
             }
             sharedConn = null
         }

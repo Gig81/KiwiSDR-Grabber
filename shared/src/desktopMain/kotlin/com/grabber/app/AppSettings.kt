@@ -235,7 +235,7 @@ class AppSettings(
             _settings.value = revealSecrets(loaded)
             if (upgradeFavorites || hasUnprotectedSecrets(stored)) save()
         } catch (e: Exception) {
-            AppLogger.warn(TAG, "Impossibile caricare impostazioni: ${e.message}")
+            AppLogger.error(TAG, "Impossibile caricare impostazioni", e)
         }
     }
 
@@ -264,10 +264,10 @@ class AppSettings(
         try {
             operation()
         } catch (e: Exception) {
-            AppLogger.error(TAG, "Impossibile $action $label: ${e.message}")
+            AppLogger.error(TAG, "Impossibile $action $label", e)
             ""
         } catch (e: LinkageError) {
-            AppLogger.error(TAG, "DPAPI non disponibile per $label: ${e.message}")
+            AppLogger.error(TAG, "DPAPI non disponibile per $label", e)
             ""
         }
 
@@ -299,7 +299,7 @@ class AppSettings(
             tempFile.writeText(content, Charsets.UTF_8)
             replaceFile(tempFile, settingsFile)
         } catch (e: Exception) {
-            AppLogger.error(TAG, "Impossibile salvare impostazioni: ${e.message}")
+            AppLogger.error(TAG, "Impossibile salvare impostazioni", e)
         }
     }
 

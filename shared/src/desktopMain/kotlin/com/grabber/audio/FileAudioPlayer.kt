@@ -220,13 +220,15 @@ class FileAudioPlayer {
                 line.stop()
                 line.close()
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            AppLogger.warn("FileAudioPlayer", "Errore durante il rilascio della linea audio", e)
         } finally {
             session.line = null
         }
         try {
             session.stream?.close()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            AppLogger.warn("FileAudioPlayer", "Errore durante la chiusura del flusso audio", e)
         } finally {
             session.stream = null
         }

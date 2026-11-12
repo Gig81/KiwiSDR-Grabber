@@ -1,5 +1,7 @@
 # KiwiSDR Grabber & Station Recorder 1.0.0
 
+> Documento storico della release 1.0.0. Per la versione più recente, consulta la [cronologia delle versioni](../VERSION_HISTORY.md).
+
 Prima release pubblica desktop di KiwiSDR Grabber per Windows.
 
 **[Italiano](#italiano) | [English](#english)**

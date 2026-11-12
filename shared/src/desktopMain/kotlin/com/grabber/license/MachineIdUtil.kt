@@ -45,10 +45,10 @@ object MachineIdUtil {
                 WinNT.KEY_WOW64_64KEY
             )
         } catch (e: Exception) {
-            AppLogger.error(TAG, "MachineGuid di Windows non leggibile: ${e.message}")
+            AppLogger.error(TAG, "MachineGuid di Windows non leggibile", e)
             null
         } catch (e: LinkageError) {
-            AppLogger.error(TAG, "Accesso al registro di Windows non disponibile: ${e.message}")
+            AppLogger.error(TAG, "Accesso al registro di Windows non disponibile", e)
             null
         }
 

@@ -63,15 +63,16 @@ Compose Multiplatform integra il plugin di packaging nativo basato sul tool `jpa
    - **WiX Toolset:** il plugin Compose scarica da solo WiX 3.11 in `build\wix311` alla prima esecuzione; non serve installarlo né aggiungerlo al `PATH`.
    - **Comando:**
      ```powershell
-     .\gradlew.bat :composeApp:packageMsi
+     .\gradlew.bat :composeApp:packageMsiRelease
      ```
    - **Output:**    `composeApp\build\compose\binaries\main\msi\KiwiSDRRecorder-<appVersion>.msi`
 
 3. **Creazione dell'Installer Singolo `.exe`:**
    ```powershell
-   .\gradlew.bat :composeApp:packageExe
+   .\gradlew.bat :composeApp:packageExeRelease
    ```
    - **Output:** `composeApp\build\compose\binaries\main\exe\KiwiSDRRecorder-<appVersion>.exe`
+   - Gli installer di release mostrano, dopo un'installazione interattiva, una finestra in cui l'utente può scegliere indipendentemente se avviare l'applicazione e/o aprire nel browser le note della versione. La finestra non viene mostrata nelle installazioni silenziose.
 
 Il 10 novembre 2026 l'utente ha verificato con esito positivo installazione e avvio dei pacchetti Windows generati.
 
@@ -149,8 +150,8 @@ Per attivare il target Android:
 | **Avviare App Desktop Windows** | `.\gradlew.bat :composeApp:run` |
 | **Verificare compilazione GUI desktop e test condivisi** | `.\gradlew.bat :composeApp:compileKotlinDesktop :shared:desktopTest` |
 | **Creare cartella portabile Desktop** | `.\gradlew.bat :composeApp:createDistributable` |
-| **Creare installer Windows (.msi)** | `.\gradlew.bat :composeApp:packageMsi` |
-| **Creare installer Windows (.exe)** | `.\gradlew.bat :composeApp:packageExe` |
+| **Creare installer di release Windows (.msi)** | `.\gradlew.bat :composeApp:packageMsiRelease` |
+| **Creare installer di release Windows (.exe)** | `.\gradlew.bat :composeApp:packageExeRelease` |
 | **Compilare APK Android (Debug)** | `.\gradlew.bat :composeApp:assembleDebug` |
 | **Compilare APK Android (Release)** | `.\gradlew.bat :composeApp:assembleRelease` |
 | **Pulire cache di build** | `.\gradlew.bat clean` |

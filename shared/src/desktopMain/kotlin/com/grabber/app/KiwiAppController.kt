@@ -30,12 +30,12 @@ private const val DEFAULT_MAX_USERS = 4
 private const val RECORDING_RESUME_DELAY_MS = 600L
 
 /**
- * Registra nel log applicativo le eccezioni non gestite delle coroutine del controller
- * (storico, trascrizioni, notifiche), che altrimenti finirebbero solo su stderr.
+ * Registra e segnala le eccezioni non gestite delle coroutine del controller
+ * (storico, trascrizioni, notifiche).
  */
 private fun uncaughtErrorLogger() = CoroutineExceptionHandler { context, error ->
     val coroutineName = context[CoroutineName]?.name ?: "coroutine"
-    AppLogger.error(TAG, "Errore non gestito in $coroutineName", error)
+    AppErrorReporter.report("coroutine '$coroutineName'", error)
 }
 
 /**
@@ -622,7 +622,6 @@ class KiwiAppController(
         monitor.stop()
         player.stop()
         database.close()
-        AppLogger.shutdown()
         history.closeTranscriptionQueue()
         scope.cancel()
     }

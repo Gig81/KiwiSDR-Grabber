@@ -59,7 +59,7 @@ Non sono pubblicati requisiti minimi di processore, memoria o spazio su disco. A
 
 ### Download e installazione
 
-Scarica l'installer Windows **EXE** o **MSI** dalla [release KiwiSDR Grabber 1.0.0](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.0.0). La release include `SHA256SUMS.txt`: confronta l'hash del file scaricato prima di eseguirlo. Apri l'installer scelto e segui le istruzioni di Windows. Non è necessario installare Java separatamente.
+Scarica l'installer Windows **EXE** o **MSI** dalla [release KiwiSDR Grabber 1.0.1](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.0.1). La release include `SHA256SUMS.txt`: confronta l'hash del file scaricato prima di eseguirlo. Apri l'installer scelto e segui le istruzioni di Windows. Non è necessario installare Java separatamente.
 
 L'installer non è firmato digitalmente: Windows potrebbe mostrare un avviso sul publisher o SmartScreen. Prima di scegliere se continuare, verifica la provenienza del file e il relativo hash.
 
@@ -135,7 +135,7 @@ The project does not publish minimum CPU, memory, or disk-space requirements. ma
 
 ### Download and installation
 
-Download the Windows **EXE** or **MSI** installer from the [KiwiSDR Grabber 1.0.0 release](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.0.0). The release also includes `SHA256SUMS.txt`; compare the checksum for the installer you downloaded before running it. Install either package by opening it and following the Windows prompts. You do not need to install Java separately.
+Download the Windows **EXE** or **MSI** installer from the [KiwiSDR Grabber 1.0.1 release](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.0.1). The release also includes `SHA256SUMS.txt`; compare the checksum for the installer you downloaded before running it. Install either package by opening it and following the Windows prompts. You do not need to install Java separately.
 
 The installer is not digitally signed, so Windows may display a publisher or SmartScreen warning. Check the release source and checksum before deciding whether to continue.
 

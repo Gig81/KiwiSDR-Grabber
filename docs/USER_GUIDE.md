@@ -29,8 +29,8 @@ Registrazione, VAD, trascrizione, storico utenti e notifiche Telegram richiedono
 
 ### 2. Installazione e primo avvio
 
-1. Apri la [release KiwiSDR Grabber 1.0.0](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.0.0).
-2. Scarica uno dei due installer, `KiwiSDRRecorder-1.0.0.exe` oppure `KiwiSDRRecorder-1.0.0.msi`. La release include `SHA256SUMS.txt`: verifica l'hash dell'installer scelto prima di eseguirlo.
+1. Apri la [release KiwiSDR Grabber 1.0.1](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.0.1).
+2. Scarica uno dei due installer, `KiwiSDRRecorder-1.0.1.exe` oppure `KiwiSDRRecorder-1.0.1.msi`. La release include `SHA256SUMS.txt`: verifica l'hash dell'installer scelto prima di eseguirlo.
 3. Apri l'installer e segui le istruzioni di Windows. L'installer non è firmato digitalmente, quindi Windows potrebbe mostrare un avviso sul publisher o SmartScreen. Verifica la provenienza e l'hash prima di scegliere se continuare.
 4. Nei pacchetti dalla versione 1.0.1, al termine dell'installazione puoi scegliere separatamente se avviare l'applicazione e/o aprire le note della versione nel browser. Questa scelta non è presente nell'installer 1.0.0.
 5. Avvia KiwiSDR Grabber dal menu o dalla voce dell'applicazione installata.
@@ -219,8 +219,8 @@ Recording, VAD, transcription, user-history logging, and Telegram alerts require
 
 ### 2. Installation and first launch
 
-1. Open the [KiwiSDR Grabber 1.0.0 release](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.0.0).
-2. Download either `KiwiSDRRecorder-1.0.0.exe` or `KiwiSDRRecorder-1.0.0.msi`, not both. The release includes `SHA256SUMS.txt`; verify the checksum for the installer you chose before running it.
+1. Open the [KiwiSDR Grabber 1.0.1 release](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.0.1).
+2. Download either `KiwiSDRRecorder-1.0.1.exe` or `KiwiSDRRecorder-1.0.1.msi`, not both. The release includes `SHA256SUMS.txt`; verify the checksum for the installer you chose before running it.
 3. Open the installer and follow the Windows prompts. The installer is not digitally signed, so Windows may show a publisher or SmartScreen warning. Check the release source and checksum before deciding whether to continue.
 4. Installers starting with version 1.0.1 let you independently choose whether to launch the application and/or open that version's release notes in your browser when setup finishes. This prompt is not included in installer 1.0.0.
 5. Start KiwiSDR Grabber from the installed application entry.

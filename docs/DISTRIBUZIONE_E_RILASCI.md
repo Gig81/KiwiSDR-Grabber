@@ -8,7 +8,8 @@
 
 ## Stato della versione desktop
 
-- `1.0.0` è la release Windows pubblicata attualmente; `1.0.1` è in preparazione e non è ancora pubblicata.
+- `1.0.1` è la release Windows pubblicata attualmente; la `1.0.0` resta disponibile nelle GitHub Releases.
+- I file di una release si preparano in una cartella **fuori dal repository** (o in una cartella `Rilascio*/`, ignorata da git) e non vanno committati: gli installer e gli allegati vivono solo nella GitHub Release.
 - Gli installer Windows includono il runtime Java. I task ordinari `:composeApp:packageExe` e `:composeApp:packageMsi` sono utili per lo sviluppo; per le release usare `:composeApp:packageExeRelease` e `:composeApp:packageMsiRelease`, che aggiungono la scelta post-installazione. Gli output si trovano in `composeApp\build\compose\binaries\main`. Per le release pubbliche usare Eclipse Temurin (vedi [TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md](./TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md)).
 - La 1.0.1 corregge la creazione della cartella dati SQLite al primo avvio, anticipa l'inizializzazione del logging e migliora la segnalazione delle eccezioni non gestite. Le note sono in [RELEASE_NOTES_1.0.1.md](./RELEASE_NOTES_1.0.1.md); la 1.0.0 è archiviata in [releases/](./releases/README.md).
 - Indirizzo e password KiwiSDR sono configurabili dall'utente, anche nel setup iniziale. Password KiwiSDR e token del bot Telegram vengono salvati nelle impostazioni locali cifrati con Windows DPAPI, legati all'account Windows corrente; i valori in chiaro delle versioni precedenti vengono cifrati al primo avvio. Se il file viene copiato su un altro account o PC, le credenziali vanno reinserite.

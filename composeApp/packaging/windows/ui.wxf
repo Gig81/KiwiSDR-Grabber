@@ -1,14 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Fragment>
+    <!-- Same (empty) UI that jpackage generates when no dir chooser, license or shortcut prompt is requested. -->
     <UI Id="JpUI" />
+    <!--
+      Post-install choices dialog.
+      - ExeCommand must use the absolute path: for a type 34 custom action "Directory" is only the
+        working directory, so a relative executable name is not found and Windows Installer
+        fails with error 1721 ("a program required for this install to complete could not be run").
+      - asyncNoWait: the installer neither waits for the dialog nor fails because of its exit code.
+    -->
     <CustomAction
       Id="KiwiShowPostInstallChoices"
       Directory="INSTALLDIR"
-      ExeCommand="KiwiSDRRecorder.exe --installer-complete"
+      ExeCommand="&quot;[INSTALLDIR]KiwiSDRRecorder.exe&quot; --installer-complete"
       Execute="immediate"
       Impersonate="yes"
-      Return="check" />
+      Return="asyncNoWait" />
     <InstallExecuteSequence>
       <Custom Action="KiwiShowPostInstallChoices" After="InstallFinalize">
         NOT Installed AND NOT REMOVE AND UILevel &gt; 2

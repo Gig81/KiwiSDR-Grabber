@@ -27,3 +27,6 @@ local.properties
 *.sqlite3
 settings.json
 
+
+# Cartelle temporanee di preparazione release
+Rilascio*/

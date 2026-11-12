@@ -41,7 +41,7 @@ compose.desktop {
             )
 
             windows {
-                console = true
+                console = false
                 menuGroup = "KiwiSDR"
                 upgradeUuid = "a60cfb90-1e5b-4c07-b35f-287714be9580"
             }

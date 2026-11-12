@@ -76,7 +76,7 @@ Consulta la [Guida rapida e manuale utente](docs/USER_GUIDE.md) per le istruzion
 **Per gli utenti**
 
 - [Guida rapida e manuale utente](docs/USER_GUIDE.md)
-- [Note della release 1.0.1 (in preparazione)](docs/RELEASE_NOTES_1.0.1.md)
+- [Note della release 1.0.1](docs/RELEASE_NOTES_1.0.1.md)
 - [Cronologia delle versioni](docs/VERSION_HISTORY.md)
 - [Avvisi e licenze di terze parti](docs/THIRD_PARTY_NOTICES.md)
 
@@ -106,7 +106,7 @@ L'applicazione utilizza Kotlin e Compose Multiplatform, Vosk per il riconoscimen
 
 ### Stato del progetto
 
-La versione **1.0.0** è la release Windows pubblicata attualmente. La **1.0.1** è in preparazione e non è ancora disponibile per il download. Il progetto non assegna all'applicazione un'etichetta di stabilità separata (stable, beta o sperimentale).
+La versione **1.0.1** è la release Windows pubblicata attualmente ed è disponibile nelle [GitHub Releases](https://github.com/Gig81/KiwiSDR-Grabber/releases). Il progetto non assegna all'applicazione un'etichetta di stabilità separata (stable, beta o sperimentale).
 
 ## English
 
@@ -152,7 +152,7 @@ See the step-by-step [Quick Start and User Guide](docs/USER_GUIDE.md).
 **For users**
 
 - [Quick Start and User Guide](docs/USER_GUIDE.md)
-- [Release notes for 1.0.1 (in preparation)](docs/RELEASE_NOTES_1.0.1.md)
+- [Release notes for 1.0.1](docs/RELEASE_NOTES_1.0.1.md)
 - [Version history](docs/VERSION_HISTORY.md)
 - [Third-party notices and licenses](docs/THIRD_PARTY_NOTICES.md)
 
@@ -182,4 +182,4 @@ The application uses Kotlin and Compose Multiplatform, Vosk for offline speech r
 
 ### Project status
 
-Version **1.0.0** is the currently published Windows release. Version **1.0.1** is in preparation and is not yet available for download. The project does not assign a separate stable, beta, or experimental label to the application.
+Version **1.0.1** is the currently published Windows release, available from [GitHub Releases](https://github.com/Gig81/KiwiSDR-Grabber/releases). The project does not assign a separate stable, beta, or experimental label to the application.

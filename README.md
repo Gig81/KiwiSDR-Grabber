@@ -61,7 +61,7 @@ Non sono pubblicati requisiti minimi di processore, memoria o spazio su disco. A
 
 Scarica l'installer Windows **EXE** o **MSI** dalla [release KiwiSDR Grabber 1.0.1](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.0.1). La release include `SHA256SUMS.txt`: confronta l'hash del file scaricato prima di eseguirlo. Apri l'installer scelto e segui le istruzioni di Windows. Non è necessario installare Java separatamente.
 
-L'installer non è firmato digitalmente: Windows potrebbe mostrare un avviso sul publisher o SmartScreen. Prima di scegliere se continuare, verifica la provenienza del file e il relativo hash.
+L'installer non è firmato digitalmente: Windows potrebbe mostrare un avviso sul publisher o SmartScreen. Prima di scegliere se continuare, verifica la provenienza del file e il relativo hash. Le versioni successive alla 1.0.1 sono compilate da GitHub Actions e hanno anche un'attestazione di provenienza; i comandi di verifica sono nella [guida utente](docs/USER_GUIDE.md#verifica-dellinstaller).
 
 ### Avvio rapido
 
@@ -88,7 +88,7 @@ Consulta la [Guida rapida e manuale utente](docs/USER_GUIDE.md) per le istruzion
 - [Design system della GUI](docs/GUI_DESIGN_SYSTEM.md)
 - [Distribuzione e release](docs/DISTRIBUZIONE_E_RILASCI.md)
 - [Toolchain e ambiente di sviluppo](docs/TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md)
-- [Piani per Android](docs/ANDROID.md) (Android non è ancora implementato.)
+- [Piani per Android](docs/piani/ANDROID.md) (Android non è ancora implementato.)
 
 ### Licenza
 
@@ -137,7 +137,7 @@ The project does not publish minimum CPU, memory, or disk-space requirements. ma
 
 Download the Windows **EXE** or **MSI** installer from the [KiwiSDR Grabber 1.0.1 release](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.0.1). The release also includes `SHA256SUMS.txt`; compare the checksum for the installer you downloaded before running it. Install either package by opening it and following the Windows prompts. You do not need to install Java separately.
 
-The installer is not digitally signed, so Windows may display a publisher or SmartScreen warning. Check the release source and checksum before deciding whether to continue.
+The installer is not digitally signed, so Windows may display a publisher or SmartScreen warning. Check the release source and checksum before deciding whether to continue. Releases after 1.0.1 are built by GitHub Actions and also carry a build provenance attestation; see the [user guide](docs/USER_GUIDE.md#verifying-the-installer) for the verification commands.
 
 ### Quick start
 
@@ -164,7 +164,7 @@ See the step-by-step [Quick Start and User Guide](docs/USER_GUIDE.md).
 - [GUI design system](docs/GUI_DESIGN_SYSTEM.md)
 - [Distribution and releases](docs/DISTRIBUZIONE_E_RILASCI.md)
 - [Toolchain and development environment](docs/TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md)
-- [Android plans](docs/ANDROID.md) (Android is not currently implemented.)
+- [Android plans](docs/piani/ANDROID.md) (Android is not currently implemented.)
 
 ### Licensing
 

@@ -38,6 +38,6 @@ Key rules that span files:
 
 ## Packaging and release
 
-Never set `windows { console = true }` in `composeApp/build.gradle.kts`, and never use a relative exe path in `composeApp/packaging/windows/ui.wxf` custom actions (use `[INSTALLDIR]…`, otherwise MSI error 1721). Never commit release attachments (installers, zips). Details, build tasks and the release doc checklist: the `windows-release` skill (`.claude/skills/windows-release/SKILL.md`).
+Never set `windows { console = true }` in `composeApp/build.gradle.kts`, and never use a relative exe path in `composeApp/packaging/windows/ui.wxf` custom actions (use `[INSTALLDIR]…`, otherwise MSI error 1721). Never commit release attachments (installers, zips). Published installers come only from the `Release` GitHub Actions workflow (tag `v<version>` → draft release with attestations); never upload locally built ones. Details, build tasks and the release doc checklist: the `windows-release` skill (`.claude/skills/windows-release/SKILL.md`).
 
 Further reference: `docs/ARCHITECTURE.md` (official architecture and rules), `docs/DEVELOPMENT.md`, `docs/TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md`.

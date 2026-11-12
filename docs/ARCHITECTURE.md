@@ -223,7 +223,7 @@ L'infrastruttura non usa una `Result` monad globale né un framework di dependen
 - Waterfall: il livello di zoom viene salvato nelle impostazioni e ripristinato alla riapertura
 - Squelch: quando lo squelch RF e il voice gate sono entrambi attivi, lo stato RF prevale; il VAD non può chiudere un gate RF aperto
 - Machine ID: SHA-256 del `MachineGuid` di Windows (registro, vista 64 bit), nel formato `GRAB-XXXX-XXXX-XXXX-XXXX`; non cambia con rete, VPN o rinomina del PC, cambia reinstallando Windows. Se il valore non è leggibile si usa `GRAB-NON-DISPONIBILE`, che nessuna licenza può validare. L'esito della verifica della firma viene memorizzato finché la chiave non cambia.
-- Licenza desktop: verifica locale legata al Machine ID e richiesta di attivazione via canale Telegram dedicato; la prova iniziale è limitata a cinque minuti. Le chiavi sono firmate offline con Ed25519 dall'app License Manager del repository privato di gestione licenze.
+- Licenza desktop: verifica locale legata al Machine ID e richiesta di attivazione via canale Telegram dedicato. Non esiste un periodo di prova: senza attivazione restano disponibili le funzioni di base (ascolto, sintonia, spettro/waterfall, utenti connessi, preferiti) e le funzioni avanzate sono bloccate. Le chiavi sono firmate offline con Ed25519 dall'app License Manager del repository privato di gestione licenze.
 
 ### 3.6 Vincoli verificati del protocollo KiwiSDR
 

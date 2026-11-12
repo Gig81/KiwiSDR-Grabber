@@ -1,0 +1,44 @@
+name: CI
+
+# Controllo standard del progetto (compilazione + test) su Windows, lo stesso sistema degli installer.
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Compilazione e test (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: JDK 21 (Eclipse Temurin)
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Compilazione e test
+        run: .\gradlew.bat --no-daemon :composeApp:compileKotlinDesktop :shared:desktopTest
+
+      - name: Report dei test
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: shared/build/reports/tests/
+          if-no-files-found: ignore

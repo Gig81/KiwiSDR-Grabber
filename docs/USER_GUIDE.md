@@ -31,7 +31,7 @@ Registrazione, VAD, trascrizione, storico utenti e notifiche Telegram richiedono
 
 1. Apri la [release KiwiSDR Grabber 1.0.1](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.0.1).
 2. Scarica uno dei due installer, `KiwiSDRRecorder-1.0.1.exe` oppure `KiwiSDRRecorder-1.0.1.msi`. La release include `SHA256SUMS.txt`: verifica l'hash dell'installer scelto prima di eseguirlo.
-3. Apri l'installer e segui le istruzioni di Windows. L'installer non è firmato digitalmente, quindi Windows potrebbe mostrare un avviso sul publisher o SmartScreen. Verifica la provenienza e l'hash prima di scegliere se continuare.
+3. Apri l'installer e segui le istruzioni di Windows. L'installer non è firmato digitalmente, quindi Windows potrebbe mostrare un avviso sul publisher o SmartScreen. Verifica la provenienza e l'hash prima di scegliere se continuare (vedi [Verifica dell'installer](#verifica-dellinstaller)).
 4. Nei pacchetti dalla versione 1.0.1, al termine dell'installazione puoi scegliere separatamente se avviare l'applicazione e/o aprire le note della versione nel browser. Questa scelta non è presente nell'installer 1.0.0.
 5. Avvia KiwiSDR Grabber dal menu o dalla voce dell'applicazione installata.
 5. Al primo avvio completa la configurazione guidata:
@@ -42,6 +42,23 @@ Registrazione, VAD, trascrizione, storico utenti e notifiche Telegram richiedono
 6. Seleziona **Completa**. La procedura si chiude, ma l'applicazione non si collega automaticamente al ricevitore.
 
 L'installer include il runtime Java. La libreria applicativa Vosk è inclusa, ma per trascrivere serve anche un modello vocale Vosk scaricato separatamente.
+
+#### Verifica dell'installer
+
+L'installer non è firmato digitalmente: la verifica dell'hash conferma che il file non è stato alterato. Esegui i comandi in PowerShell, nella cartella in cui hai scaricato il file, sostituendo `<versione>` con la versione scaricata.
+
+1. **Hash:**
+   ```powershell
+   Get-FileHash .\KiwiSDRRecorder-<versione>.msi -Algorithm SHA256
+   ```
+   Il valore deve coincidere, ignorando maiuscole e minuscole, con la riga corrispondente di `SHA256SUMS.txt`.
+2. **Provenienza** (facoltativa, per le versioni successive alla 1.0.1, richiede [GitHub CLI](https://cli.github.com/)):
+   ```powershell
+   gh attestation verify .\KiwiSDRRecorder-<versione>.msi --repo Gig81/KiwiSDR-Grabber
+   ```
+   L'esito positivo conferma che il file è stato compilato da GitHub Actions in questo repository. Le attestazioni sono elencate anche nella pagina [Attestations](https://github.com/Gig81/KiwiSDR-Grabber/attestations) del repository.
+
+Se un controllo non va a buon fine, non eseguire il file e segnala il problema nelle [GitHub Issues](https://github.com/Gig81/KiwiSDR-Grabber/issues).
 
 ### 3. Collegamento a un KiwiSDR
 
@@ -221,7 +238,7 @@ Recording, VAD, transcription, user-history logging, and Telegram alerts require
 
 1. Open the [KiwiSDR Grabber 1.0.1 release](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.0.1).
 2. Download either `KiwiSDRRecorder-1.0.1.exe` or `KiwiSDRRecorder-1.0.1.msi`, not both. The release includes `SHA256SUMS.txt`; verify the checksum for the installer you chose before running it.
-3. Open the installer and follow the Windows prompts. The installer is not digitally signed, so Windows may show a publisher or SmartScreen warning. Check the release source and checksum before deciding whether to continue.
+3. Open the installer and follow the Windows prompts. The installer is not digitally signed, so Windows may show a publisher or SmartScreen warning. Check the release source and checksum before deciding whether to continue (see [Verifying the installer](#verifying-the-installer)).
 4. Installers starting with version 1.0.1 let you independently choose whether to launch the application and/or open that version's release notes in your browser when setup finishes. This prompt is not included in installer 1.0.0.
 5. Start KiwiSDR Grabber from the installed application entry.
 5. On first launch, complete the setup dialog:
@@ -232,6 +249,23 @@ Recording, VAD, transcription, user-history logging, and Telegram alerts require
 6. Select **Complete** (`Completa`). The setup dialog closes; it does not automatically connect to the receiver.
 
 The installer includes its Java runtime. Vosk's application library is also bundled, but a separate Vosk speech model is required if you want transcription.
+
+#### Verifying the installer
+
+The installer is not digitally signed; checking its hash confirms that the file has not been altered. Run these commands in PowerShell, in the folder where you downloaded the file, replacing `<version>` with the version you downloaded.
+
+1. **Checksum:**
+   ```powershell
+   Get-FileHash .\KiwiSDRRecorder-<version>.msi -Algorithm SHA256
+   ```
+   The value must match, ignoring letter case, the corresponding line in `SHA256SUMS.txt`.
+2. **Provenance** (optional, for releases after 1.0.1, requires [GitHub CLI](https://cli.github.com/)):
+   ```powershell
+   gh attestation verify .\KiwiSDRRecorder-<version>.msi --repo Gig81/KiwiSDR-Grabber
+   ```
+   A successful result confirms that the file was built by GitHub Actions in this repository. Attestations are also listed on the repository's [Attestations](https://github.com/Gig81/KiwiSDR-Grabber/attestations) page.
+
+If either check fails, do not run the file and report the problem through [GitHub Issues](https://github.com/Gig81/KiwiSDR-Grabber/issues).
 
 ### 3. Connecting to a KiwiSDR
 

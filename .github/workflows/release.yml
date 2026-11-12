@@ -1,0 +1,95 @@
+name: Release
+
+# Build degli installer Windows di release, allegati, SHA256SUMS.txt e attestazioni di provenienza.
+# - push di un tag v<versione>: crea una GitHub Release BOZZA, da pubblicare a mano dopo il collaudo;
+# - avvio manuale (workflow_dispatch): solo build, gli allegati restano come artifact del workflow.
+# Procedura completa: docs/DISTRIBUZIONE_E_RILASCI.md
+
+on:
+  push:
+    tags: [ "v*" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Installer Windows
+    runs-on: windows-latest
+    permissions:
+      contents: write       # creare la release bozza e caricare gli allegati
+      id-token: write       # token OIDC per la firma Sigstore dell'attestazione
+      attestations: write   # salvare l'attestazione nel repository
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: JDK 21 (Eclipse Temurin)
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: true
+
+      - name: Versione
+        id: version
+        shell: pwsh
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          $v = (Select-String -Path gradle.properties -Pattern '^appVersion=(.+)$').Matches[0].Groups[1].Value.Trim()
+          if ($env:REF_TYPE -eq 'tag' -and $env:REF_NAME -ne "v$v") {
+            throw "Il tag $env:REF_NAME non corrisponde ad appVersion=$v"
+          }
+          if ($env:REF_TYPE -eq 'tag' -and -not (Test-Path "docs/RELEASE_NOTES_$v.md")) {
+            throw "Note di rilascio mancanti: docs/RELEASE_NOTES_$v.md"
+          }
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Compilazione e test
+        run: .\gradlew.bat --no-daemon :composeApp:compileKotlinDesktop :shared:desktopTest
+
+      - name: Installer
+        run: .\gradlew.bat --no-daemon :composeApp:packageMsiRelease :composeApp:packageExeRelease
+
+      - name: Allegati e hash
+        shell: pwsh
+        run: ./scripts/release/Prepare-ReleaseAssets.ps1 -Version '${{ steps.version.outputs.version }}' -OutputDir release-assets
+
+      - name: Attestazione di provenienza
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            release-assets/*.msi
+            release-assets/*.exe
+            release-assets/*.zip
+            release-assets/SHA256SUMS.txt
+
+      - name: Artifact del workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets-${{ steps.version.outputs.version }}
+          path: release-assets/
+          retention-days: 30
+
+      - name: Release bozza
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "v$env:VERSION" (Get-ChildItem release-assets -File).FullName `
+            --draft --verify-tag `
+            --title "KiwiSDR Grabber $env:VERSION" `
+            --notes-file "docs/RELEASE_NOTES_$env:VERSION.md"

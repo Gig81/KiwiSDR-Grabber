@@ -82,7 +82,7 @@ Il 10 novembre 2026 l'utente ha verificato con esito positivo installazione e av
 
 *Nota: Questa sezione guiderà la configurazione non appena il download e l'installazione di Android Studio saranno completati.*
 
-Lo stato e l'ambito iniziale della versione mobile sono riepilogati in [ANDROID.md](./ANDROID.md). I parametri e i comandi riportati qui sotto sono proposte preliminari: il target Android del progetto non è ancora configurato.
+Lo stato e l'ambito iniziale della versione mobile sono riepilogati in [piani/ANDROID.md](./piani/ANDROID.md). I parametri e i comandi riportati qui sotto sono proposte preliminari: il target Android del progetto non è ancora configurato.
 
 ### Tool Necessari per lo Sviluppo Android
 1. **Android Studio** (versione Koala / Ladybug o superiore).

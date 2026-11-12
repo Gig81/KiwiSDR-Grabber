@@ -80,6 +80,16 @@ Per i pacchetti destinati a una release, usare invece `:composeApp:packageExeRel
 
 Gli installer vengono generati sotto `composeApp\build\compose\binaries\main\exe` e `composeApp\build\compose\binaries\main\msi`.
 
+Gli installer locali servono per lo sviluppo e per provare modifiche al packaging: quelli pubblicati nelle release si producono solo con il workflow `Release` (vedi sotto).
+
+### Integrazione continua (GitHub Actions)
+
+- `.github/workflows/ci.yml` — a ogni push su `main` e pull request esegue su Windows `:composeApp:compileKotlinDesktop :shared:desktopTest`, lo stesso controllo da lanciare in locale prima di un commit.
+- `.github/workflows/release.yml` — sul push di un tag `v<versione>` compila gli installer con Eclipse Temurin 21, prepara gli allegati con `scripts/release/Prepare-ReleaseAssets.ps1`, crea le attestazioni di provenienza e una GitHub Release bozza. Avviato a mano (*Run workflow*) esegue solo la build e lascia gli allegati come artifact.
+- `.github/workflows/codeql.yml` — analisi CodeQL settimanale e su push/pull request.
+
+Lo script degli allegati si può eseguire anche in locale, dopo i task `package*Release`: `.\scripts\release\Prepare-ReleaseAssets.ps1 -Version <versione>` (output in `Rilascio-<versione>\`, ignorata da git).
+
 ## 4. Struttura dei moduli
 
 - `shared`: logica cross-platform, modelli, protocollo, client SDR, audio e monitoraggio

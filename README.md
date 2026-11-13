@@ -76,6 +76,7 @@ Consulta la [Guida rapida e manuale utente](docs/USER_GUIDE.md) per le istruzion
 **Per gli utenti**
 
 - [Guida rapida e manuale utente](docs/USER_GUIDE.md)
+- [Funzionalità richieste dagli utenti](docs/piani/RICHIESTE_FUNZIONALITA.md)
 - [Note della release 1.0.1](docs/RELEASE_NOTES_1.0.1.md)
 - [Cronologia delle versioni](docs/VERSION_HISTORY.md)
 - [Avvisi e licenze di terze parti](docs/THIRD_PARTY_NOTICES.md)
@@ -152,6 +153,7 @@ See the step-by-step [Quick Start and User Guide](docs/USER_GUIDE.md).
 **For users**
 
 - [Quick Start and User Guide](docs/USER_GUIDE.md)
+- [User feature requests](docs/piani/RICHIESTE_FUNZIONALITA.md)
 - [Release notes for 1.0.1](docs/RELEASE_NOTES_1.0.1.md)
 - [Version history](docs/VERSION_HISTORY.md)
 - [Third-party notices and licenses](docs/THIRD_PARTY_NOTICES.md)

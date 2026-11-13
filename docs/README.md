@@ -18,5 +18,6 @@ Questa pagina è l'indice della documentazione ufficiale e delle guide operative
 
 ## Sviluppi futuri
 
+- [piani/RICHIESTE_FUNZIONALITA.md](./piani/RICHIESTE_FUNZIONALITA.md) — richieste di funzionalità raccolte dagli utenti.
 - [piani/ANDROID.md](./piani/ANDROID.md) — piano di sviluppo della futura versione Android.
 - [piani/PIANO_CI_ATTESTAZIONI_E_VERIFICA_INSTALLER.md](./piani/PIANO_CI_ATTESTAZIONI_E_VERIFICA_INSTALLER.md) — CI su GitHub Actions, attestazioni di provenienza, invio degli installer a Microsoft e istruzioni di verifica.

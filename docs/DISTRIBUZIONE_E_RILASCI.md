@@ -8,10 +8,10 @@
 
 ## Stato della versione desktop
 
-- `1.0.1` è la release Windows pubblicata attualmente; la `1.0.0` resta disponibile nelle GitHub Releases.
+- `1.1.0` è la release Windows pubblicata attualmente ed è la prima prodotta dal workflow `Release` con attestazioni di provenienza; `1.0.1` e `1.0.0` restano disponibili nelle GitHub Releases.
 - I file di una release si preparano in una cartella **fuori dal repository** (o in una cartella `Rilascio*/`, ignorata da git) e non vanno committati: gli installer e gli allegati vivono solo nella GitHub Release.
 - Gli installer Windows includono il runtime Java. I task ordinari `:composeApp:packageExe` e `:composeApp:packageMsi` sono utili per lo sviluppo; per le release usare `:composeApp:packageExeRelease` e `:composeApp:packageMsiRelease`, che aggiungono la scelta post-installazione. Gli output si trovano in `composeApp\build\compose\binaries\main`. Per le release pubbliche usare Eclipse Temurin (vedi [TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md](./TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md)).
-- La 1.0.1 corregge la creazione della cartella dati SQLite al primo avvio, anticipa l'inizializzazione del logging e migliora la segnalazione delle eccezioni non gestite. Le note sono in [RELEASE_NOTES_1.0.1.md](./RELEASE_NOTES_1.0.1.md); la 1.0.0 è archiviata in [releases/](./releases/README.md).
+- La 1.1.0 introduce la scansione dei canali preferiti. Le note sono in [RELEASE_NOTES_1.1.0.md](./RELEASE_NOTES_1.1.0.md); le versioni precedenti sono archiviate in [releases/](./releases/README.md).
 - Indirizzo e password KiwiSDR sono configurabili dall'utente, anche nel setup iniziale. Password KiwiSDR e token del bot Telegram vengono salvati nelle impostazioni locali cifrati con Windows DPAPI, legati all'account Windows corrente; i valori in chiaro delle versioni precedenti vengono cifrati al primo avvio. Se il file viene copiato su un altro account o PC, le credenziali vanno reinserite.
 - La libreria Vosk è inclusa; il modello linguistico no: l'utente lo scarica dal sito ufficiale e sceglie la cartella nell'app.
 - Se il server rifiuta l'autenticazione (`badp=1`), l'app spiega che la causa può essere la password errata oppure l'esaurimento dei canali e indica di controllare le impostazioni.
@@ -80,7 +80,18 @@ Lo script usato dal workflow si può eseguire anche in locale, dopo `:composeApp
 .\scripts\release\Prepare-ReleaseAssets.ps1 -Version <versione>
 ```
 
-Crea `Rilascio-<versione>\` (ignorata da git). Le versioni delle librerie LGPL sono ricavate dai jar inclusi nell'app image. Gli allegati prodotti così servono solo per prove: non vanno pubblicati.
+Crea `Rilascio-<versione>\` (ignorata da git). Le versioni delle librerie LGPL sono ricavate dai jar inclusi nell'app image, cioè da ciò che viene effettivamente distribuito, e non da `gradle/libs.versions.toml`, che non contiene le dipendenze transitive (`jlayer`, `tritonus-share`). Gli allegati prodotti così servono solo per prove: non vanno pubblicati.
+
+### Note sui workflow GitHub Actions
+
+- `CI` (`.github/workflows/ci.yml`) esegue su `windows-latest` lo stesso controllo standard del progetto a ogni push e pull request verso `main`; in caso di errore allega i report dei test. Il workflow `CodeQL` è separato.
+- `Release` (`.github/workflows/release.yml`) parte dal push di un tag `v*` (crea la release bozza) oppure a mano con *Run workflow* (solo build, allegati come artifact per 30 giorni). Prima di compilare verifica che il tag coincida con `appVersion` e che esistano le note di rilascio.
+- I permessi sono dichiarati per job e ridotti al minimo: `contents: write` per la bozza e gli allegati, `id-token: write` per il token OIDC usato da Sigstore, `attestations: write` per salvare l'attestazione. A livello di workflow resta `contents: read`.
+- Il workflow non usa segreti e non ne deve usare: in particolare la chiave privata Ed25519 delle licenze non deve mai entrare nella CI.
+- La cache Gradle è in sola lettura (`cache-read-only`), così la release non dipende da cache scritte da altri branch.
+- WiX 3.11 non va installato sul runner: lo scarica il plugin Compose. Se il download non fosse più disponibile, installare WiX sul runner e impostare `WIX_PATH`.
+- Il workflow usa solo azioni di GitHub e Gradle, fissate per versione principale; per maggior rigore si possono fissare per hash di commit.
+- Se una release prodotta dalla CI si comporta diversamente da una build locale (JDK, WiX o percorsi diversi), confrontare il `.wxs` decompilato dei due MSI: `build\wix311\dark.exe -nologo <msi> out.wxs`.
 
 ## Possibili evoluzioni
 

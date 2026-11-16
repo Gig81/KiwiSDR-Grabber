@@ -59,7 +59,7 @@ Non sono pubblicati requisiti minimi di processore, memoria o spazio su disco. A
 
 ### Download e installazione
 
-Scarica l'installer Windows **EXE** o **MSI** dalla [release KiwiSDR Grabber 1.0.1](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.0.1). La release include `SHA256SUMS.txt`: confronta l'hash del file scaricato prima di eseguirlo. Apri l'installer scelto e segui le istruzioni di Windows. Non è necessario installare Java separatamente.
+Scarica l'installer Windows **EXE** o **MSI** dalla [release KiwiSDR Grabber 1.1.0](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.1.0). La release include `SHA256SUMS.txt`: confronta l'hash del file scaricato prima di eseguirlo. Apri l'installer scelto e segui le istruzioni di Windows. Non è necessario installare Java separatamente.
 
 L'installer non è firmato digitalmente: Windows potrebbe mostrare un avviso sul publisher o SmartScreen. Prima di scegliere se continuare, verifica la provenienza del file e il relativo hash. Le versioni successive alla 1.0.1 sono compilate da GitHub Actions e hanno anche un'attestazione di provenienza; i comandi di verifica sono nella [guida utente](docs/USER_GUIDE.md#verifica-dellinstaller).
 
@@ -77,7 +77,7 @@ Consulta la [Guida rapida e manuale utente](docs/USER_GUIDE.md) per le istruzion
 
 - [Guida rapida e manuale utente](docs/USER_GUIDE.md)
 - [Funzionalità richieste dagli utenti](docs/piani/RICHIESTE_FUNZIONALITA.md)
-- [Note della release 1.0.1](docs/RELEASE_NOTES_1.0.1.md)
+- [Note della release 1.1.0](docs/RELEASE_NOTES_1.1.0.md)
 - [Cronologia delle versioni](docs/VERSION_HISTORY.md)
 - [Avvisi e licenze di terze parti](docs/THIRD_PARTY_NOTICES.md)
 
@@ -107,7 +107,7 @@ L'applicazione utilizza Kotlin e Compose Multiplatform, Vosk per il riconoscimen
 
 ### Stato del progetto
 
-La versione **1.0.1** è la release Windows pubblicata attualmente ed è disponibile nelle [GitHub Releases](https://github.com/Gig81/KiwiSDR-Grabber/releases). Il progetto non assegna all'applicazione un'etichetta di stabilità separata (stable, beta o sperimentale).
+La versione **1.1.0** è la release Windows pubblicata attualmente ed è disponibile nelle [GitHub Releases](https://github.com/Gig81/KiwiSDR-Grabber/releases). Il progetto non assegna all'applicazione un'etichetta di stabilità separata (stable, beta o sperimentale).
 
 ## English
 
@@ -136,7 +136,7 @@ The project does not publish minimum CPU, memory, or disk-space requirements. ma
 
 ### Download and installation
 
-Download the Windows **EXE** or **MSI** installer from the [KiwiSDR Grabber 1.0.1 release](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.0.1). The release also includes `SHA256SUMS.txt`; compare the checksum for the installer you downloaded before running it. Install either package by opening it and following the Windows prompts. You do not need to install Java separately.
+Download the Windows **EXE** or **MSI** installer from the [KiwiSDR Grabber 1.1.0 release](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.1.0). The release also includes `SHA256SUMS.txt`; compare the checksum for the installer you downloaded before running it. Install either package by opening it and following the Windows prompts. You do not need to install Java separately.
 
 The installer is not digitally signed, so Windows may display a publisher or SmartScreen warning. Check the release source and checksum before deciding whether to continue. Releases after 1.0.1 are built by GitHub Actions and also carry a build provenance attestation; see the [user guide](docs/USER_GUIDE.md#verifying-the-installer) for the verification commands.
 
@@ -154,7 +154,7 @@ See the step-by-step [Quick Start and User Guide](docs/USER_GUIDE.md).
 
 - [Quick Start and User Guide](docs/USER_GUIDE.md)
 - [User feature requests](docs/piani/RICHIESTE_FUNZIONALITA.md)
-- [Release notes for 1.0.1](docs/RELEASE_NOTES_1.0.1.md)
+- [Release notes for 1.1.0](docs/RELEASE_NOTES_1.1.0.md)
 - [Version history](docs/VERSION_HISTORY.md)
 - [Third-party notices and licenses](docs/THIRD_PARTY_NOTICES.md)
 
@@ -184,4 +184,4 @@ The application uses Kotlin and Compose Multiplatform, Vosk for offline speech r
 
 ### Project status
 
-Version **1.0.1** is the currently published Windows release, available from [GitHub Releases](https://github.com/Gig81/KiwiSDR-Grabber/releases). The project does not assign a separate stable, beta, or experimental label to the application.
+Version **1.1.0** is the currently published Windows release, available from [GitHub Releases](https://github.com/Gig81/KiwiSDR-Grabber/releases). The project does not assign a separate stable, beta, or experimental label to the application.

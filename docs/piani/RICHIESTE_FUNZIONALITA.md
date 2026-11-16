@@ -6,7 +6,8 @@ Questa pagina raccoglie le richieste ricevute dagli utenti. Sono proposte per sv
 
 - **Tema chiaro:** possibilità di scegliere un tema chiaro per l'interfaccia.
 - **Scansione di frequenza:** scansione entro un intervallo configurabile, definito da una frequenza iniziale e una finale.
-- **Processamento audio:** equalizzazione e filtri DSP, applicabili sia all'audio in ascolto sia all'audio registrato.
+- **Processamento audio:** equalizzazione e filtri DSP, applicabili sia all'audio in ascolto sia all'audio registrato
+- **Aggiunta mappa:** https://rx-tx.info/map-sdr-points
 
 ## English
 
@@ -15,3 +16,4 @@ This page tracks feature requests received from users. These are proposals for f
 - **Light theme:** option to use a light interface theme.
 - **Frequency scanning:** scan within a configurable range defined by start and end frequencies.
 - **Audio processing:** equalization and DSP filters applicable to both live listening and recorded audio.
+- **Add map:** https://rx-tx.info/map-sdr-points

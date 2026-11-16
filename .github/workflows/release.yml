@@ -108,7 +108,7 @@ jobs:
           cp "$apk" "android-apk/KiwiSDRGrabber-$VERSION.apk"
 
       - name: Artifact APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-apk
           path: android-apk/
@@ -161,7 +161,7 @@ jobs:
         run: .\gradlew.bat --no-daemon "-Pkiwi.android=false" :composeApp:packageMsiRelease :composeApp:packageExeRelease
 
       - name: APK Android
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: android-apk
           path: android-apk
@@ -174,7 +174,7 @@ jobs:
           ./scripts/release/Prepare-ReleaseAssets.ps1 -Version '${{ steps.version.outputs.version }}' -OutputDir release-assets -ExtraFiles $apk[0].FullName
 
       - name: Attestazione di provenienza
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             release-assets/*.msi
@@ -184,7 +184,7 @@ jobs:
             release-assets/SHA256SUMS.txt
 
       - name: Artifact del workflow
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-assets-${{ steps.version.outputs.version }}
           path: release-assets/

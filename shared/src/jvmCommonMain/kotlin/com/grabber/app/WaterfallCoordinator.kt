@@ -23,17 +23,17 @@ internal class WaterfallCoordinator(
     private val client: KiwiClient,
     private val waterfallClient: WaterfallClient,
     private val buffer: WaterfallBuffer,
-    private val appSettings: AppSettings
+    private val preferences: WaterfallPreferences
 ) {
     private companion object {
         const val TAG = "WaterfallCoordinator"
         const val RETRY_DELAY_MS = 2000L
     }
 
-    private val _palette = MutableStateFlow(appSettings.settings.value.waterfallPalette)
+    private val _palette = MutableStateFlow(preferences.palette)
     val palette: StateFlow<WaterfallPaletteType> = _palette.asStateFlow()
 
-    private val _autoFollow = MutableStateFlow(appSettings.settings.value.waterfallAutoFollowVfo)
+    private val _autoFollow = MutableStateFlow(preferences.autoFollow)
     val autoFollow: StateFlow<Boolean> = _autoFollow.asStateFlow()
 
     @Volatile private var isStreamRequested = false
@@ -44,11 +44,18 @@ internal class WaterfallCoordinator(
         retryWhenTransientlyDisconnected()
     }
 
-    fun applyPersistedSettings(settings: SettingsData, initialFrequencyKhz: Double) {
-        waterfallClient.clientName = settings.callsign
-        waterfallClient.setDbRange(settings.waterfallMinDb, settings.waterfallMaxDb)
-        waterfallClient.setSpeed(settings.waterfallSpeed)
-        waterfallClient.setZoom(settings.waterfallZoom)
+    fun applyPersistedSettings(
+        clientName: String,
+        minDb: Int,
+        maxDb: Int,
+        speed: Int,
+        zoom: Int,
+        initialFrequencyKhz: Double
+    ) {
+        waterfallClient.clientName = clientName
+        waterfallClient.setDbRange(minDb, maxDb)
+        waterfallClient.setSpeed(speed)
+        waterfallClient.setZoom(zoom)
         waterfallClient.setCenterFrequency(initialFrequencyKhz)
     }
 
@@ -81,7 +88,7 @@ internal class WaterfallCoordinator(
 
     fun setZoom(zoom: Int) {
         waterfallClient.setZoom(zoom)
-        appSettings.setWaterfallZoom(waterfallClient.currentZoom.value)
+        preferences.saveZoom(waterfallClient.currentZoom.value)
     }
 
     fun zoomBy(delta: Int) = setZoom(waterfallClient.currentZoom.value + delta)
@@ -90,24 +97,24 @@ internal class WaterfallCoordinator(
 
     fun setPalette(palette: WaterfallPaletteType) {
         _palette.value = palette
-        appSettings.setWaterfallPalette(palette)
+        preferences.savePalette(palette)
         buffer.recolor(minDb = waterfallClient.minDb.value, maxDb = waterfallClient.maxDb.value, palette = palette)
     }
 
     fun setDbRange(minDb: Int, maxDb: Int) {
         waterfallClient.setDbRange(minDb, maxDb)
-        appSettings.setWaterfallDbRange(minDb, maxDb)
+        preferences.saveDbRange(minDb, maxDb)
         buffer.recolor(minDb = minDb, maxDb = maxDb, palette = _palette.value)
     }
 
     fun setSpeed(speed: Int) {
         waterfallClient.setSpeed(speed)
-        appSettings.setWaterfallSpeed(speed)
+        preferences.saveSpeed(speed)
     }
 
     fun setAutoFollow(autoFollow: Boolean, currentFrequencyKhz: Double) {
         _autoFollow.value = autoFollow
-        appSettings.setWaterfallAutoFollow(autoFollow)
+        preferences.saveAutoFollow(autoFollow)
         if (autoFollow) waterfallClient.setCenterFrequency(currentFrequencyKhz)
     }
 

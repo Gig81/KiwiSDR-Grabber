@@ -85,6 +85,15 @@ object KiwiProtocol {
     }
 
     /**
+     * Richiede tutte le etichette DX memorizzate sul ricevitore (risposta `MSG mkr=`).
+     * Il server accetta solo la variante completa a 8 parametri, con la maschera in esadecimale
+     * `0x…`: una variante sconosciuta viene trattata come app non Kiwi (`too_busy` e disconnessione).
+     * `filter_tod=0` e `anti_clutter=0` restituiscono l'elenco completo, senza filtri di orario o spaziatura.
+     */
+    fun dxMarkers(): String =
+        "SET MARKER db=0 min=0.000 max=30000.000 zoom=0 width=1024 eibi_types_mask=0xffffffff filter_tod=0 anti_clutter=0"
+
+    /**
      * Comando di keepalive richiesto per mantenere la sessione attiva.
      */
     val keepalive = "SET keepalive"

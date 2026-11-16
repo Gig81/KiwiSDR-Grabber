@@ -4,26 +4,13 @@ import com.sun.jna.platform.win32.Crypt32Util
 import com.sun.jna.platform.win32.WinCrypt
 import java.util.Base64
 
-/**
- * Protegge i valori sensibili delle impostazioni (password del ricevitore, token Telegram)
- * prima che vengano scritti su disco.
- */
-interface SecretCipher {
-    fun encrypt(plainText: String): String
-    fun decrypt(storedValue: String): String
-
-    /** Indica un valore salvato in chiaro da una versione precedente, da cifrare al prossimo salvataggio. */
-    fun isUnprotected(storedValue: String): Boolean
-
-    companion object {
-        fun forCurrentPlatform(): SecretCipher =
-            if (System.getProperty("os.name").orEmpty().startsWith("Windows", ignoreCase = true)) {
-                DpapiSecretCipher
-            } else {
-                PlainTextSecretCipher
-            }
+/** Cifratura delle impostazioni desktop: DPAPI su Windows, nessuna altrove (l'app è distribuita solo per Windows). */
+fun desktopSecretCipher(): SecretCipher =
+    if (System.getProperty("os.name").orEmpty().startsWith("Windows", ignoreCase = true)) {
+        DpapiSecretCipher
+    } else {
+        PlainTextSecretCipher
     }
-}
 
 /**
  * Cifratura con Windows DPAPI (`CryptProtectData`) legata all'account Windows corrente:
@@ -59,11 +46,4 @@ object DpapiSecretCipher : SecretCipher {
 
     override fun isUnprotected(storedValue: String): Boolean =
         storedValue.isNotEmpty() && !storedValue.startsWith(PREFIX)
-}
-
-/** Ripiego per sistemi senza DPAPI: l'app è distribuita solo per Windows. */
-object PlainTextSecretCipher : SecretCipher {
-    override fun encrypt(plainText: String) = plainText
-    override fun decrypt(storedValue: String) = storedValue
-    override fun isUnprotected(storedValue: String) = false
 }

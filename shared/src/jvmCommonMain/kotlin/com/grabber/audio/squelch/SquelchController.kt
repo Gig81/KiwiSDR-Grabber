@@ -42,7 +42,8 @@ class SquelchController(
     initialSoftMuteMs: Int = 10,
     initialPreBufferMs: Int = 400,
     initialHangTimeSeconds: Double = 3.5,
-    val vad: VoiceActivityDetector = HfSpectralVad(sampleRate = sampleRate)
+    /** Voice Activity Detector; `null` lo disattiva (es. su Android, per ridurre i consumi). */
+    val vad: VoiceActivityDetector? = HfSpectralVad(sampleRate = sampleRate)
 ) {
     companion object {
         private const val TAG = "SquelchController"
@@ -155,11 +156,11 @@ class SquelchController(
     }
 
     fun setVadSensitivity(sensitivity: Float) {
-        vad.sensitivityThreshold = sensitivity.coerceIn(0.1f, 0.9f)
+        vad?.sensitivityThreshold = sensitivity.coerceIn(0.1f, 0.9f)
     }
 
     fun setVadHangoverMs(ms: Int) {
-        vad.hangoverMs = ms.coerceIn(50, 1000)
+        vad?.hangoverMs = ms.coerceIn(50, 1000)
     }
 
     private fun updateListenFaderTarget() {
@@ -187,11 +188,11 @@ class SquelchController(
         val currentState = _state.value
 
         // 1. Analisi Voice Activity Detection sul blocco PCM
-        val vadRes = vad.process(frame.pcmBytes)
+        val vadRes = vad?.process(frame.pcmBytes)
         _lastVadResult.value = vadRes
 
-        val hasVoice = vadRes.isVoice
-        val isQrn = vadRes.isImpulseNoise
+        val hasVoice = vadRes?.isVoice == true
+        val isQrn = vadRes?.isImpulseNoise == true
 
         val voiceStateChanged = _isVoiceDetected.value != hasVoice
         if (voiceStateChanged) {
@@ -201,8 +202,8 @@ class SquelchController(
             _isQrnDetected.value = isQrn
         }
         // Throttling StateFlow confidenza per evitare ricomposizioni Compose eccessive (Regola 6) - min 60ms
-        if (voiceStateChanged || (now - lastVadConfidenceEmitTime >= 60L && abs(_vadConfidence.value - vadRes.confidence) >= 0.05f)) {
-            _vadConfidence.value = vadRes.confidence
+        if (voiceStateChanged || (now - lastVadConfidenceEmitTime >= 60L && abs(_vadConfidence.value - (vadRes?.confidence ?: 0f)) >= 0.05f)) {
+            _vadConfidence.value = vadRes?.confidence ?: 0f
             lastVadConfidenceEmitTime = now
         }
 
@@ -380,7 +381,7 @@ class SquelchController(
         _vadConfidence.value = 0f
         isRecordingSegmentTriggered = false
         preBuffer.clear()
-        vad.reset()
+        vad?.reset()
         updateListenFaderTarget()
         recordFader.reset(open = false)
     }

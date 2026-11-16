@@ -41,7 +41,7 @@ jobs:
       - name: Build Kotlin Desktop
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon --no-build-cache :shared:compileKotlinDesktop :composeApp:compileKotlinDesktop
+          ./gradlew --no-daemon --no-build-cache -Pkiwi.android=false :shared:compileKotlinDesktop :composeApp:compileKotlinDesktop
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4

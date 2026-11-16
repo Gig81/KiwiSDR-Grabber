@@ -178,3 +178,10 @@ class LicenseAndRecordingTests {
         assertEquals(8080, cp)
     }
 }
+
+class SharedLicenseVectorDesktopTests {
+    @Test
+    fun jdkVerifierAcceptsSharedAndroidVector() {
+        LicenseTestVectors.assertVerifierBehaviour(JdkEd25519SignatureVerifier)
+    }
+}

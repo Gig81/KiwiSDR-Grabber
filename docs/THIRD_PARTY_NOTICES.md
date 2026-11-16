@@ -89,3 +89,21 @@ A ogni aggiornamento delle dipendenze:
 2. elenca JAR e file nativi in `composeApp\build\compose\binaries\main\app\KiwiSDRRecorder\app\` e confrontali con le tabelle sopra;
 3. per ogni componente nuovo o con versione cambiata, verifica la licenza nel POM e nei file `LICENSE`/`NOTICE` del JAR e aggiungi il testo in `docs/licenses/` se manca;
 4. aggiorna versioni e link ai sorgenti LGPL e rigenera `lgpl-sources-<versione>.zip`.
+
+Per l'app Android (§7) l'elenco completo delle dipendenze di runtime si ottiene nel container con `.\scripts\android\build.ps1 :androidApp:dependencies --configuration releaseRuntimeClasspath`.
+
+## 7. App Android (APK/AAB)
+
+L'app Android non include le librerie desktop (SQLite JDBC, Vosk, JNA, JLayer, MP3SPI, Tritonus, Jump3r) né componenti LGPL. Il codice è ridotto da R8: delle librerie restano solo le classi usate.
+
+| Componente | Versione | Licenza | Titolari principali | Testo |
+|---|---|---|---|---|
+| Kotlin Standard Library | 2.4.21 | Apache-2.0 | JetBrains s.r.o. and Kotlin Programming Language contributors | [Apache-2.0](./licenses/Apache-2.0.txt), [NOTICE](./licenses/Kotlin-NOTICE.txt) |
+| kotlinx.coroutines (core, android) | 1.11.0 | Apache-2.0 | JetBrains s.r.o. and contributors | [Apache-2.0](./licenses/Apache-2.0.txt), [NOTICE](./licenses/kotlinx-coroutines-NOTICE.txt) |
+| kotlinx.serialization (core, json) | 1.12.0 | Apache-2.0 | JetBrains s.r.o. and contributors | [Apache-2.0](./licenses/Apache-2.0.txt), [NOTICE](./licenses/kotlinx-serialization-NOTICE.txt) |
+| AndroidX (core, activity, lifecycle, savedstate, Compose UI/foundation/material3/material-icons e dipendenze transitive) | core 1.19.1; activity 1.13.0; lifecycle 2.11.0; Compose BOM 2026.09.00 | Apache-2.0 | The Android Open Source Project | [Apache-2.0](./licenses/Apache-2.0.txt) |
+| OkHttp (`com.squareup.okhttp3:okhttp`) | 5.5.1 | Apache-2.0 | Square, Inc. | [Apache-2.0](./licenses/Apache-2.0.txt) |
+| Okio (`com.squareup.okio:okio`) | 3.18.1 | Apache-2.0 | Square, Inc. | [Apache-2.0](./licenses/Apache-2.0.txt) |
+| Bouncy Castle (`org.bouncycastle:bcprov-jdk18on`, solo API leggera Ed25519) | 1.87 | MIT (Bouncy Castle Licence) | The Legion of the Bouncy Castle Inc. | [LICENSE](./licenses/BouncyCastle-LICENSE.md) |
+
+Strumenti di build Android (Android Gradle Plugin, SDK, immagine Docker `eclipse-temurin`) non sono inclusi nei pacchetti.

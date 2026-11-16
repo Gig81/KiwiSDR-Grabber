@@ -18,7 +18,7 @@ class KiwiMessageParserTests {
 
         assertEquals(
             listOf(
-                KiwiUserEntry(0, "IK7ABC Mario", 27205000, "am", "0:12:34"),
+                KiwiUserEntry(0, "IK7ABC Mario", 27205000, "am", "0:12:34", location = "Bari"),
                 KiwiUserEntry(2, "", 7100000, "lsb", "1:00:00")
             ),
             users
@@ -39,25 +39,6 @@ class KiwiMessageParserTests {
     fun malformedUserNameEncodingIsKeptRaw() {
         val users = KiwiMessageParser.parseUserList("""[{"i":0,"n":"100%","f":1,"m":"am","t":""}]""")
         assertEquals("100%", users.single().name)
-    }
-
-    @Test
-    fun parsesUrlEncodedDxLabelsPayload() {
-        val payload = "%7B%22dx%22%3A%5B%7B%22f%22%3A27205.0%2C%22m%22%3A1%2C%22i%22%3A%22CB%20Ch%2020%22%2C%22g%22%3A%22CB%22%7D%5D%7D"
-
-        val labels = KiwiMessageParser.parseDxLabels(payload)
-
-        assertEquals(1, labels.size)
-        assertEquals(27205.0, labels.single().f)
-        assertEquals("CB Ch 20", labels.single().i)
-        assertEquals(ModulationMode.AM, labels.single().mode)
-    }
-
-    @Test
-    fun emptyDxPayloadProducesNoLabels() {
-        assertTrue(KiwiMessageParser.parseDxLabels("").isEmpty())
-        assertTrue(KiwiMessageParser.parseDxLabels(" [] ").isEmpty())
-        assertTrue(KiwiMessageParser.parseDxLabels("nessun array").isEmpty())
     }
 
     @Test

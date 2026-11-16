@@ -32,8 +32,9 @@ jobs:
       - name: Gradle
         uses: gradle/actions/setup-gradle@v5
 
+      # Il runner ha l'SDK Android preinstallato: qui serve solo la build desktop.
       - name: Compilazione e test
-        run: .\gradlew.bat --no-daemon :composeApp:compileKotlinDesktop :shared:desktopTest
+        run: .\gradlew.bat --no-daemon "-Pkiwi.android=false" :composeApp:compileKotlinDesktop :shared:desktopTest
 
       - name: Report dei test
         if: failure()
@@ -41,4 +42,42 @@ jobs:
         with:
           name: test-reports
           path: shared/build/reports/tests/
+          if-no-files-found: ignore
+
+  android:
+    name: Test host e lint (Android)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: JDK 21 (Eclipse Temurin)
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: SDK Android
+        # Stesse versioni dell'immagine Docker di sviluppo (docker/android-build/Dockerfile).
+        run: |
+          platform=$(sed -n 's/^ARG ANDROID_PLATFORM=//p' docker/android-build/Dockerfile)
+          build_tools=$(sed -n 's/^ARG ANDROID_BUILD_TOOLS=//p' docker/android-build/Dockerfile)
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;$platform" "build-tools;$build_tools" > /dev/null
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Test host, lint e APK di debug
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon -Pkiwi.android=true :shared:testAndroidHostTest :androidApp:lintDebug :androidApp:assembleDebug
+
+      - name: Report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-reports
+          path: |
+            shared/build/reports/
+            androidApp/build/reports/
           if-no-files-found: ignore

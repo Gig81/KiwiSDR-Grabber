@@ -1,38 +1,39 @@
 package com.grabber.model
 
-import kotlinx.serialization.Serializable
-
 /**
- * Rappresenta un'etichetta/segnalibro DX fornito dal server KiwiSDR tramite il comando load_dxcfg.
+ * Canale (etichetta DX) memorizzato sul ricevitore KiwiSDR, ricevuto con il messaggio `mkr`
+ * in risposta a `SET MARKER` (vedi [com.grabber.kiwi.KiwiProtocol.dxMarkers]).
  *
- * @param f Frequenza in kHz
- * @param o Offset (solitamente 0)
- * @param m Modalità: 1=AM, 2=LSB, 3=USB, 4=CW, 5=NFM
- * @param w Larghezza filtro / passband
- * @param i Nome identificativo / label del canale
- * @param g Gruppo / Categoria (es. LW, MW, HAM, CB)
- * @param p Passband offset
- * @param e Flag estesi
+ * @param id Indice dell'etichetta nel database DX del ricevitore (`g`).
+ * @param frequencyKhz Frequenza in kHz (`f`).
+ * @param mode Modalità ricavata dai bit di `fl`, ricondotta alle modalità supportate dall'app.
+ * @param name Identificativo già decodificato (`i`); può essere vuoto.
+ * @param notes Note già decodificate (`n`); può essere vuoto.
  */
-@Serializable
 data class KiwiDxLabel(
-    val f: Double,
-    val o: Double = 0.0,
-    val m: Int = 1,
-    val w: Double = 0.0,
-    val i: String = "",
-    val g: String = "",
-    val p: Int = 0,
-    val e: Int = 0
+    val id: Int,
+    val frequencyKhz: Double,
+    val mode: ModulationMode,
+    val name: String,
+    val notes: String = ""
 ) {
-    val mode: ModulationMode
-        get() = when (m) {
-            1 -> ModulationMode.AM
-            2 -> ModulationMode.LSB
-            3 -> ModulationMode.USB
-            4 -> ModulationMode.CW
-            5 -> ModulationMode.NFM
-            else -> ModulationMode.AM
-        }
-}
+    companion object {
+        private const val DX_MODE_MASK = 0x0000000f
+        private const val DX_MODE_16 = 0x00040000
 
+        /**
+         * Il modo è un indice nell'elenco `modes_lc` del client web KiwiSDR:
+         * am, amn, usb, lsb, cw, cwn, nbfm, iq, drm, usn, lsn, sam, sau, sal, sas, qam, nnfm, amw.
+         */
+        fun modeFromFlags(flags: Int): ModulationMode {
+            val index = (if (flags and DX_MODE_16 != 0) 16 else 0) or (flags and DX_MODE_MASK)
+            return when (index) {
+                2, 9, 12 -> ModulationMode.USB
+                3, 10, 13 -> ModulationMode.LSB
+                4, 5 -> ModulationMode.CW
+                6, 16 -> ModulationMode.NFM
+                else -> ModulationMode.AM
+            }
+        }
+    }
+}

@@ -5,43 +5,48 @@ import com.grabber.app.FavoriteFrequency
 import com.grabber.app.defaultFavorites
 import com.grabber.model.KiwiDxLabel
 import com.grabber.model.ModulationMode
-import kotlinx.serialization.json.Json
+import com.grabber.kiwi.KiwiMessageParser
+import com.grabber.kiwi.KiwiProtocol
 import java.nio.file.Files
 import kotlin.test.*
 
 class BookmarksAndDxTests {
 
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    /** Estratto di una risposta reale `MSG mkr=` (KiwiSDR v1.902) a [KiwiProtocol.dxMarkers]. */
+    @Test
+    fun testParseDxMarkersResponse() {
+        val payload = """[{"t":4,"n":1113,"s":1794835611,"m":805,"f":0,"pe":0,"fe":0,"tc":[242,831,31,0,2,7,0,0,0,0,0,0,0,0,0,0]},""" +
+            """{"g":0,"f":11.900,"lo":0,"hi":0,"o":0,"s":0,"fl":65045,"b":0,"e":2400,"c":"","l":"","t":"","i":"Alpha%20F1%20RUS","n":"navigation%20system"},""" +
+            """{"g":528,"f":6980.000,"lo":0,"hi":0,"o":0,"s":0,"fl":65066,"b":0,"e":2400,"c":"","l":"","t":"","i":"Pirati%2040%20metri"},""" +
+            """{"g":531,"f":7040.000,"lo":0,"hi":0,"o":0,"s":0,"fl":65026,"b":0,"e":2400,"c":"","l":"","t":"","i":"PSK%2031"},""" +
+            """{"g":532,"f":7055.000,"lo":0,"hi":0,"o":0,"s":0,"fl":327169,"b":0,"e":2400,"c":"","l":"","t":"","i":"7055%20-%20AM%20ex%207045"},""" +
+            """{"g":158,"f":1008.000,"lo":0,"hi":0,"o":0,"s":0,"fl":65024,"b":0,"e":2400,"c":"","l":"","t":"","i":""}]"""
+
+        val labels = assertNotNull(KiwiMessageParser.parseDxMarkers(payload))
+        assertEquals(5, labels.size)
+
+        assertEquals(KiwiDxLabel(0, 11.9, ModulationMode.CW, "Alpha F1 RUS", "navigation system"), labels[0])
+        assertEquals("Pirati 40 metri", labels[1].name)
+        assertEquals(ModulationMode.LSB, labels[1].mode)   // lsn
+        assertEquals(ModulationMode.USB, labels[2].mode)   // usb
+        assertEquals(ModulationMode.AM, labels[3].mode)    // amw (bit DX_MODE_16)
+        assertEquals("", labels[4].name)
+        assertEquals(1008.0, labels[4].frequencyKhz)
+    }
 
     @Test
-    fun testParseKiwiDxLabelsJson() {
-        val rawJson = """
-            [
-                {"f":198,"o":0,"m":1,"w":0,"i":"BBC Radio 4 (Droitwich)","g":"LW","p":0,"e":0},
-                {"f":7100,"o":0,"m":2,"w":0,"i":"40m LSB Calling","g":"HAM","p":0,"e":0},
-                {"f":14200,"o":0,"m":3,"w":0,"i":"20m USB Calling","g":"HAM","p":0,"e":0},
-                {"f":27205,"o":0,"m":1,"w":0,"i":"CB Ch 20 Puglia","g":"CB","p":0,"e":0}
-            ]
-        """.trimIndent()
+    fun testParseDxMarkersIgnoresOtherResponses() {
+        assertEquals(emptyList(), KiwiMessageParser.parseDxMarkers("""[{"t":4}]"""))
+        assertNull(KiwiMessageParser.parseDxMarkers("""[{"t":2},{"g":1,"f":7000.0,"fl":2,"i":"x"}]"""))
+    }
 
-        val labels = json.decodeFromString<List<KiwiDxLabel>>(rawJson)
-        assertEquals(4, labels.size)
-
-        assertEquals(198.0, labels[0].f)
-        assertEquals("BBC Radio 4 (Droitwich)", labels[0].i)
-        assertEquals("LW", labels[0].g)
-        assertEquals(ModulationMode.AM, labels[0].mode)
-
-        assertEquals(7100.0, labels[1].f)
-        assertEquals(ModulationMode.LSB, labels[1].mode)
-
-        assertEquals(14200.0, labels[2].f)
-        assertEquals(ModulationMode.USB, labels[2].mode)
-
-        assertEquals(27205.0, labels[3].f)
-        assertEquals("CB Ch 20 Puglia", labels[3].i)
-        assertEquals("CB", labels[3].g)
-        assertEquals(ModulationMode.AM, labels[3].mode)
+    @Test
+    fun testDxMarkersCommandMatchesServerSyntax() {
+        // Il server riconosce solo la variante a 8 parametri con maschera `0x…`.
+        assertEquals(
+            "SET MARKER db=0 min=0.000 max=30000.000 zoom=0 width=1024 eibi_types_mask=0xffffffff filter_tod=0 anti_clutter=0",
+            KiwiProtocol.dxMarkers()
+        )
     }
 
     @Test

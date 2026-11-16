@@ -14,7 +14,9 @@ Questo documento raccoglie tutti i requisiti di sistema, i tool necessari per lo
 | **JDK (Java)** | Qualsiasi OpenJDK 17+ per lo sviluppo; **Eclipse Temurin 21** per creare gli installer di release | `17` (minimo richiesto 17) |
 | **Networking** | `java.net.http` del JDK (HttpClient, WebSocket) | JDK `17` |
 | **Concorrenza** | Kotlinx Coroutines & Flow | `1.11.0` |
-| **Persistenza Locale** | SQLite JDBC (Desktop) / Room-SQLDelight | `3.54.1.0` |
+| **Persistenza Locale** | SQLite JDBC (solo Desktop); JSON atomico in `filesDir` su Android | `3.54.1.0` |
+| **Networking Android** | OkHttp (WebSocket) | `5.5.1` |
+| **Android** | AGP / compileSdk / targetSdk / minSdk | `9.5.1` / `37` / `36` / `29` |
 
 La versione dell'applicazione è centralizzata nella proprietà `appVersion` di `gradle.properties`; viene usata per la versione Gradle, il titolo della finestra e i pacchetti desktop.
 
@@ -80,65 +82,75 @@ Il 10 novembre 2026 l'utente ha verificato con esito positivo installazione e av
 
 ## 3. Sviluppo e Rilascio — Mobile (Android)
 
-*Nota: Questa sezione guiderà la configurazione non appena il download e l'installazione di Android Studio saranno completati.*
+Ambito, architettura e stato della versione mobile: [piani/ANDROID.md](./piani/ANDROID.md).
 
-Lo stato e l'ambito iniziale della versione mobile sono riepilogati in [piani/ANDROID.md](./piani/ANDROID.md). I parametri e i comandi riportati qui sotto sono proposte preliminari: il target Android del progetto non è ancora configurato.
+### Parametri della build Android
 
-### Tool Necessari per lo Sviluppo Android
-1. **Android Studio** (versione Koala / Ladybug o superiore).
-2. **Android SDK (Software Development Kit)**:
-   - Installare tramite l'SDK Manager di Android Studio:
-     - **Android SDK Platform 34 o 35** (Android 14 / 15).
-     - **Android SDK Build-Tools** (versione 34.0.0 o successiva).
-     - **Android SDK Platform-Tools** (include `adb` per il debug su dispositivo fisico o emulatore).
-3. **Configurazione Percorso SDK**:
-   Assicurarsi che la variabile d'ambiente `ANDROID_HOME` sia impostata, oppure creare un file `local.properties` nella radice del progetto:
-   ```properties
-   sdk.dir=C\:\\Users\\<TUO_UTENTE>\\AppData\\Local\\Android\\Sdk
-   ```
+| Parametro | Valore | Dove |
+| :--- | :--- | :--- |
+| `applicationId` / `namespace` app | `com.gig81.kiwisdrgrabber` (definitivo: cambiarlo cambia gli ID dispositivo) | `androidApp/build.gradle.kts` |
+| `minSdk` | `29` (Android 10, nessun permesso di storage) | `gradle/libs.versions.toml` |
+| `compileSdk` | `37` (richiesto da AndroidX Core 1.19) | `gradle/libs.versions.toml` |
+| `targetSdk` | `36` (requisito Play Store attuale) | `gradle/libs.versions.toml` |
+| Android Gradle Plugin | `9.5.1` (`com.android.application`, `com.android.kotlin.multiplatform.library`) | `gradle/libs.versions.toml` |
+| `versionName` / `versionCode` | da `appVersion` (`1.2.3` → `10203`) | `androidApp/build.gradle.kts` |
 
-### Integrazione nel Progetto Gradle per Android (Fase successiva)
-Per attivare il target Android:
-- Aggiunta del plugin `com.android.application` in `composeApp/build.gradle.kts` e `com.android.library` in `shared/build.gradle.kts`.
-- Configurazione dei parametri Android:
-  ```kotlin
-  android {
-      namespace = "com.grabber"
-      compileSdk = 35
-      defaultConfig {
-          applicationId = "com.grabber.kiwirecorder"
-          minSdk = 24       // Android 7.0+
-          targetSdk = 35
-          versionCode = 1
-          versionName = "1.0.0"
-      }
-  }
-  ```
+### Attivazione condizionale del target Android
 
-### Strumenti e Procedura di Rilascio Android
+Il modulo `androidApp` e il target Android di `:shared` si attivano **solo se l'SDK Android è disponibile**: variabile `ANDROID_HOME`/`ANDROID_SDK_ROOT` oppure `sdk.dir` in `local.properties` (non versionato). In alternativa si forza con `-Pkiwi.android=true|false`. Sul PC di sviluppo desktop senza SDK la build resta identica a prima (`settings.gradle.kts`).
 
-1. **Generazione della Chiave di Firma (Keystore Release):**
-   Utilizzare lo strumento `keytool` (fornito dal JDK):
+### Build nel container Docker (consigliata, nessuna installazione sul PC)
+
+L'ambiente Android (JDK 21 Temurin + SDK a riga di comando, platform 37, build-tools 37) è descritto in `docker/android-build/Dockerfile`. Lo script lo costruisce al primo uso e lancia Gradle nel container:
+
+```powershell
+.\scripts\android\build.ps1                                   # :androidApp:assembleDebug
+.\scripts\android\build.ps1 :shared:testAndroidHostTest :androidApp:lintDebug :androidApp:assembleDebug
+.\scripts\android\build.ps1 :androidApp:assembleRelease :androidApp:bundleRelease
+.\scripts\android\build.ps1 -Rebuild                          # ricostruisce l'immagine
+```
+
+- Il repository è montato in sola lettura e copiato nel volume `kiwigrabber-android-work`: le cartelle `build/` e `.gradle/` di Windows non vengono toccate.
+- La cache Gradle resta nel volume `kiwigrabber-android-gradle` (build successive più rapide).
+- APK, AAB e report (test, lint) vengono copiati in `build\android-out\`.
+- Docker Desktop su Windows non espone KVM: l'emulatore Android non è utilizzabile nel container. Il collaudo si fa su dispositivo fisico installando l'APK di debug (`build\android-out\apk\debug\androidApp-debug.apk`).
+
+### Build con Android Studio (alternativa)
+
+Con Android Studio installato (SDK Platform 37, Build-Tools 37, Platform-Tools) e `local.properties` con `sdk.dir`, il target Android si attiva da solo e i comandi sono gli stessi:
+
+```powershell
+.\gradlew.bat :androidApp:assembleDebug
+.\gradlew.bat :shared:testAndroidHostTest
+```
+
+### Firma e rilascio Android
+
+1. **Due chiavi**, custodite con backup offline **fuori dal repository** (`*.jks` è già in `.gitignore`), con le password in un password manager:
+   - **chiave di firma dell'app** (`kiwigrabber-release.jks`, alias `kiwigrabber`): firma l'APK GitHub ed è caricata una sola volta su Play App Signing, quindi è la stessa sui due canali (vedi `piani/ANDROID.md` §5.2). Non è sostituibile: perderla impedisce gli aggiornamenti e invalida tutte le licenze Android;
+   - **chiave di upload** (`kiwigrabber-upload.jks`, alias `upload`): firma solo l'AAB caricato su Play; in caso di perdita Google la sostituisce.
    ```powershell
-   keytool -genkey -v -keystore release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias kiwi-release
+   keytool -genkeypair -v -keystore kiwigrabber-release.jks -storetype PKCS12 -keyalg RSA -keysize 4096 -validity 10000 -alias kiwigrabber
+   keytool -genkeypair -v -keystore kiwigrabber-upload.jks -storetype PKCS12 -keyalg RSA -keysize 4096 -validity 10000 -alias upload
    ```
+   `keytool` è incluso nel JDK. Con PKCS12 la password della chiave coincide con quella del keystore.
+2. **Configurazione della firma** senza segreti nel repository, in `~/.gradle/gradle.properties` oppure come variabili d'ambiente:
 
-2. **Compilazione del Pacchetto APK per Installazione Diretta:**
+   | Proprietà Gradle | Variabile d'ambiente |
+   | :--- | :--- |
+   | `kiwi.signing.storeFile` | `KIWI_SIGNING_STORE_FILE` |
+   | `kiwi.signing.storePassword` | `KIWI_SIGNING_STORE_PASSWORD` |
+   | `kiwi.signing.keyAlias` | `KIWI_SIGNING_KEY_ALIAS` |
+   | `kiwi.signing.keyPassword` | `KIWI_SIGNING_KEY_PASSWORD` |
+
+   Senza queste proprietà la release viene prodotta **non firmata** (`androidApp-release-unsigned.apk`). Nel container lo script fa tutto da solo con `-Keystore`: monta in sola lettura la cartella del keystore (che deve stare fuori dal repository), chiede la password senza mostrarla (oppure la legge da `$env:KIWI_SIGNING_STORE_PASSWORD`) e la passa al container come variabile d'ambiente, senza scriverla su disco né nella riga di comando:
    ```powershell
-   .\gradlew.bat :composeApp:assembleRelease
+   .\scripts\android\build.ps1 -Keystore "$env:USERPROFILE\KiwiGrabberKeys\kiwigrabber-release.jks" :androidApp:assembleRelease
+   .\scripts\android\build.ps1 -Keystore "$env:USERPROFILE\KiwiGrabberKeys\kiwigrabber-upload.jks" -KeyAlias upload :androidApp:bundleRelease
    ```
-   - Genera il file `.apk` firmabile e installabile su qualsiasi smartphone o tablet Android (anche tramite sideloading o comando `adb install`).
-
-3. **Compilazione del Pacchetto AAB (Android App Bundle) per Google Play Store:**
-   ```powershell
-   .\gradlew.bat :composeApp:bundleRelease
-   ```
-   - Genera il file `.aab` ottimizzato da caricare sulla Google Play Console.
-
-4. **Verifica e Allineamento del Pacchetto:**
-   Gli strumenti inclusi nei Build-Tools dell'SDK:
-   - `zipalign`: ottimizza l'allineamento dei byte dell'archivio APK.
-   - `apksigner`: verifica la validità della firma crittografica v2/v3 dell'APK prima della distribuzione.
+3. **APK** per GitHub (`:androidApp:assembleRelease`, chiave dell'app) e **AAB** per Play Store (`:androidApp:bundleRelease`, chiave di upload), con R8 attivo (APK di release ≈ 3 MB).
+4. **Verifica della firma**: dopo una build con `-Keystore` lo script esegue `apksigner verify --print-certs` sugli APK di release. L'impronta SHA-256 del certificato dell'APK GitHub e di quello installato da Play deve coincidere con quella della chiave dell'app.
+5. Nessun APK/AAB va committato nel repository.
 
 ---
 
@@ -152,6 +164,7 @@ Per attivare il target Android:
 | **Creare cartella portabile Desktop** | `.\gradlew.bat :composeApp:createDistributable` |
 | **Creare installer di release Windows (.msi)** | `.\gradlew.bat :composeApp:packageMsiRelease` |
 | **Creare installer di release Windows (.exe)** | `.\gradlew.bat :composeApp:packageExeRelease` |
-| **Compilare APK Android (Debug)** | `.\gradlew.bat :composeApp:assembleDebug` |
-| **Compilare APK Android (Release)** | `.\gradlew.bat :composeApp:assembleRelease` |
+| **Compilare APK Android (Debug) nel container** | `.\scripts\android\build.ps1` |
+| **Test host, lint e APK Android nel container** | `.\scripts\android\build.ps1 :shared:testAndroidHostTest :androidApp:lintDebug :androidApp:assembleDebug` |
+| **Compilare APK e AAB Android di release nel container** | `.\scripts\android\build.ps1 :androidApp:assembleRelease :androidApp:bundleRelease` |
 | **Pulire cache di build** | `.\gradlew.bat clean` |

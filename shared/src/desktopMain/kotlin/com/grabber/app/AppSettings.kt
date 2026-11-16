@@ -16,35 +16,8 @@ import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
-@Serializable
-data class FavoriteFrequency(
-    val name: String,
-    val frequencyKhz: Double,
-    val modeCode: String, // "am", "usb", "lsb", "cw", "nbfm"
-    val group: String = "", // "LW", "MW", "HAM", "CB", "BC", ecc.
-    val scanEnabled: Boolean = false // Incluso nella scansione dei canali
-) {
-    val mode: ModulationMode get() = ModulationMode.entries.find { it.code == modeCode } ?: ModulationMode.AM
-}
-
-const val DEFAULT_SERVER_ADDRESS = KiwiServerDefaults.ADDRESS
-
 const val DEFAULT_SCAN_DWELL_SECONDS = 3
 val SCAN_DWELL_SECONDS_RANGE = 1..30
-
-fun parseServerAddress(address: String): Pair<String, Int> {
-    var clean = address.trim()
-    if (clean.startsWith("http://", ignoreCase = true)) clean = clean.substring(7)
-    if (clean.startsWith("https://", ignoreCase = true)) clean = clean.substring(8)
-    if (clean.startsWith("ws://", ignoreCase = true)) clean = clean.substring(5)
-    if (clean.startsWith("wss://", ignoreCase = true)) clean = clean.substring(6)
-    while (clean.endsWith("/")) clean = clean.substring(0, clean.length - 1)
-
-    val parts = clean.split(":")
-    val host = parts[0].trim().ifEmpty { KiwiServerDefaults.HOST }
-    val port = if (parts.size > 1) parts[1].filter { it.isDigit() }.toIntOrNull() ?: KiwiServerDefaults.PORT else KiwiServerDefaults.PORT
-    return Pair(host, port)
-}
 
 @Serializable
 data class SettingsData(
@@ -218,7 +191,7 @@ private const val LEGACY_CB_NAME_PREFIX = "CB Ch1 - 26965"
 
 class AppSettings(
     private val settingsDir: File,
-    private val secretCipher: SecretCipher = SecretCipher.forCurrentPlatform()
+    private val secretCipher: SecretCipher = desktopSecretCipher()
 ) {
     private val settingsFile = File(settingsDir, SETTINGS_FILE_NAME)
     private val saveLock = Any()
@@ -509,4 +482,15 @@ class AppSettings(
     fun setWaterfallAutoFollow(autoFollow: Boolean) {
         updateAndSave { it.copy(waterfallAutoFollowVfo = autoFollow) }
     }
+}
+
+/** Collega le impostazioni del waterfall condiviso ([WaterfallCoordinator]) a `settings.json`. */
+internal class AppSettingsWaterfallPreferences(private val appSettings: AppSettings) : WaterfallPreferences {
+    override val palette: com.grabber.waterfall.WaterfallPaletteType get() = appSettings.settings.value.waterfallPalette
+    override val autoFollow: Boolean get() = appSettings.settings.value.waterfallAutoFollowVfo
+    override fun savePalette(palette: com.grabber.waterfall.WaterfallPaletteType) = appSettings.setWaterfallPalette(palette)
+    override fun saveDbRange(minDb: Int, maxDb: Int) = appSettings.setWaterfallDbRange(minDb, maxDb)
+    override fun saveSpeed(speed: Int) = appSettings.setWaterfallSpeed(speed)
+    override fun saveZoom(zoom: Int) = appSettings.setWaterfallZoom(zoom)
+    override fun saveAutoFollow(autoFollow: Boolean) = appSettings.setWaterfallAutoFollow(autoFollow)
 }

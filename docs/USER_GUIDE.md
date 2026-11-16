@@ -1,6 +1,6 @@
 # KiwiSDR Grabber: Guida rapida e manuale utente
 
-Questa guida descrive l'applicazione desktop per Windows. L'interfaccia attuale è in italiano.
+Questa guida descrive l'applicazione desktop per Windows; la versione Android è descritta nella [sezione 12](#12-versione-android). L'interfaccia attuale è in italiano.
 
 **[Italiano](#italiano) | [English](#english)**
 
@@ -221,9 +221,57 @@ Se il problema persiste, apri una segnalazione nelle [GitHub Issues](https://git
 - [Scarica la release attuale](https://github.com/Gig81/KiwiSDR-Grabber/releases)
 - [Segnala un problema o richiedi una funzione](https://github.com/Gig81/KiwiSDR-Grabber/issues)
 
+### 12. Versione Android
+
+Dalla versione 1.2.0 è disponibile un'app Android per l'**ascolto**: con lo stesso ricevitore KiwiSDR offre radio, spettro e waterfall, preferiti, utenti connessi e registrazione WAV. Non include le funzioni di elaborazione e avviso del desktop (VAD, trascrizione, storico, scansione, Telegram, MP3).
+
+**Requisiti:** Android 10 o successivo e una connessione Internet. Il waterfall consuma più dati dell'audio: su rete a consumo l'app ne riduce automaticamente la velocità.
+
+#### Installazione e aggiornamento
+
+L'app per ora non è sul Play Store: si installa dal file APK pubblicato nelle GitHub Releases.
+
+1. Dal telefono apri la [pagina delle release](https://github.com/Gig81/KiwiSDR-Grabber/releases) e scarica `KiwiSDRGrabber-<versione>.apk` dalla versione più recente.
+2. Apri il file scaricato. Se Android lo chiede, consenti al browser o all'app File di **installare app sconosciute**, poi conferma l'installazione. Play Protect potrebbe mostrare un avviso o analizzare l'app, come per tutte le app installate fuori dal Play Store.
+3. Avvia **KiwiSDR Grabber**. Dopo l'attivazione, alla prima connessione Android può chiedere il permesso per le notifiche: serve a mostrare i comandi dell'ascolto in background.
+
+Per **aggiornare** scarica e installa il nuovo APK sopra quello esistente: impostazioni, preferiti e attivazione restano. Non serve disinstallare. L'app non si aggiorna da sola: controlla le release o segui il repository su GitHub.
+
+Per verificare il file scaricato, confronta il suo hash SHA-256 con la riga corrispondente di `SHA256SUMS.txt` della release (vedi [Verifica dell'installer](#verifica-dellinstaller); anche l'APK ha un'attestazione di provenienza). Tutti gli APK ufficiali sono firmati con lo stesso certificato, con impronta SHA-256 `EF:6D:6C:A3:CE:92:C7:A0:47:15:43:A1:FE:48:68:42:47:C6:B7:D4:B7:DD:8C:7E:B3:68:B4:46:EC:20:21:29`. Android rifiuta di installare un aggiornamento firmato con un certificato diverso.
+
+#### Uso
+
+L'app è divisa in cinque schede nella barra in basso:
+
+- **Radio:** connessione, frequenza (tocca il valore per inserirla, oppure usa i pulsanti con il passo scelto), modo, volume, squelch RF con soglia regolabile e S-meter. La stella aggiunge il canale sintonizzato ai preferiti personali; **Registra** avvia una registrazione WAV.
+- **Waterfall:** spettro e waterfall del ricevitore. Tocca per sintonizzare, trascina per spostarti, pizzica per lo zoom; palette e range dB sono regolabili. Il waterfall resta collegato solo mentre la scheda è visibile.
+- **Preferiti:** la sezione **Server** mostra in sola lettura i canali memorizzati sul ricevitore, caricati a ogni connessione; la sezione **Personali** contiene i tuoi canali. Entrambe hanno ricerca e filtro per banda; tocca un canale per sintonizzarlo.
+- **Utenti:** gli ascoltatori collegati al ricevitore con frequenza, modo e località.
+- **Impostazioni:** indirizzo (`host:porta`) e password del ricevitore, nome mostrato agli altri utenti e sezione **Licenza**. La password è salvata cifrata sul telefono, ma il protocollo KiwiSDR la trasmette in chiaro: non riutilizzare password importanti.
+
+Le registrazioni si trovano in **Registrazioni/KiwiGrabber** (Musica/KiwiGrabber su Android 10 e 11) e si aprono con l'app File o con un lettore musicale. Se l'app viene chiusa durante una registrazione, il file viene riparato al successivo avvio.
+
+#### Attivazione
+
+Come sul desktop, alcune funzioni richiedono un'attivazione gratuita e offline: **ascolto in background** (con schermo spento o usando altre app), **registrazione** e creazione o modifica dei **preferiti personali**. Senza attivazione, quando l'app passa in background la connessione si chiude, così il canale del ricevitore si libera per altri ascoltatori.
+
+1. In **Impostazioni → Licenza** copia o condividi l'**ID dispositivo** (`GRAB-A-…`) e invialo all'autore.
+2. Inserisci il codice `KSR1:…` ricevuto e tocca **Attiva**.
+
+Il codice vale solo per quel telefono: una licenza desktop non attiva l'app Android e viceversa. L'ID cambia dopo un ripristino di fabbrica o con un nuovo profilo utente; in quel caso richiedi un nuovo codice.
+
+#### Problemi frequenti su Android
+
+| Problema | Controlli suggeriti |
+|---|---|
+| L'audio si ferma a schermo spento | Senza attivazione è il comportamento previsto. Con l'attivazione, alcuni produttori chiudono comunque le app in background: escludi KiwiSDR Grabber dall'ottimizzazione della batteria nelle impostazioni di sistema. |
+| L'aggiornamento non si installa ("app non installata" o conflitto di pacchetto) | Installa solo APK delle release ufficiali: un APK firmato con un altro certificato non può aggiornare quello installato. |
+| Nessun canale nella sezione Server | I canali arrivano a ogni connessione: collegati e tocca **Ricarica**. Alcuni ricevitori non hanno canali memorizzati. |
+| Impossibile collegarsi | Gli stessi controlli del desktop (vedi [Risoluzione dei problemi](#10-risoluzione-dei-problemi)): indirizzo, password, canali utente del ricevitore occupati. |
+
 ## English
 
-This guide covers the Windows desktop application. The current interface is in Italian; English descriptions below include the Italian labels shown in the application where helpful.
+This guide covers the Windows desktop application; the Android version is described in [section 12](#12-android-version). The current interface is in Italian; English descriptions below include the Italian labels shown in the application where helpful.
 
 <!-- SCREENSHOT (IT/EN): finestra principale con console radio e schede dell'area di
 lavoro. Nascondere credenziali e informazioni private. / Main window with the radio
@@ -439,3 +487,51 @@ If the problem persists, report it through [GitHub Issues](https://github.com/Gi
 - [Third-party notices and license texts](./THIRD_PARTY_NOTICES.md)
 - [Download the current release](https://github.com/Gig81/KiwiSDR-Grabber/releases)
 - [Report an issue or request a feature](https://github.com/Gig81/KiwiSDR-Grabber/issues)
+
+### 12. Android version
+
+Starting with version 1.2.0 an Android **listening** app is available: with the same KiwiSDR receiver it offers radio, spectrum and waterfall, favorites, connected users, and WAV recording. It does not include the desktop processing and alert features (VAD, transcription, history, scanning, Telegram, MP3). The interface is in Italian; Italian labels are shown in parentheses.
+
+**Requirements:** Android 10 or later and an internet connection. The waterfall uses more data than audio: on metered networks the app automatically lowers its speed.
+
+#### Installation and updates
+
+The app is not on the Play Store yet: install it from the APK published in GitHub Releases.
+
+1. On the phone, open the [releases page](https://github.com/Gig81/KiwiSDR-Grabber/releases) and download `KiwiSDRGrabber-<version>.apk` from the latest version.
+2. Open the downloaded file. If Android asks, allow the browser or Files app to **install unknown apps**, then confirm the installation. Play Protect may show a warning or scan the app, as for any app installed outside the Play Store.
+3. Start **KiwiSDR Grabber**. After activation, on the first connection Android may ask for the notification permission, used to show the background-listening controls.
+
+To **update**, download and install the new APK over the existing one: settings, favorites, and activation are kept. Uninstalling is not needed. The app does not update itself: check the releases or watch the repository on GitHub.
+
+To verify the downloaded file, compare its SHA-256 hash with the matching line of the release `SHA256SUMS.txt` (see [Verifying the installer](#verifying-the-installer); the APK also has a build provenance attestation). All official APKs are signed with the same certificate, SHA-256 fingerprint `EF:6D:6C:A3:CE:92:C7:A0:47:15:43:A1:FE:48:68:42:47:C6:B7:D4:B7:DD:8C:7E:B3:68:B4:46:EC:20:21:29`. Android refuses to install an update signed with a different certificate.
+
+#### Usage
+
+The app has five tabs in the bottom bar:
+
+- **Radio:** connection, frequency (tap the value to type it, or use the buttons with the chosen step), mode, volume, RF squelch with adjustable threshold, and S-meter. The star adds the tuned channel to your personal favorites; **Record** (`Registra`) starts a WAV recording.
+- **Waterfall:** the receiver spectrum and waterfall. Tap to tune, drag to move, pinch to zoom; palette and dB range are adjustable. The waterfall stays connected only while its tab is visible.
+- **Favorites** (`Preferiti`): the **Server** section shows the channels stored on the receiver, read-only and loaded on every connection; the **Personal** section (`Personali`) holds your own channels. Both have search and a band filter; tap a channel to tune it.
+- **Users** (`Utenti`): listeners connected to the receiver with frequency, mode, and location.
+- **Settings** (`Impostazioni`): receiver address (`host:port`) and password, the name shown to other users, and the **License** section (`Licenza`). The password is stored encrypted on the phone, but the KiwiSDR protocol sends it in clear text: do not reuse important passwords.
+
+Recordings are saved in **Recordings/KiwiGrabber** (Music/KiwiGrabber on Android 10 and 11) and open with the Files app or a music player. If the app is closed during a recording, the file is repaired on the next start.
+
+#### Activation
+
+As on the desktop, some features require a free offline activation: **background listening** (screen off or while using other apps), **recording**, and creating or editing **personal favorites**. Without activation, the connection is closed when the app goes to the background, freeing the receiver channel for other listeners.
+
+1. In **Settings → License** copy or share the **device ID** (`GRAB-A-…`) and send it to the project owner.
+2. Enter the received `KSR1:…` code and tap **Activate** (`Attiva`).
+
+The code is valid only for that phone: a desktop license does not activate the Android app and vice versa. The ID changes after a factory reset or with a new user profile; in that case request a new code.
+
+#### Common Android issues
+
+| Problem | Things to check |
+|---|---|
+| Audio stops with the screen off | Expected without activation. With activation, some manufacturers still close background apps: exclude KiwiSDR Grabber from battery optimization in the system settings. |
+| The update does not install ("app not installed" or package conflict) | Install only APKs from the official releases: an APK signed with another certificate cannot update the installed one. |
+| No channels in the Server section | Channels arrive on every connection: connect and tap **Reload** (`Ricarica`). Some receivers have no stored channels. |
+| Cannot connect | Same checks as on the desktop (see [Troubleshooting](#10-troubleshooting)): address, password, receiver user channels all busy. |

@@ -16,7 +16,8 @@ internal data class KiwiUserEntry(
     val name: String,
     val freqHz: Long,
     val mode: String,
-    val connected: String
+    val connected: String,
+    val location: String = ""
 )
 
 /** Frame audio `SND` decodificato, con campioni PCM 16 bit già convertiti in little-endian. */
@@ -33,6 +34,8 @@ internal object KiwiMessageParser {
     private const val SND_HEADER_SIZE = 10
     private const val SND_FLAGS_OFFSET = 3
     private const val SND_FLAG_LITTLE_ENDIAN = 0x80
+    /** Tipo `DX_MKRS` nell'intestazione della risposta `mkr` (sorgente KiwiSDR `rx_cmd.cpp`). */
+    private const val DX_MKRS_RESPONSE = 4
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
@@ -42,15 +45,27 @@ internal object KiwiMessageParser {
         return entries.mapNotNull { (it as? JsonObject)?.toUserEntry() }
     }
 
-    /** Il payload di `load_dxcfg` può arrivare URL-encoded e racchiuso in un oggetto. */
-    fun parseDxLabels(rawPayload: String): List<KiwiDxLabel> {
-        val trimmed = rawPayload.trim()
-        if (trimmed.isEmpty() || trimmed == "[]") return emptyList()
-        val decoded = if (trimmed.contains("%")) urlDecodeOrRaw(trimmed) else trimmed
-        val arrayStart = decoded.indexOf('[')
-        val arrayEnd = decoded.lastIndexOf(']')
-        if (arrayStart < 0 || arrayEnd <= arrayStart) return emptyList()
-        return json.decodeFromString<List<KiwiDxLabel>>(decoded.substring(arrayStart, arrayEnd + 1))
+    /**
+     * Payload di `mkr=`: array JSON il cui primo elemento è un'intestazione (`t` = tipo di risposta),
+     * seguito dalle etichette `{"g","f","fl","i","n",...}` con testi URL-encoded.
+     * Restituisce `null` se la risposta non è un elenco di marcatori (es. `DX_STEP`).
+     */
+    fun parseDxMarkers(payload: String): List<KiwiDxLabel>? {
+        val entries = json.parseToJsonElement(payload.trim()) as? JsonArray ?: return null
+        val header = entries.firstOrNull() as? JsonObject ?: return null
+        if (header.stringField("t")?.toIntOrNull() != DX_MKRS_RESPONSE) return null
+        return entries.drop(1).mapNotNull { (it as? JsonObject)?.toDxLabel() }
+    }
+
+    private fun JsonObject.toDxLabel(): KiwiDxLabel? {
+        val frequencyKhz = stringField("f")?.toDoubleOrNull() ?: return null
+        return KiwiDxLabel(
+            id = stringField("g")?.toIntOrNull() ?: -1,
+            frequencyKhz = frequencyKhz,
+            mode = KiwiDxLabel.modeFromFlags(stringField("fl")?.toIntOrNull() ?: 0),
+            name = stringField("i")?.let(::urlDecodeOrRaw).orEmpty().trim(),
+            notes = stringField("n")?.let(::urlDecodeOrRaw).orEmpty().trim()
+        )
     }
 
     /**
@@ -59,13 +74,11 @@ internal object KiwiMessageParser {
      */
     fun decodeSoundFrame(bytes: ByteArray): SoundFrame? {
         if (bytes.size < SND_HEADER_SIZE) return null
+        // Letture assolute: Buffer.position(int) covariante non esiste su Android 10.
         val buffer = ByteBuffer.wrap(bytes)
-        buffer.position(SND_FLAGS_OFFSET)
-        val flags = buffer.get().toInt() and 0xFF
-        buffer.order(ByteOrder.LITTLE_ENDIAN)
-        val sequence = buffer.getInt().toLong() and 0xFFFFFFFFL
-        buffer.order(ByteOrder.BIG_ENDIAN)
-        val sMeter = buffer.getShort().toInt() and 0xFFFF
+        val flags = buffer.get(SND_FLAGS_OFFSET).toInt() and 0xFF
+        val sequence = buffer.order(ByteOrder.LITTLE_ENDIAN).getInt(SND_FLAGS_OFFSET + 1).toLong() and 0xFFFFFFFFL
+        val sMeter = buffer.order(ByteOrder.BIG_ENDIAN).getShort(SND_FLAGS_OFFSET + 5).toInt() and 0xFFFF
         val isLittleEndian = (flags and SND_FLAG_LITTLE_ENDIAN) != 0
         return SoundFrame(
             sequence = sequence,
@@ -95,7 +108,8 @@ internal object KiwiMessageParser {
             name = stringField("n")?.let(::urlDecodeOrRaw).orEmpty(),
             freqHz = freqHz,
             mode = stringField("m").orEmpty(),
-            connected = stringField("t").orEmpty()
+            connected = stringField("t").orEmpty(),
+            location = stringField("g")?.let(::urlDecodeOrRaw).orEmpty()
         )
     }
 

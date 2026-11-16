@@ -67,7 +67,7 @@ class WaterfallTests {
 
     @Test
     fun testWaterfallBinaryFrameParsing() {
-        val client = WaterfallClient()
+        val client = WaterfallClient(com.grabber.kiwi.JdkWebSocketConnector())
         client.setCenterFrequency(7100.0)
         client.setZoom(2) // span = 7500 kHz
 
@@ -101,7 +101,7 @@ class WaterfallTests {
 
     @Test
     fun testWaterfallResumesAfterPause() {
-        val client = WaterfallClient()
+        val client = WaterfallClient(com.grabber.kiwi.JdkWebSocketConnector())
         val rawPacket = ByteArray(4 + 12 + 1024)
         rawPacket[0] = 'W'.code.toByte()
         rawPacket[1] = '/'.code.toByte()

@@ -2,7 +2,7 @@
 
 ## 1. Stato e obiettivo
 
-La versione Android non è ancora implementata: `shared` e `composeApp` espongono solo il target JVM `desktop`, non esistono sorgenti `androidMain` né pacchetti APK/AAB.
+Stato al 16/11/2026: fasi 1–9 **completate** (refactoring di `shared`, target Android, modulo `androidApp`, tutte le funzioni F1–F6, gate di licenza, rifiniture di layout, collaudo su dispositivo fisico anche della release firmata con R8). La prima versione Android esce con la **1.2.0** come APK nelle GitHub Releases, firmato dal workflow `Release`; il Play Store è rinviato. Dettagli e scostamenti dal piano in §11.
 
 L'obiettivo è un **client di ascolto mobile, interattivo e attento ai consumi**, con un sottoinsieme ridotto delle funzioni desktop. Non è una versione "monitor continuo": niente automazioni, niente elaborazioni pesanti.
 
@@ -232,17 +232,23 @@ Ogni fase si chiude con build desktop e test verdi (`.\gradlew.bat :composeApp:c
 Decisioni già prese (12/11/2026):
 
 - `minSdk` **29** (Android 10): nessun permesso di storage legacy;
-- distribuzione su **GitHub Release (APK) e Play Store (AAB)**, con la stessa chiave di firma dell'app (§5.2);
+- distribuzione su **GitHub Release (APK) e Play Store (AAB)**, con la stessa chiave di firma dell'app (§5.2); il 16/11/2026 il Play Store è stato rinviato (vedi sotto);
 - **nessun** preferito personale nella versione non attivata (§6);
 - License Manager: serve la modifica del pattern dell'ID descritta in §5.3.
 
-Attività rimanenti:
+Decisioni del 16/11/2026:
 
-- Installare Android Studio, SDK e `local.properties` (non versionato).
-- Scegliere `targetSdk` (ultimo richiesto dal Play Store al momento dello sviluppo) e la versione AGP compatibile con Kotlin 2.4.21 e Compose Multiplatform 1.12.2.
-- Generare la chiave di firma dell'app e quella di upload, con backup fuori dal repository; creare l'app nella Play Console caricando la propria chiave di firma.
-- Scegliere `applicationId` e confermare il formato di registrazione (WAV).
-- Applicare e verificare la modifica al License Manager (§5.3).
+- `applicationId` **`com.gig81.kiwisdrgrabber`** (definitivo);
+- AGP **9.5.1**, `compileSdk` **37** (richiesto da AndroidX Core 1.19), `targetSdk` **36**, `minSdk` confermato a **29**;
+- nessuna installazione sul PC di sviluppo: build Android in **container Docker** (`docker/android-build/`, `scripts/android/build.ps1`); il target Android si attiva solo con l'SDK disponibile, quindi la build desktop resta invariata;
+- formato di registrazione WAV confermato; License Manager già aggiornato al pattern `GRAB-(?:A-)?…`.
+
+Decisioni del 16/11/2026 (Fase 10):
+
+- chiave di firma dell'app (`kiwigrabber-release.jks`) e chiave di upload (`kiwigrabber-upload.jks`) generate e custodite dall'autore fuori dal repository, con backup offline;
+- **prima distribuzione solo su GitHub** (APK); Play Store rinviato. Il passaggio a Play resta possibile finché l'app non vi è mai stata pubblicata, caricando la propria chiave dell'app con PEPK: APK GitHub e app Play avranno la stessa firma e gli stessi ID dispositivo;
+- l'APK pubblicato è firmato dal workflow `Release` (job Android, segreti nell'environment `android-release`), come gli installer Windows;
+- prima versione Android: **1.2.0**, insieme al desktop.
 
 **Uscita:** ambiente funzionante, chiavi di firma create e custodite, License Manager aggiornato.
 
@@ -352,12 +358,48 @@ Vedi §8. Matrice minima: un emulatore con API = `minSdk`, un emulatore con l'ul
 | Policy Play Store sui foreground service | rifiuto pubblicazione | tipo `mediaPlayback` coerente con l'uso; dichiarazione nella console Play |
 | Password KiwiSDR in chiaro sulla rete (limite del protocollo) | esposizione credenziali | stesso avviso della guida desktop |
 
-Punti aperti da decidere in Fase 0: `targetSdk` e versione AGP, eventuale MP3 in una versione successiva (`jump3r` è Java puro ma va verificato su Android per prestazioni e licenza), nome del pacchetto applicativo (`applicationId`).
+Punti aperti:
+
+- **Verifica dello sviluppatore Android:** Google richiederà che anche le app installate fuori da Play appartengano a sviluppatori registrati (nome del pacchetto e chiave di firma registrati), con obbligo esteso gradualmente ai vari paesi dal 2026. Va completata la registrazione prima che l'obbligo riguardi l'Italia, altrimenti i dispositivi certificati bloccheranno l'installazione dell'APK.
+- **Play Store:** creazione dell'app con la propria chiave (PEPK), scheda dello Store, informativa sulla privacy, sicurezza dei dati, dichiarazione del foreground service `mediaPlayback`, accesso dei revisori alle funzioni con attivazione; per un account personale, test chiuso con almeno 12 tester per 14 giorni.
+- Eventuale MP3 in una versione successiva (`jump3r` è Java puro ma va verificato su Android per prestazioni e licenza). `targetSdk`, AGP e `applicationId` sono stati decisi il 16/11/2026 (Fase 0).
 
 ---
 
 ## 10. Riferimenti
 
 - [ARCHITECTURE.md](../ARCHITECTURE.md) — regole architetturali e linee guida per l'evoluzione Android.
-- [TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md](../TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md) — proposta preliminare di toolchain e comandi APK/AAB (da aggiornare in Fase 0).
+- [TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md](../TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md) — toolchain Android, build nel container Docker, firma e comandi APK/AAB.
 - [GUI_DESIGN_SYSTEM.md](../GUI_DESIGN_SYSTEM.md) — token visivi da riprendere nel tema mobile.
+
+---
+
+## 11. Stato dell'implementazione (16/11/2026)
+
+| Fase | Stato | Note |
+|------|-------|------|
+| 0 — Decisioni e ambiente | ✅ | chiavi di firma generate; build in Docker, nessuna installazione sul PC |
+| 1 — Refactoring di `shared` | ✅ | desktop invariato, 85 test desktop verdi |
+| 2 — Target Android e scheletro | ✅ | `androidApp`, `MobileSettings`, `KeystoreSecretCipher`, log in `filesDir/logs` |
+| 3 — Ascolto | ✅ (da collaudare) | OkHttp, `AudioTrackOutput`, foreground service, audio focus, cuffie, Wi-Fi lock, `NetworkMonitor` |
+| 4 — Spettro e waterfall | ✅ (da collaudare) | renderer `Bitmap`, tocco/trascinamento/pinch, palette, range dB, layout orizzontale |
+| 5 — Utenti e preferiti | ✅ (da collaudare) | utenti con località; preferiti server (filtri, ricerca) e personali (CRUD con gate) |
+| 6 — Registrazione | ✅ (da collaudare) | `WavWriter` + MediaStore, riparazione dei file `IS_PENDING` all'avvio, controllo spazio |
+| 7 — Impostazioni e licenza | ✅ | BouncyCastle, `GRAB-A-…`, copia/condivisione ID, vettori comuni desktop/Android |
+| 8 — Rifinitura UX | ✅ parziale | tema scuro dai token desktop, tablet/orizzontale, target ≥ 48 dp, `contentDescription`; misura dei consumi in collaudo |
+| 9 — Collaudo | ✅ | su dispositivo fisico (debug e release firmata con R8); emulatore non utilizzabile (Docker Desktop non espone KVM) |
+| 10 — Packaging e rilascio | ⏳ in corso | release firmata verificata, workflow `Release` e CI estesi ad Android, documentazione aggiornata; restano segreti GitHub, release 1.2.0 e (in seguito) Play Store |
+
+### 11.1 Scostamenti dal piano
+
+- **`KiwiSessionCore` non estratto.** La parte di sessione davvero comune (coordinamento W/F con token SND, ritentativi, rifiuti `badp`) è già in `WaterfallCoordinator`, ora in `jvmCommonMain` con l'interfaccia `WaterfallPreferences`; `MobileAppController` compone direttamente `KiwiClient`, `WaterfallClient`, `SquelchController` e i servizi Android. Estrarre anche il resto da `KiwiAppController` avrebbe toccato registrazione segmentata, VAD, storico e alert desktop senza beneficio per Android.
+- **Controller nell'`Application`, non nel service.** `MobileAppController` vive per tutto il processo (`KiwiGrabberApplication`); `KiwiPlaybackService` serve solo a tenere vivo il processo in background quando la licenza è attiva e la sessione è aperta. Il comportamento atteso (§4.2) è lo stesso, con meno accoppiamento tra Activity e service.
+- **Test.** Le parti portabili nuove hanno test in `jvmCommonTest` (eseguiti sia su desktop sia come test host Android); i test desktop preesistenti restano in `desktopTest`.
+- **Waterfall solo con la schermata visibile.** Oltre alla chiusura in background (§4.2), il socket W/F resta chiuso quando la schermata Waterfall non è visibile, per ridurre traffico e batteria. Su rete a consumo la velocità del waterfall è forzata al minimo.
+- **Senza attivazione, in background la connessione viene chiusa** (non solo silenziata), così lo slot del ricevitore si libera; al ritorno in primo piano compare un avviso.
+- **Cleartext.** `usesCleartextTraffic="true"` è necessario: il protocollo KiwiSDR usa `ws://` in chiaro.
+- **Canali DX del server.** Durante il collaudo è emerso che anche il desktop non riceveva i canali: `SET load_dxcfg` restituisce solo la configurazione dei tipi DX. Ora i canali si chiedono con `SET MARKER` completo a 8 parametri (`KiwiProtocol.dxMarkers()`, risposta `mkr`), inviato su SND così da non richiedere il socket W/F; la correzione vale per entrambe le piattaforme.
+
+### 11.2 Collaudo da eseguire (Fase 9)
+
+Installare `build\android-out\apk\debug\androidApp-debug.apk` su un dispositivo con Android 10 o successivo e verificare i criteri del §8, in particolare: ascolto per 30 minuti a schermo spento (attivata), interruzione e avviso in background (non attivata), riconnessione dopo cambio Wi-Fi ↔ rete mobile, waterfall e sintonia al tocco, registrazione WAV e riparazione dopo chiusura forzata, attivazione con un codice del License Manager per l'ID `GRAB-A-…` mostrato nell'app.

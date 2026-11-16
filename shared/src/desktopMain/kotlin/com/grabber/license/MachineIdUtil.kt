@@ -4,7 +4,6 @@ import com.grabber.app.AppLogger
 import com.sun.jna.platform.win32.Advapi32Util
 import com.sun.jna.platform.win32.WinNT
 import com.sun.jna.platform.win32.WinReg
-import java.security.MessageDigest
 
 /**
  * Identificativo stabile della macchina a cui viene vincolata la licenza.
@@ -20,20 +19,19 @@ object MachineIdUtil {
     private const val HASH_NAMESPACE = "KiwiSDRRecorder:machine:v2:"
 
     /** Restituito quando l'identificativo di Windows non è leggibile: nessuna licenza può corrispondere. */
-    const val UNAVAILABLE_MACHINE_ID = "GRAB-NON-DISPONIBILE"
+    const val UNAVAILABLE_MACHINE_ID = LicenseFormat.UNAVAILABLE_MACHINE_ID
 
     private val currentMachineId: String by lazy { machineIdFrom(readMachineGuid()) }
 
     fun getMachineId(): String = currentMachineId
 
-    fun isAvailable(id: String): Boolean = id != UNAVAILABLE_MACHINE_ID
+    fun isAvailable(id: String): Boolean = LicenseFormat.isAvailable(id)
 
     /** Formato compatto e leggibile: GRAB-XXXX-XXXX-XXXX-XXXX. */
     internal fun machineIdFrom(machineGuid: String?): String {
         val normalizedGuid = machineGuid?.trim()?.lowercase()
         if (normalizedGuid.isNullOrEmpty()) return UNAVAILABLE_MACHINE_ID
-        val hex = sha256Hex(HASH_NAMESPACE + normalizedGuid)
-        return "GRAB-" + hex.take(16).chunked(4).joinToString("-")
+        return "GRAB-" + DeviceIds.groupedHash(HASH_NAMESPACE + normalizedGuid)
     }
 
     private fun readMachineGuid(): String? =
@@ -51,9 +49,4 @@ object MachineIdUtil {
             AppLogger.error(TAG, "Accesso al registro di Windows non disponibile", e)
             null
         }
-
-    private fun sha256Hex(text: String): String =
-        MessageDigest.getInstance("SHA-256")
-            .digest(text.toByteArray(Charsets.UTF_8))
-            .joinToString("") { "%02X".format(it) }
 }

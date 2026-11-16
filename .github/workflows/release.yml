@@ -1,8 +1,9 @@
 name: Release
 
-# Build degli installer Windows di release, allegati, SHA256SUMS.txt e attestazioni di provenienza.
+# Build degli allegati di release (installer Windows e APK Android), SHA256SUMS.txt e attestazioni di provenienza.
 # - push di un tag v<versione>: crea una GitHub Release BOZZA, da pubblicare a mano dopo il collaudo;
 # - avvio manuale (workflow_dispatch): solo build, gli allegati restano come artifact del workflow.
+# L'APK è firmato con la chiave dell'app, letta dai segreti dell'environment "android-release".
 # Procedura completa: docs/DISTRIBUZIONE_E_RILASCI.md
 
 on:
@@ -18,8 +19,104 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  android:
+    name: APK Android
+    runs-on: ubuntu-latest
+    # Segreti della chiave di firma disponibili solo in questo environment (protetto: tag v* e main).
+    environment: android-release
+    permissions:
+      contents: read
+    env:
+      # Impronta SHA-256 del certificato della chiave di firma dell'app (pubblica, vedi USER_GUIDE.md):
+      # il job fallisce se l'APK risulta firmato con un'altra chiave.
+      APP_CERT_SHA256: ef6d6ca3ce92c7a0471543a1fe48684247c6b7d4b7dd8c7eb368b446ec202129
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: JDK 21 (Eclipse Temurin)
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: SDK Android
+        # Stesse versioni dell'immagine Docker di sviluppo (docker/android-build/Dockerfile).
+        run: |
+          platform=$(sed -n 's/^ARG ANDROID_PLATFORM=//p' docker/android-build/Dockerfile)
+          build_tools=$(sed -n 's/^ARG ANDROID_BUILD_TOOLS=//p' docker/android-build/Dockerfile)
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;$platform" "build-tools;$build_tools" > /dev/null
+          echo "BUILD_TOOLS=$ANDROID_HOME/build-tools/$build_tools" >> "$GITHUB_ENV"
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: true
+
+      - name: Versione
+        id: version
+        run: |
+          v=$(sed -n 's/^appVersion=//p' gradle.properties | tr -d '[:space:]')
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "v$v" ]; then
+            echo "::error::Il tag $GITHUB_REF_NAME non corrisponde ad appVersion=$v"; exit 1
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Test host e lint
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon -Pkiwi.android=true :shared:testAndroidHostTest :androidApp:lintDebug
+
+      - name: Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Segreto ANDROID_KEYSTORE_BASE64 assente (environment android-release)"; exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/kiwigrabber-release.jks"
+
+      - name: APK di release firmato
+        env:
+          KIWI_SIGNING_STORE_FILE: ${{ runner.temp }}/kiwigrabber-release.jks
+          KIWI_SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KIWI_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KIWI_SIGNING_KEY_ALIAS: kiwigrabber
+        run: ./gradlew --no-daemon -Pkiwi.android=true :androidApp:assembleRelease
+
+      - name: Rimozione keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/kiwigrabber-release.jks"
+
+      - name: Verifica firma e versione
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          apk=androidApp/build/outputs/apk/release/androidApp-release.apk
+          test -f "$apk" || { echo "::error::APK firmato non trovato (release non firmata?)"; exit 1; }
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$apk" | tee apksigner.txt
+          # Tutti gli schemi di firma (v2, v3, ...) devono usare l'unico certificato atteso.
+          cert=$(sed -n 's/.*certificate SHA-256 digest: //p' apksigner.txt | sort -u)
+          if [ "$cert" != "$APP_CERT_SHA256" ]; then
+            echo "::error::Certificato inatteso: $cert (atteso $APP_CERT_SHA256)"; exit 1
+          fi
+          badging=$("$BUILD_TOOLS/aapt2" dump badging "$apk" | head -1)
+          echo "$badging"
+          echo "$badging" | grep -q "name='com.gig81.kiwisdrgrabber'" || { echo "::error::applicationId inatteso"; exit 1; }
+          echo "$badging" | grep -q "versionName='$VERSION'" || { echo "::error::versionName diverso da $VERSION"; exit 1; }
+          mkdir -p android-apk
+          cp "$apk" "android-apk/KiwiSDRGrabber-$VERSION.apk"
+
+      - name: Artifact APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: android-apk/
+          retention-days: 7
+
   release:
-    name: Installer Windows
+    name: Installer Windows e release
+    needs: android
     runs-on: windows-latest
     permissions:
       contents: write       # creare la release bozza e caricare gli allegati
@@ -56,15 +153,25 @@ jobs:
           }
           "version=$v" >> $env:GITHUB_OUTPUT
 
+      # Il runner ha l'SDK Android preinstallato: qui serve solo la build desktop.
       - name: Compilazione e test
-        run: .\gradlew.bat --no-daemon :composeApp:compileKotlinDesktop :shared:desktopTest
+        run: .\gradlew.bat --no-daemon "-Pkiwi.android=false" :composeApp:compileKotlinDesktop :shared:desktopTest
 
       - name: Installer
-        run: .\gradlew.bat --no-daemon :composeApp:packageMsiRelease :composeApp:packageExeRelease
+        run: .\gradlew.bat --no-daemon "-Pkiwi.android=false" :composeApp:packageMsiRelease :composeApp:packageExeRelease
+
+      - name: APK Android
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: android-apk
 
       - name: Allegati e hash
         shell: pwsh
-        run: ./scripts/release/Prepare-ReleaseAssets.ps1 -Version '${{ steps.version.outputs.version }}' -OutputDir release-assets
+        run: |
+          $apk = @(Get-ChildItem android-apk -Filter '*.apk')
+          if ($apk.Count -ne 1) { throw "Atteso un APK, trovati $($apk.Count)" }
+          ./scripts/release/Prepare-ReleaseAssets.ps1 -Version '${{ steps.version.outputs.version }}' -OutputDir release-assets -ExtraFiles $apk[0].FullName
 
       - name: Attestazione di provenienza
         uses: actions/attest-build-provenance@v2
@@ -72,6 +179,7 @@ jobs:
           subject-path: |
             release-assets/*.msi
             release-assets/*.exe
+            release-assets/*.apk
             release-assets/*.zip
             release-assets/SHA256SUMS.txt
 

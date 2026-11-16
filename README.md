@@ -55,7 +55,7 @@ and keyword options, interval, and test button. Hide the bot token and chat ID. 
 - **Java:** non serve installarlo separatamente; gli installer Windows includono un runtime Java.
 - **Connessione:** serve poter raggiungere un ricevitore KiwiSDR per ascoltare e visualizzare i dati in tempo reale.
 
-Non sono pubblicati requisiti minimi di processore, memoria o spazio su disco. Al momento non sono disponibili pacchetti per macOS, Linux o Android.
+Non sono pubblicati requisiti minimi di processore, memoria o spazio su disco. Non sono disponibili pacchetti per macOS o Linux. Un'app Android di ascolto (Android 10 o successivo) è in preparazione per la versione 1.2.0: vedi la [guida utente](docs/USER_GUIDE.md#12-versione-android).
 
 ### Download e installazione
 
@@ -89,7 +89,7 @@ Consulta la [Guida rapida e manuale utente](docs/USER_GUIDE.md) per le istruzion
 - [Design system della GUI](docs/GUI_DESIGN_SYSTEM.md)
 - [Distribuzione e release](docs/DISTRIBUZIONE_E_RILASCI.md)
 - [Toolchain e ambiente di sviluppo](docs/TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md)
-- [Piani per Android](docs/piani/ANDROID.md) (Android non è ancora implementato.)
+- [Piano e stato della versione Android](docs/piani/ANDROID.md)
 
 ### Licenza
 
@@ -132,7 +132,7 @@ Recording, VAD, transcription, user-history logging, channel scanning, and Teleg
 - **Java:** Not required for the Windows installers; they include a Java runtime.
 - **Connection:** Access to a reachable KiwiSDR receiver is needed to listen and view live receiver data.
 
-The project does not publish minimum CPU, memory, or disk-space requirements. macOS, Linux, and Android packages are not currently provided.
+The project does not publish minimum CPU, memory, or disk-space requirements. macOS and Linux packages are not provided. An Android listening app (Android 10 or later) is being prepared for version 1.2.0: see the [user guide](docs/USER_GUIDE.md#12-android-version).
 
 ### Download and installation
 
@@ -166,7 +166,7 @@ See the step-by-step [Quick Start and User Guide](docs/USER_GUIDE.md).
 - [GUI design system](docs/GUI_DESIGN_SYSTEM.md)
 - [Distribution and releases](docs/DISTRIBUZIONE_E_RILASCI.md)
 - [Toolchain and development environment](docs/TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md)
-- [Android plans](docs/piani/ANDROID.md) (Android is not currently implemented.)
+- [Android version plan and status](docs/piani/ANDROID.md)
 
 ### Licensing
 

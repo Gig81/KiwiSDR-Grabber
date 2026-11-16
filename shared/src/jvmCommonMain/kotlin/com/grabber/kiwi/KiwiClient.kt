@@ -13,11 +13,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.future.await
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.WebSocket
-import java.nio.ByteBuffer
-import java.util.concurrent.CompletionStage
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -27,16 +22,21 @@ data class KiwiUser(
     val freqHz: Long,
     val mode: String,
     val connected: String,
-    val isMySession: Boolean = false
+    val isMySession: Boolean = false,
+    val location: String = ""
 )
 
 class KiwiClient(
+    private val connector: KiwiWebSocketConnector,
     var host: String = KiwiServerDefaults.HOST,
     var port: Int = KiwiServerDefaults.PORT,
     private var password: String = "",
-    var clientName: String = "KiwiGrabberDesktop"
+    var clientName: String = DEFAULT_CLIENT_NAME,
+    private val userAgent: String = DEFAULT_USER_AGENT
 ) {
     companion object {
+        const val DEFAULT_CLIENT_NAME = "KiwiGrabberDesktop"
+        const val DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) GrabberClient/1.0"
         private const val TAG = "KiwiClient"
         private const val KEEPALIVE_INTERVAL_MS = 1500L
         private const val KEEPALIVE_SEND_TIMEOUT_MS = 10_000L
@@ -55,6 +55,8 @@ class KiwiClient(
         val changed = (host != cleanHost || port != newPort)
         host = cleanHost
         port = newPort
+        // I canali DX appartengono al ricevitore: non mostrarli per un server diverso.
+        if (changed) _serverDxLabels.value = emptyList()
         if (changed && _connectionState.value !is ConnectionState.Disconnected) {
             disconnect()
         }
@@ -99,7 +101,6 @@ class KiwiClient(
     private val _serverLogs = MutableSharedFlow<String>(replay = 50, extraBufferCapacity = 100)
     val serverLogs: SharedFlow<String> = _serverLogs.asSharedFlow()
 
-    private val httpClient: HttpClient = HttpClient.newHttpClient()
     @Volatile private var commandQueue: WebSocketCommandQueue? = null
     private var clientScope: CoroutineScope? = null
     private var keepaliveJob: Job? = null
@@ -122,10 +123,6 @@ class KiwiClient(
     private var agcEnabled = true
     private var agcGain = 50
     private var assignedChannel: Int? = null
-
-    // Buffer per riassemblare frame binari frammentati
-    private var binaryBuffer = ByteBuffer.allocate(65536)
-    private var textBuffer = StringBuilder()
 
     fun connect(scope: CoroutineScope) {
         if (isConnected.get() || _connectionState.value is ConnectionState.Connecting) {
@@ -158,12 +155,11 @@ class KiwiClient(
             val token = KiwiTokenGenerator.generateToken()
             _sessionToken.value = token
             try {
-                val wsUri = URI.create("ws://$host:$port/$token/SND")
-                val ws = httpClient.newWebSocketBuilder()
-                    .header("Origin", "http://$host:$port")
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) GrabberClient/1.0")
-                    .buildAsync(wsUri, KiwiWebSocketListener())
-                    .get()
+                val ws = connector.connect(
+                    uri = "ws://$host:$port/$token/SND",
+                    headers = mapOf("Origin" to "http://$host:$port", "User-Agent" to userAgent),
+                    listener = SoundSocketListener()
+                ).get()
 
                 commandQueue = WebSocketCommandQueue(ws)
                 isConnected.set(true)
@@ -247,69 +243,55 @@ class KiwiClient(
         }
     }
 
-    private inner class KiwiWebSocketListener : WebSocket.Listener {
-        override fun onOpen(webSocket: WebSocket) {
-            AppLogger.debug(TAG, "WebSocket aperta")
-            webSocket.request(1)
+    /**
+     * Anticipa il tentativo di riconnessione automatica in attesa, ad esempio quando la rete
+     * torna disponibile. Non ha effetto dopo una disconnessione manuale o un rifiuto `badp`.
+     */
+    fun retryReconnectNow() {
+        if (isManualDisconnect.get() || isConnected.get()) return
+        if (_connectionState.value !is ConnectionState.Reconnecting) return
+        val scope = clientScope ?: return
+        autoReconnectJob?.cancel()
+        autoReconnectJob = scope.launch(Dispatchers.IO) {
+            _connectionState.value = ConnectionState.Connecting("Rete disponibile: riconnessione a $host:$port...")
+            _serverLogs.emit("[CLIENT] Rete disponibile: tentativo di riconnessione immediato.")
+            if (!doConnect(scope) && !isManualDisconnect.get()) {
+                scheduleAutoReconnect("Riconnessione dopo il cambio di rete non riuscita")
+            }
+        }
+    }
+
+    private inner class SoundSocketListener : KiwiWebSocketListener {
+        override fun onText(text: String) {
+            AppLogger.trace(TAG, "[SERVER TEXT] $text")
         }
 
-        override fun onText(webSocket: WebSocket, data: CharSequence, last: Boolean): CompletionStage<*> {
-            textBuffer.append(data)
-            if (last) {
-                val fullText = textBuffer.toString()
-                textBuffer.clear()
-                AppLogger.trace(TAG, "[SERVER TEXT] $fullText")
-            }
-            webSocket.request(1)
-            return CompletableFuture.completedFuture(null)
-        }
-
-        override fun onBinary(webSocket: WebSocket, data: ByteBuffer, last: Boolean): CompletionStage<*> {
-            if (binaryBuffer.remaining() < data.remaining()) {
-                val newCapacity = binaryBuffer.position() + data.remaining() + 8192
-                val newBuffer = ByteBuffer.allocate(newCapacity)
-                binaryBuffer.flip()
-                newBuffer.put(binaryBuffer)
-                binaryBuffer = newBuffer
-            }
-            binaryBuffer.put(data)
-
-            if (last) {
-                binaryBuffer.flip()
-                val bytes = ByteArray(binaryBuffer.remaining())
-                binaryBuffer.get(bytes)
-                binaryBuffer.clear()
-
-                clientScope?.launch(frameDispatcher) {
-                    try {
-                        handleBinaryFrame(bytes)
-                    } catch (e: Exception) {
-                        AppLogger.error(TAG, "Errore processamento frame binario", e)
-                    }
+        override fun onBinary(bytes: ByteArray) {
+            clientScope?.launch(frameDispatcher) {
+                try {
+                    handleBinaryFrame(bytes)
+                } catch (e: Exception) {
+                    AppLogger.error(TAG, "Errore processamento frame binario", e)
                 }
             }
-
-            webSocket.request(1)
-            return CompletableFuture.completedFuture(null)
         }
 
-        override fun onClose(webSocket: WebSocket, statusCode: Int, reason: String): CompletionStage<*> {
-            AppLogger.info(TAG, "WebSocket chiusa dal server (code=$statusCode, reason=$reason)")
-            _serverLogs.tryEmit("[CLIENT] Connessione chiusa dal server (code=$statusCode).")
+        override fun onClosed(code: Int, reason: String) {
+            AppLogger.info(TAG, "WebSocket chiusa dal server (code=$code, reason=$reason)")
+            _serverLogs.tryEmit("[CLIENT] Connessione chiusa dal server (code=$code).")
             val manual = isManualDisconnect.get()
             isConnected.set(false)
             _isAuthenticated.value = false
             cleanup()
             if (!manual) {
-                scheduleAutoReconnect("Connessione chiusa dal server (code=$statusCode)")
-                _connectionErrors.tryEmit("Connessione audio/controllo chiusa dal server (codice $statusCode); riconnessione in corso.")
+                scheduleAutoReconnect("Connessione chiusa dal server (code=$code)")
+                _connectionErrors.tryEmit("Connessione audio/controllo chiusa dal server (codice $code); riconnessione in corso.")
             } else {
                 _connectionState.value = ConnectionState.Disconnected
             }
-            return CompletableFuture.completedFuture(null)
         }
 
-        override fun onError(webSocket: WebSocket, error: Throwable) {
+        override fun onError(error: Throwable) {
             val msg = error.message?.takeIf { it.isNotBlank() } ?: "Errore WebSocket senza dettagli"
             AppLogger.error(TAG, "Errore WebSocket: $msg", error)
             val manual = isManualDisconnect.get()
@@ -352,10 +334,13 @@ class KiwiClient(
             return
         }
 
-        if (msg.startsWith("load_dxcfg=")) {
-            parseDxCfg(msg.substringAfter("load_dxcfg="))
+        if (msg.startsWith("mkr=")) {
+            parseDxMarkers(msg.substringAfter("mkr="))
             return
         }
+
+        // Configurazioni (load_cfg, load_dxcfg, ...) inviate dal server: grandi JSON non usati dal client.
+        if (msg.startsWith("load_")) return
 
         val pairs = msg.split(" ")
         for (pair in pairs) {
@@ -376,8 +361,7 @@ class KiwiClient(
                         AppLogger.info(TAG, "Handshake tune: $tuneCmd")
                         sendCommand(KiwiProtocol.agc(agcEnabled, agcGain))
                         sendCommand("SET GET_USERS")
-                        sendCommand("SET load_dxcfg")
-                        sendCommand("SET load_dxcomm_cfg")
+                        sendCommand(KiwiProtocol.dxMarkers())
                         startUsersPolling()
                     }
                 }
@@ -427,33 +411,32 @@ class KiwiClient(
             freqHz = entry.freqHz,
             mode = entry.mode,
             connected = entry.connected,
+            location = entry.location,
             isMySession = isMy
         )
     }
 
     private fun displayNameFor(entry: KiwiUserEntry, isMy: Boolean): String = when {
-        isMy -> if (clientName.isNotBlank() && clientName != "KiwiGrabberDesktop") "★ $clientName (Tu)" else "★ Questo Ricevitore (Tu)"
+        isMy -> if (clientName.isNotBlank() && clientName != DEFAULT_CLIENT_NAME) "★ $clientName (Tu)" else "★ Questo Ricevitore (Tu)"
         entry.name.isBlank() || entry.name == "(no identity)" || entry.name == "%28no%20identity%29" -> "Ascoltatore (Ch ${entry.slot})"
         else -> entry.name
     }
 
-    private fun parseDxCfg(rawJson: String) {
+    private fun parseDxMarkers(payload: String) {
         try {
-            val labels = KiwiMessageParser.parseDxLabels(rawJson)
-            if (labels.isNotEmpty()) {
-                _serverDxLabels.value = labels
-                AppLogger.info(TAG, "Ricevuti ${labels.size} segnalibri DX dal server KiwiSDR")
-                _serverLogs.tryEmit("[DX] Ricevuti ${labels.size} canali/segnalibri DX dal server.")
-            }
+            val labels = KiwiMessageParser.parseDxMarkers(payload) ?: return
+            _serverDxLabels.value = labels
+            AppLogger.info(TAG, "Ricevuti ${labels.size} segnalibri DX dal server KiwiSDR")
+            _serverLogs.tryEmit("[DX] Ricevuti ${labels.size} canali/segnalibri DX dal server.")
         } catch (e: Exception) {
-            AppLogger.warn(TAG, "Errore parsing load_dxcfg", e)
+            AppLogger.warn(TAG, "Errore parsing segnalibri DX (mkr)", e)
         }
     }
 
+    /** Chiede di nuovo l'elenco dei canali DX del ricevitore (anche sul socket SND, accettato dal server). */
     fun requestDxLabels() {
         AppLogger.info(TAG, "Richiesta segnalibri DX al server...")
-        sendCommand("SET load_dxcfg")
-        sendCommand("SET load_dxcomm_cfg")
+        sendCommand(KiwiProtocol.dxMarkers())
     }
 
     private fun startUsersPolling() {
@@ -559,8 +542,6 @@ class KiwiClient(
         usersPollingJob = null
         assignedChannel = null
         _activeUsers.value = emptyList()
-        binaryBuffer.clear()
-        textBuffer.clear()
     }
 
     fun disconnect() {

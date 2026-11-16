@@ -8,7 +8,7 @@
     Lo script:
       1. verifica che -Version coincida con appVersion in gradle.properties;
       2. verifica che il runtime Java incluso abbia licenza GPL (Temurin/OpenJDK, non Oracle);
-      3. copia gli installer MSI/EXE della versione;
+      3. copia gli installer MSI/EXE della versione e gli eventuali -ExtraFiles (APK Android);
       4. crea third-party-licenses-<versione>.zip;
       5. scarica da Maven Central i sorgenti delle librerie LGPL effettivamente incluse
          nell'app image e crea lgpl-sources-<versione>.zip;
@@ -23,6 +23,10 @@
     Cartella di destinazione. Predefinita: Rilascio-<versione> (ignorata da git).
     Deve essere vuota o inesistente.
 
+.PARAMETER ExtraFiles
+    Altri allegati da pubblicare, già compilati e verificati altrove (es. l'APK Android firmato
+    prodotto dal job Android del workflow Release). Vengono copiati e inclusi in SHA256SUMS.txt.
+
 .EXAMPLE
     .\scripts\release\Prepare-ReleaseAssets.ps1 -Version 1.0.2
 #>
@@ -32,7 +36,9 @@ param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
     [string] $Version,
 
-    [string] $OutputDir
+    [string] $OutputDir,
+
+    [string[]] $ExtraFiles = @()
 )
 
 Set-StrictMode -Version Latest
@@ -100,6 +106,12 @@ try {
         Copy-Item -Path $installer -Destination $OutputDir
     }
     Write-Step 'Installer copiati'
+
+    foreach ($extra in $ExtraFiles) {
+        if (-not (Test-Path -Path $extra -PathType Leaf)) { throw "Allegato aggiuntivo mancante: $extra" }
+        Copy-Item -Path $extra -Destination $OutputDir
+        Write-Step "Copiato $(Split-Path -Leaf $extra)"
+    }
 
     # 4. Avvisi e licenze di terze parti
     Compress-Archive -Path (Join-Path $repoRoot 'docs\THIRD_PARTY_NOTICES.md'), (Join-Path $repoRoot 'docs\licenses') `

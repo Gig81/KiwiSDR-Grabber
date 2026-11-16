@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">KiwiSDR Grabber</string>
+    <string name="notification_channel_playback">Ascolto in corso</string>
+    <string name="notification_channel_playback_description">Notifica mostrata durante l\'ascolto del ricevitore KiwiSDR.</string>
+</resources>

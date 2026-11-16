@@ -6,7 +6,7 @@ KiwiSDR Grabber & Station Recorder è un'applicazione desktop multipiattaforma s
 
 La soluzione è costruita con un'architettura modulare orientata al riutilizzo: la logica applicativa core è contenuta nel modulo `shared`, mentre il rendering e i componenti desktop specifici sono separati nella UI application `composeApp`.
 
-Il progetto è oggi fortemente orientato alla versione Desktop Windows, con l'obiettivo dichiarato di evolvere la base condivisa verso una futura variante mobile. L'architettura non impone un framework applicativo complesso: mantiene un design semplice, reattivo e guidato da flussi di eventi (`Flow`/`Coroutine`) e da servizi dedicati per audio, monitoraggio, registrazione e connessione KiwiSDR.
+Il progetto ha una versione Desktop Windows completa e un client Android di ascolto con un sottoinsieme ridotto delle funzioni (vedi [piani/ANDROID.md](./piani/ANDROID.md)), che riusa la logica JVM condivisa. L'architettura non impone un framework applicativo complesso: mantiene un design semplice, reattivo e guidato da flussi di eventi (`Flow`/`Coroutine`) e da servizi dedicati per audio, monitoraggio, registrazione e connessione KiwiSDR.
 
 ### Obiettivi principali
 
@@ -27,6 +27,8 @@ Il repository è attualmente organizzato così:
 
 - `shared/`: logica condivisa tra piattaforme, protocollo KiwiSDR, modelli dati, servizi audio e monitoraggio desktop
 - `composeApp/`: applicazione desktop Compose + UI per le schede e i componenti grafici
+- `androidApp/`: applicazione Android (Activity, UI Compose mobile, foreground service di ascolto, manifest); il modulo esiste nella build solo se l.SDK Android è disponibile
+- `docker/android-build/`, `scripts/android/`: ambiente di build Android in container (nessun SDK sul PC)
 - `docs/`: documentazione architetturale, guide operative e piani per sviluppi futuri
 - `build/`, `gradle/`: build system e toolchain
 
@@ -50,7 +52,7 @@ Il repository è attualmente organizzato così:
 - Finalità: base del progetto e condivisione della logica tra moduli e piattaforme
 - Motivazione: rende possibile mantenere la business logic comune, riducendo duplicazioni tra desktop e future piattaforme
 - Ambito: condiviso
-- Note: il modulo `shared` usa `commonMain` e `desktopMain`, ma non è ancora stato esteso a una target mobile reale
+- Note: il modulo `shared` usa `commonMain` (Kotlin puro), `jvmCommonMain` (codice JVM condiviso tra desktop e Android), `desktopMain` e `androidMain`; il target Android (plugin `com.android.kotlin.multiplatform.library`) si attiva solo con l.SDK disponibile
 
 ### 2.2 Compose Multiplatform
 
@@ -64,7 +66,7 @@ Il repository è attualmente organizzato così:
 
 - Nome e versione: `java.net.http.HttpClient` / `WebSocket` del JDK 17
 - Finalità: WebSocket KiwiSDR (SND e W/F), polling HTTP dello stato stazione e API Telegram
-- Nota: i comandi WebSocket passano da `WebSocketCommandQueue`, che li serializza senza bloccare il chiamante. Le dipendenze Ktor, mai usate, sono state rimosse; per un futuro target non JVM andrà scelto un client multipiattaforma.
+- Nota: i client usano l.interfaccia `KiwiWebSocketConnector` / `KiwiWebSocket` (`jvmCommonMain`); su desktop l.implementazione è `JdkWebSocketConnector` (`java.net.http`), su Android `OkHttpWebSocketConnector`. I comandi passano sempre da `WebSocketCommandQueue`, che li serializza senza bloccare il chiamante.
 - Ambito: desktop
 
 ### 2.4 Kotlin Coroutines + Flow
@@ -108,6 +110,14 @@ Il repository è attualmente organizzato così:
 - Finalità: packaging e installazione del software Windows
 - Motivazione: creare installer MSI/EXE della desktop app senza dipendenze esterne di sistema
 - Ambito: desktop
+
+### 2.10 Android
+
+- Nome e versione: Android Gradle Plugin 9.5.1, `compileSdk` 37, `targetSdk` 36, `minSdk` 29; Compose AndroidX (BOM 2026.09.00), Activity 1.13, Lifecycle 2.11, Core 1.19
+- Librerie: OkHttp 5.5.1 (WebSocket), BouncyCastle `bcprov-jdk18on` 1.87 (solo l'API leggera Ed25519 per la licenza), kotlinx-coroutines-android
+- Finalità: client di ascolto mobile (ascolto, spettro/waterfall, utenti, preferiti, registrazione WAV, impostazioni e licenza)
+- Ambito: Android (`shared/androidMain`, `androidApp`)
+- Note: build nel container Docker (`scripts/android/build.ps1`); dettagli in `TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md`
 
 ---
 
@@ -241,22 +251,25 @@ L'infrastruttura non usa una `Result` monad globale né un framework di dependen
 ### 4.1 `KiwiClient`
 
 - Package: `com.grabber.kiwi.KiwiClient`
-- Responsabilità: connessione WebSocket JDK (un `HttpClient` per istanza), autenticazione, keepalive, riconnessione automatica, invio dei comandi e streaming audio
-- API pubblica: `connect`, `disconnect`, `updateServer`, `updatePassword`, `tune`, `setMode`, `setAgc`, `setIdentUser`, `requestDxLabels`, `audioFlow`, `connectionState`, `activeUsers`, `serverDxLabels`
-- Dipendenze: `KiwiProtocol`, `KiwiMessageParser`, `WebSocketCommandQueue`, `KiwiTokenGenerator`, `AppLogger`, `ModulationMode`
+- Responsabilità: connessione WebSocket tramite `KiwiWebSocketConnector` (JDK su desktop, OkHttp su Android), autenticazione, keepalive, riconnessione automatica, invio dei comandi e streaming audio
+- API pubblica: `connect`, `disconnect`, `retryReconnectNow` (anticipa la riconnessione quando la rete torna disponibile), `updateServer`, `updatePassword`, `tune`, `setMode`, `setAgc`, `setIdentUser`, `requestDxLabels`, `audioFlow`, `connectionState`, `activeUsers`, `serverDxLabels`
+- Dipendenze: `KiwiWebSocketConnector`, `KiwiProtocol`, `KiwiMessageParser`, `WebSocketCommandQueue`, `KiwiTokenGenerator`, `AppLogger`, `ModulationMode`
+- Source set: `jvmCommonMain`, come parser, coda, waterfall, squelch/VAD, `AppLogger`, `WaterfallCoordinator` e `WavWriter`
 - Riutilizzabilità: core del sistema; riveste il protocollo KiwiSDR e deve rimanere condiviso tra tutte le piattaforme future
 
 ### 4.1.1 `KiwiProtocol`, `KiwiMessageParser`, `WebSocketCommandQueue`
 
 - `KiwiProtocol` (`commonMain`, Kotlin puro): costruisce i comandi testuali. Password e nominativo sono codificati come `encodeURIComponent` (il server li decodifica con `kiwi_str_decode_inplace`); `redactSecrets` oscura la password per i log; la frequenza è formattata con tre decimali senza dipendere dalla lingua di sistema.
-- `KiwiMessageParser` (senza stato e senza I/O): decodifica `user_cb` (JSON), `load_dxcfg` (anche URL-encoded) e l'header dei frame `SND`.
-- `WebSocketCommandQueue`: serializza invii e chiusura sul WebSocket del JDK, che rifiuta un nuovo invio prima del completamento del precedente; un invio fallito non blocca i successivi.
+- `KiwiMessageParser` (senza stato e senza I/O): decodifica `user_cb` (JSON), l'elenco dei canali DX `mkr` e l'header dei frame `SND`. I canali DX si chiedono con `KiwiProtocol.dxMarkers()` (`SET MARKER` completo a 8 parametri, accettato dal server anche su SND): una variante non riconosciuta fa chiudere la connessione con `too_busy`. `load_dxcfg` contiene solo la configurazione dei tipi DX e viene ignorato.
+- `KiwiMessageParser` legge anche la località (`g`) degli utenti di `user_cb`.
+- `KiwiWebSocket` / `KiwiWebSocketListener` / `KiwiWebSocketConnector`: astrazione del trasporto; i messaggi arrivano al listener già ricomposti. Implementazioni: `JdkWebSocketConnector` (desktop), `OkHttpWebSocketConnector` (Android, con ping ogni 20 s per rilevare le connessioni morte dopo un cambio di rete).
+- `WebSocketCommandQueue`: serializza invii e chiusura su un `KiwiWebSocket` (il WebSocket del JDK rifiuta un nuovo invio prima del completamento del precedente); un invio fallito non blocca i successivi. La coda e l'intera sessione SND sono testate con un trasporto finto (`WebSocketCommandQueueTests`, `KiwiClientTransportTests`).
 - `KiwiServerDefaults`: host e porta del ricevitore predefinito, unica fonte per tutti i client e per `DEFAULT_SERVER_ADDRESS`.
 
 ### 4.2 `WaterfallClient`
 
 - Package: `com.grabber.waterfall.WaterfallClient`
-- Responsabilità: apertura della WebSocket JDK dedicata `/W/F` dopo l'autenticazione SND, autenticazione e comandi di waterfall, decodifica frame FFT, gestione zoom e centro frequenza
+- Responsabilità: apertura della WebSocket dedicata `/W/F` (stesso `KiwiWebSocketConnector` della sessione SND) dopo l'autenticazione SND, autenticazione e comandi di waterfall, decodifica frame FFT, gestione zoom e centro frequenza
 - Dipendenze: `KiwiProtocol`, `WebSocketCommandQueue`, `AppLogger`, `ConnectionState`
 - Lifecycle: lo stream viene avviato da `WaterfallCoordinator` solo dopo il `badp=0` di autenticazione SND, resta attivo cambiando schermata e viene chiuso durante disconnessione/riconnessione. La configurazione W/F parte dopo il proprio `badp=0`; i rifiuti permanenti (`badp`) generano una notifica e non vengono ritentati automaticamente.
 - Protocollo: audio/controllo (`/SND`) e waterfall (`/W/F`) sono socket distinti, ma devono condividere lo stesso token/timestamp nell'URL per essere associate alla medesima sessione Kiwi. Il client web ufficiale apre la seconda socket dopo l'autenticazione principale e ripete il flusso di autenticazione per W/F. Token distinti fanno rifiutare W/F con `badp=5` come connessione multipla dallo stesso IP. Evitare di inoltrare i frame o i comandi W/F sulla socket SND.
@@ -273,8 +286,8 @@ L'infrastruttura non usa una `Result` monad globale né un framework di dependen
 
 - Package: `com.grabber.recording.AudioRecorder`
 - Responsabilità: registrazione audio continua o segmentata, file MP3/WAV, callback di completamento
-- Dipendenze: `AudioFrame`, `LameEncoder`, filesystem, Java IO
-- Riutilizzabilità: il modello di registrazione è condivisibile; la serializzazione MP3 e la gestione del filesystem sono specifiche del desktop
+- Dipendenze: `AudioFrame`, `LameEncoder`, `WavWriter`, filesystem, Java IO
+- Riutilizzabilità: la scrittura WAV è in `WavWriter` (`jvmCommonMain`, su un `FileChannel`, con `repairHeader` per i file interrotti), usata anche da `MediaStoreWavRecorder` su Android; MP3, segmentazione e filesystem restano specifici del desktop
 
 ### 4.5 `HistoryDatabase`
 
@@ -287,7 +300,7 @@ L'infrastruttura non usa una `Result` monad globale né un framework di dependen
 
 - Package: `com.grabber.app`
 - `KiwiAppController`: facciata unica della UI. Collega client, pipeline audio, registrazione, squelch/VAD, preferiti, impostazioni e licenza; i servizi sono privati e la UI usa solo le sue API e i suoi `StateFlow`.
-- `WaterfallCoordinator`: socket W/F aperto dopo l'autenticazione SND, ritentativi sulle interruzioni temporanee (non sui rifiuti `badp`), palette, zoom, range dBm, inseguimento del VFO.
+- `WaterfallCoordinator` (`jvmCommonMain`, condiviso con Android): socket W/F aperto dopo l'autenticazione SND, ritentativi sulle interruzioni temporanee (non sui rifiuti `badp`), palette, zoom, range dBm, inseguimento del VFO. Persiste le impostazioni tramite l'interfaccia `WaterfallPreferences` (`AppSettingsWaterfallPreferences` su desktop, `MobileSettings` su Android).
 - `RecordingHistoryCoordinator`: storico di registrazioni e utenti, ricerca full-text, coda di trascrizione offline; senza licenza lo storico risulta vuoto.
 - `QsoAlertCoordinator`: notifiche Telegram di inizio/fine QSO e, a trascrizione conclusa, parole chiave con audio e testo allegati; rispetta il gate di licenza e l'intervallo minimo tra messaggi.
 - `ChannelScanCoordinator`: scansione ciclica dei preferiti con `scanEnabled`. Dopo ogni cambio canale attende un tempo di assestamento (i primi frame possono riferirsi ancora alla frequenza precedente) e azzera lo squelch, poi ascolta per il tempo di permanenza; se il gate RF dello squelch si apre resta sul canale e, con la ripresa automatica, riparte alla chiusura del gate (dopo l'hang time). Rilegge canali e impostazioni a ogni passo. La sintonia manuale (`KiwiAppController.tune`) e la perdita della connessione fermano la scansione; il controller sintonizza per conto dello scanner con un percorso interno che non la interrompe. Funzione riservata alla licenza.
@@ -296,15 +309,27 @@ L'infrastruttura non usa una `Result` monad globale né un framework di dependen
 ### 4.7 `AppSettings` e `SecretCipher`
 
 - Package: `com.grabber.app`
-- Responsabilità: persistenza atomica della configurazione, migrazione dei preferiti predefiniti, cifratura delle credenziali tramite `SecretCipher` (`DpapiSecretCipher` su Windows, `PlainTextSecretCipher` altrove)
+- Responsabilità: persistenza atomica della configurazione, migrazione dei preferiti predefiniti, cifratura delle credenziali tramite `SecretCipher` (interfaccia in `jvmCommonMain`; `DpapiSecretCipher` su Windows, `PlainTextSecretCipher` altrove, `KeystoreSecretCipher` con prefisso `aks:` su Android)
 - Dipendenze: JSON serialization, filesystem, JNA Platform (DPAPI)
-- Riutilizzabilità: condivisibile in un ambiente desktop o mobile, a patto che backing storage e cifratura siano adattati alla piattaforma
+- `FavoriteFrequency`, `parseServerAddress` e `bandGroupFor` sono in `jvmCommonMain` (stesso package) e servono anche ad Android
+- Su Android le impostazioni ridotte sono in `MobileSettings` (`filesDir/settings.json`, scritto in modo atomico e asincrono, escluso dal backup)
 
-### 4.8 `LicenseManager` e `MachineIdUtil`
+### 4.8 Licenza: `LicenseFormat`, `LicenseChecker`, `LicenseManager`, `MachineIdUtil`
 
 - Package: `com.grabber.license`
-- Responsabilità: verifica locale delle licenze `KSR1` firmate Ed25519 e calcolo del Machine ID dal `MachineGuid` di Windows
-- Dipendenze: JDK (`java.security`), JNA Platform (registro di Windows)
+- Logica comune (`jvmCommonMain`): `LicenseFormat` (formato `KSR1`, payload, chiave pubblica), `LicenseChecker` (esito con cache per il dispositivo corrente), `DeviceIds` (ID Android `GRAB-A-…`), `FeatureGate` / `GatedFeature` (funzioni riservate su Android)
+- Verifica della firma iniettata (`SignatureVerifier`): `JdkEd25519SignatureVerifier` su desktop, `BouncyCastleEd25519Verifier` su Android; i vettori comuni `LicenseTestVectors` sono verificati con entrambi
+- ID dispositivo: `MachineIdUtil` (desktop, `MachineGuid` di Windows, `GRAB-XXXX-…`), `AndroidDeviceId` (`ANDROID_ID`, `GRAB-A-XXXX-…`)
+- `LicenseManager` (desktop) mantiene l'API usata da `KiwiAppController`
+- Dipendenze: JDK (`java.security`), JNA Platform (registro di Windows); BouncyCastle su Android
+
+### 4.9 Android: `MobileAppController` e servizi `androidMain`
+
+- `MobileAppController` (`shared/androidMain`, package `com.grabber.mobile`): unica facciata della UI Android, con le stesse regole di `KiwiAppController` (solo API e `StateFlow`; eccezione `waterfallBuffer` per il renderer). Vive per tutto il processo, creato da `KiwiGrabberApplication`; applica il `FeatureGate` prima di ogni azione riservata (registrazione, preferiti personali, ascolto in background) ed emette `lockedFeatureRequests` per la UI.
+- Servizi: `OkHttpWebSocketConnector`, `AudioTrackOutput` (thread dedicato, coda limitata, pre-buffer 250 ms), `AudioSessionPolicy` (audio focus, cuffie scollegate), `NetworkMonitor` (riconnessione anticipata, rete a consumo → waterfall a velocità minima), `MediaStoreWavRecorder` (WAV in MediaStore con `IS_PENDING` e riparazione all'avvio), `KeystoreSecretCipher`, `MobileSettings`.
+- Squelch con VAD disattivato (`SquelchController(vad = null)`).
+- Waterfall: socket W/F aperto solo con la schermata Waterfall visibile e l'app in primo piano; riaperto con lo stesso token SND.
+- `androidApp`: `KiwiGrabberApplication` (ciclo di vita del processo, avvio/arresto del servizio), `KiwiPlaybackService` (foreground service `mediaPlayback` con notifica, azione *Disconnetti*, Wi-Fi lock, chiusura della sessione alla rimozione dai recenti), `MainActivity` e UI Compose in `com.gig81.kiwisdrgrabber.ui.*` (Radio, Waterfall, Preferiti, Utenti, Impostazioni).
 
 ---
 
@@ -336,9 +361,12 @@ L'infrastruttura non usa una `Result` monad globale né un framework di dependen
 
 - il codice condiviso non deve dipendere da `compose` o da API desktop specifiche
 - `shared` può dipendere da modelli e utility cross-platform, non da `java.awt` o `javax.sound` direttamente
-- `commonMain` non usa API Java (`Locale`, `String.format`, `System`, `java.*`): il codice JVM va in `desktopMain`
+- `commonMain` non usa API Java (`Locale`, `String.format`, `System`, `java.*`): il codice JVM condiviso va in `jvmCommonMain`, quello specifico in `desktopMain` / `androidMain`
+- `jvmCommonMain` (desktop + Android) può usare `java.nio`, `java.util.concurrent`, `java.security`, `java.time`, ma non `java.net.http`, `javax.*`, `java.awt` né JNA
+- in `jvmCommonMain` evitare i metodi covarianti di `java.nio.Buffer` (`flip()`, `position(int)`, …), assenti su Android 10: usare letture/scritture assolute o `ByteBuffer.wrap`
+- le dipendenze desktop (`sqlite-jdbc`, `vosk`, `mp3spi`, `jump3r`, `jna`) restano in `desktopMain` e non devono comparire nel grafo Android
+- il target Android si verifica con `scripts/android/build.ps1` (test host, lint con `checkDependencies`, APK), perché sul PC desktop senza SDK `jvmCommonMain` viene compilato solo per il desktop
 - versioni e coordinate delle dipendenze si dichiarano solo nel version catalog `gradle/libs.versions.toml`
-- nella futura evoluzione verso Android, i servizi portabili andranno in `commonMain`, mentre le implementazioni platform-specific andranno in `desktopMain` / `androidMain`
 
 ### 5.5 Error handling e logging
 
@@ -421,9 +449,10 @@ L'infrastruttura non usa una `Result` monad globale né un framework di dependen
 
 Il progetto attuale è in uno stato di sviluppo desktop-first e già funzionale, con i principali componenti core implementati e in uso:
 
-- `shared` contiene la logica di protocollo e modelli chiave
+- `shared` contiene la logica di protocollo e modelli chiave (`commonMain`), i servizi JVM condivisi (`jvmCommonMain`) e quelli specifici di desktop e Android
 - `composeApp` fornisce l'interfaccia grafica desktop
 - `KiwiAppController` è la facciata della UI; `WaterfallCoordinator`, `RecordingHistoryCoordinator`, `QsoAlertCoordinator` e `ChannelScanCoordinator` orchestrano rispettivamente waterfall, storico/trascrizioni, notifiche e scansione dei canali, sopra `KiwiClient`, `WaterfallClient`, `AudioRecorder` e `StationMonitor`
+- `androidApp` + `MobileAppController` forniscono il client Android di ascolto (implementato, da collaudare su dispositivo: vedi `piani/ANDROID.md`)
 - la documentazione storica sotto `docs/` è utile come riferimento, ma la struttura architetturale ufficiale del progetto deve essere mantenuta in questo documento
 
-La direzione consigliata è di mantenere la base condivisa come asset riutilizzabile e di evitare duplicazioni tra la UI e i servizi di dominio. Qualsiasi futura espansione verso Android deve partire da questa separazione, senza introdurre accoppiamenti impropri tra codice condiviso e runtime specifici.
+La direzione consigliata è di mantenere la base condivisa come asset riutilizzabile e di evitare duplicazioni tra la UI e i servizi di dominio, senza introdurre accoppiamenti impropri tra codice condiviso e runtime specifici.

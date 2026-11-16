@@ -41,7 +41,7 @@ Le prove di compilazione/test non sostituiscono la verifica interattiva con un K
 
 La suite desktop comprende 65 test automatici. Al 10 novembre 2026 è stata eseguita senza errori, anche dopo l'aggiornamento della toolchain.
 
-I test di regressione coprono, tra l'altro, parser e trasformazioni waterfall, preferiti DX e loro persistenza, impostazioni e cifratura DPAPI delle credenziali, logging, Squelch/VAD, cooldown Telegram, codifica e oscuramento dei comandi KiwiSDR, parser dei messaggi del server (`user_cb`, `load_dxcfg`, frame `SND`), coda dei comandi WebSocket, Machine ID e licenze, migrazione del database. Le verifiche manuali di protocollo/audio restano separate dai test automatici.
+I test di regressione coprono, tra l'altro, parser e trasformazioni waterfall, preferiti DX e loro persistenza, impostazioni e cifratura DPAPI delle credenziali, logging, Squelch/VAD, cooldown Telegram, codifica e oscuramento dei comandi KiwiSDR, parser dei messaggi del server (`user_cb`, canali DX `mkr`, frame `SND`), coda dei comandi WebSocket, Machine ID e licenze, migrazione del database. Le verifiche manuali di protocollo/audio restano separate dai test automatici.
 
 ### Collaudi desktop riportati (10 novembre 2026)
 

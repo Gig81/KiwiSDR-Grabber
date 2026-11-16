@@ -4,7 +4,9 @@ import com.grabber.alerting.TelegramAlertService
 import com.grabber.audio.DesktopAudioPlayer
 import com.grabber.audio.FileAudioPlayer
 import com.grabber.audio.squelch.SquelchController
+import com.grabber.kiwi.JdkWebSocketConnector
 import com.grabber.kiwi.KiwiClient
+import com.grabber.kiwi.KiwiWebSocketConnector
 import com.grabber.license.LicenseManager
 import com.grabber.license.MachineIdUtil
 import com.grabber.model.ConnectionState
@@ -46,14 +48,15 @@ private fun uncaughtErrorLogger() = CoroutineExceptionHandler { context, error -
  * esposti qui e non accede direttamente ai servizi.
  */
 class KiwiAppController(
-    private val client: KiwiClient = KiwiClient(),
+    connector: KiwiWebSocketConnector = JdkWebSocketConnector(),
+    private val client: KiwiClient = KiwiClient(connector),
     private val player: DesktopAudioPlayer = DesktopAudioPlayer(),
     private val filePlayer: FileAudioPlayer = FileAudioPlayer(),
     private val recorder: AudioRecorder = AudioRecorder(),
     private val database: HistoryDatabase = HistoryDatabase(),
     private val monitor: StationMonitor = StationMonitor(),
     private val squelch: SquelchController = SquelchController(),
-    private val waterfallClient: WaterfallClient = WaterfallClient(host = client.host, port = client.port),
+    private val waterfallClient: WaterfallClient = WaterfallClient(connector, host = client.host, port = client.port),
     /** Buffer di pixel letto direttamente dal renderer del waterfall. */
     val waterfallBuffer: WaterfallBuffer = WaterfallBuffer(width = 1024, height = 250)
 ) {
@@ -65,7 +68,7 @@ class KiwiAppController(
     private val _connectionNotifications = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val connectionNotifications: SharedFlow<String> = _connectionNotifications.asSharedFlow()
 
-    private val waterfall = WaterfallCoordinator(scope, client, waterfallClient, waterfallBuffer, appSettings)
+    private val waterfall = WaterfallCoordinator(scope, client, waterfallClient, waterfallBuffer, AppSettingsWaterfallPreferences(appSettings))
 
     private val alerts = QsoAlertCoordinator(
         scope = scope,
@@ -182,7 +185,14 @@ class KiwiAppController(
 
         val initialFrequency = settings.lastFrequencyKhz.coerceIn(0.0, MAX_FREQUENCY_KHZ)
         client.tune(initialFrequency, settings.lastMode)
-        waterfall.applyPersistedSettings(settings, initialFrequency)
+        waterfall.applyPersistedSettings(
+            clientName = settings.callsign,
+            minDb = settings.waterfallMinDb,
+            maxDb = settings.waterfallMaxDb,
+            speed = settings.waterfallSpeed,
+            zoom = settings.waterfallZoom,
+            initialFrequencyKhz = initialFrequency
+        )
     }
 
     private fun applySquelchSettings(settings: SettingsData) {
@@ -423,11 +433,11 @@ class KiwiAppController(
             .toSet()
         val favorites = labels.map { label ->
             FavoriteFrequency(
-                name = label.i.ifBlank { "${label.f.toInt()} kHz" },
-                frequencyKhz = label.f,
+                name = label.name.ifBlank { "${label.frequencyKhz.toInt()} kHz" },
+                frequencyKhz = label.frequencyKhz,
                 modeCode = label.mode.code,
-                group = label.g,
-                scanEnabled = (label.f to label.mode.code) in scanSelection
+                group = bandGroupFor(label.frequencyKhz),
+                scanEnabled = (label.frequencyKhz to label.mode.code) in scanSelection
             )
         }
         appSettings.updateFavorites(favorites)
@@ -445,15 +455,6 @@ class KiwiAppController(
         appSettings.addFavorite(
             FavoriteFrequency(name = name, frequencyKhz = freq, modeCode = mode.code, group = bandGroupFor(freq))
         )
-    }
-
-    private fun bandGroupFor(freqKhz: Double): String = when {
-        freqKhz in 26965.0..27405.0 -> "CB"
-        freqKhz in 1800.0..2000.0 || freqKhz in 3500.0..3800.0 || freqKhz in 7000.0..7200.0 ||
-            freqKhz in 14000.0..14350.0 || freqKhz in 21000.0..21450.0 || freqKhz in 28000.0..29700.0 -> "HAM"
-        freqKhz < 530.0 -> "LW"
-        freqKhz in 530.0..1700.0 -> "MW"
-        else -> "DX"
     }
 
     fun editFavorite(oldFav: FavoriteFrequency, newFav: FavoriteFrequency) = appSettings.editFavorite(oldFav, newFav)

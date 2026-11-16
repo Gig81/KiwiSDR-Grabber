@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 e precedenti: le impostazioni (password cifrata con una chiave Keystore non
+     trasferibile, licenza legata all'ID del dispositivo) e i log non vanno nel backup. -->
+<full-backup-content>
+    <exclude domain="file" path="settings.json" />
+    <exclude domain="file" path="logs/" />
+</full-backup-content>

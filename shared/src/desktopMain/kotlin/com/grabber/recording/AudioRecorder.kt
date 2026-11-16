@@ -9,8 +9,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.io.FileOutputStream
 import java.io.RandomAccessFile
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.LinkedBlockingQueue
@@ -66,8 +64,7 @@ class AudioRecorder(
     var onSegmentCompleted: ((filePath: String, durationSec: Long) -> Unit)? = null
 
     // For WAV format
-    private var currentRaf: RandomAccessFile? = null
-    private var bytesWrittenInWav: Long = 0L
+    private var currentWav: WavWriter? = null
 
     // For MP3 format
     private var currentFos: FileOutputStream? = null
@@ -92,7 +89,6 @@ class AudioRecorder(
 
         _format.value = recordingFormat
         selectedInterval = interval
-        bytesWrittenInWav = 0L
         _elapsedSeconds.value = 0L
         _recordedSegments.value = 0
         totalStartTimeMs = System.currentTimeMillis()
@@ -201,13 +197,7 @@ class AudioRecorder(
                     }
                 }
             }
-            AudioRecordingFormat.WAV -> {
-                val raf = currentRaf
-                if (raf != null) {
-                    raf.write(chunk)
-                    bytesWrittenInWav += chunk.size
-                }
-            }
+            AudioRecordingFormat.WAV -> currentWav?.write(chunk)
         }
     }
 
@@ -252,11 +242,7 @@ class AudioRecorder(
                 currentFos = FileOutputStream(file)
             }
             AudioRecordingFormat.WAV -> {
-                val raf = RandomAccessFile(file, "rw")
-                raf.setLength(0)
-                writeWavHeader(raf, 0)
-                bytesWrittenInWav = 0L
-                currentRaf = raf
+                currentWav = WavWriter(RandomAccessFile(file, "rw").channel, sampleRate)
             }
         }
 
@@ -290,24 +276,13 @@ class AudioRecorder(
                 }
             }
             AudioRecordingFormat.WAV -> {
-                val raf = currentRaf
+                val wav = currentWav
                 try {
-                    if (raf != null) {
-                        val totalDataLen = bytesWrittenInWav
-                        val totalFileLen = totalDataLen + 36
-
-                        raf.seek(4)
-                        raf.write(intToByteArrayLE(totalFileLen.toInt()))
-
-                        raf.seek(40)
-                        raf.write(intToByteArrayLE(totalDataLen.toInt()))
-
-                        raf.close()
-                    }
+                    wav?.use { it.finish() }
                 } catch (e: Exception) {
                     AppLogger.error("AudioRecorder", "Errore durante la finalizzazione della registrazione WAV", e)
                 } finally {
-                    currentRaf = null
+                    currentWav = null
                     currentFile = null
                 }
             }
@@ -316,38 +291,6 @@ class AudioRecorder(
         if (completedFile != null && completedFile.exists() && completedFile.length() > 44) {
             onSegmentCompleted?.invoke(completedFile.absolutePath, durationSec)
         }
-    }
-
-    private fun writeWavHeader(raf: RandomAccessFile, dataSize: Int) {
-        val header = ByteBuffer.allocate(44).apply {
-            order(ByteOrder.LITTLE_ENDIAN)
-            put("RIFF".toByteArray())
-            putInt(dataSize + 36)
-            put("WAVE".toByteArray())
-
-            put("fmt ".toByteArray())
-            putInt(16)
-            putShort(1.toShort())
-            putShort(1.toShort())
-            putInt(sampleRate)
-            putInt(sampleRate * 2)
-            putShort(2.toShort())
-            putShort(16.toShort())
-
-            put("data".toByteArray())
-            putInt(dataSize)
-        }
-        raf.seek(0)
-        raf.write(header.array())
-    }
-
-    private fun intToByteArrayLE(value: Int): ByteArray {
-        return byteArrayOf(
-            (value and 0xFF).toByte(),
-            ((value shr 8) and 0xFF).toByte(),
-            ((value shr 16) and 0xFF).toByte(),
-            ((value shr 24) and 0xFF).toByte()
-        )
     }
 
     fun stopRecording() {

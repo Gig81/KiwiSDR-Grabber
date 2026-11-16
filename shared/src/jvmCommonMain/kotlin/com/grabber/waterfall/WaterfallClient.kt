@@ -3,6 +3,8 @@ package com.grabber.waterfall
 import com.grabber.app.AppLogger
 import com.grabber.kiwi.KiwiProtocol
 import com.grabber.kiwi.KiwiServerDefaults
+import com.grabber.kiwi.KiwiWebSocketConnector
+import com.grabber.kiwi.KiwiWebSocketListener
 import com.grabber.kiwi.WebSocketCommandQueue
 import com.grabber.model.ConnectionState
 import kotlinx.coroutines.*
@@ -12,13 +14,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.WebSocket
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CompletionStage
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -26,12 +23,15 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Si collega all'endpoint `ws://<host>:<port>/<token>/W/F`.
  */
 class WaterfallClient(
+    private val connector: KiwiWebSocketConnector,
     var host: String = KiwiServerDefaults.HOST,
     var port: Int = KiwiServerDefaults.PORT,
     private var password: String = "",
-    var clientName: String = "KiwiGrabberWaterfall"
+    var clientName: String = "KiwiGrabberWaterfall",
+    private val userAgent: String = DEFAULT_USER_AGENT
 ) {
     companion object {
+        const val DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) KiwiGrabber/1.0"
         private const val TAG = "WaterfallClient"
         const val MAX_ZOOM = 14
         const val TOTAL_SPECTRUM_KHZ = 30000.0
@@ -88,7 +88,6 @@ class WaterfallClient(
     private val _latestFrame = MutableStateFlow<WaterfallFrame?>(null)
     val latestFrame: StateFlow<WaterfallFrame?> = _latestFrame.asStateFlow()
 
-    private val httpClient: HttpClient = HttpClient.newHttpClient()
     @Volatile private var commandQueue: WebSocketCommandQueue? = null
     private var clientScope: CoroutineScope? = null
     private var keepaliveJob: Job? = null
@@ -96,9 +95,6 @@ class WaterfallClient(
     private val isManualDisconnect = AtomicBoolean(false)
 
     private val frameDispatcher = Dispatchers.Default.limitedParallelism(1)
-
-    private var binaryBuffer = ByteBuffer.allocate(65536)
-    private var textBuffer = StringBuilder()
 
     fun connect(scope: CoroutineScope, sessionToken: Long) {
         if (isConnected.get() || _connectionState.value is ConnectionState.Connecting) {
@@ -114,12 +110,11 @@ class WaterfallClient(
             AppLogger.info(TAG, "Connessione Waterfall WebSocket a $host:$port/W/F...")
 
             try {
-                val wsUri = URI.create("ws://$host:$port/$sessionToken/W/F")
-                val wsBuilder = httpClient.newWebSocketBuilder()
-                    .header("Origin", "http://$host:$port")
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) KiwiGrabber/1.0")
-
-                val ws = wsBuilder.buildAsync(wsUri, WaterfallWsListener()).join()
+                val ws = connector.connect(
+                    uri = "ws://$host:$port/$sessionToken/W/F",
+                    headers = mapOf("Origin" to "http://$host:$port", "User-Agent" to userAgent),
+                    listener = WaterfallWsListener()
+                ).join()
                 commandQueue = WebSocketCommandQueue(ws)
                 isConnected.set(true)
                 sendAuthentication()
@@ -237,67 +232,35 @@ class WaterfallClient(
         }
     }
 
-    private inner class WaterfallWsListener : WebSocket.Listener {
-        override fun onOpen(webSocket: WebSocket) {
-            AppLogger.debug(TAG, "Waterfall WebSocket aperto")
-            webSocket.request(1)
+    private inner class WaterfallWsListener : KiwiWebSocketListener {
+        override fun onText(text: String) {
+            handleServerText(text)
         }
 
-        override fun onText(webSocket: WebSocket, data: CharSequence, last: Boolean): CompletionStage<*> {
-            textBuffer.append(data)
-            if (last) {
-                val fullText = textBuffer.toString()
-                textBuffer.clear()
-                handleServerText(fullText)
-            }
-            webSocket.request(1)
-            return CompletableFuture.completedFuture(null)
-        }
-
-        override fun onBinary(webSocket: WebSocket, data: ByteBuffer, last: Boolean): CompletionStage<*> {
-            if (binaryBuffer.remaining() < data.remaining()) {
-                val newCapacity = binaryBuffer.position() + data.remaining() + 8192
-                val newBuffer = ByteBuffer.allocate(newCapacity)
-                binaryBuffer.flip()
-                newBuffer.put(binaryBuffer)
-                binaryBuffer = newBuffer
-            }
-            binaryBuffer.put(data)
-
-            if (last) {
-                binaryBuffer.flip()
-                val bytes = ByteArray(binaryBuffer.remaining())
-                binaryBuffer.get(bytes)
-                binaryBuffer.clear()
-
-                clientScope?.launch(frameDispatcher) {
-                    try {
-                        handleBinaryFrame(bytes)
-                    } catch (e: Exception) {
-                        AppLogger.error(TAG, "Errore processamento frame W/F binario", e)
-                    }
+        override fun onBinary(bytes: ByteArray) {
+            clientScope?.launch(frameDispatcher) {
+                try {
+                    handleBinaryFrame(bytes)
+                } catch (e: Exception) {
+                    AppLogger.error(TAG, "Errore processamento frame W/F binario", e)
                 }
             }
-
-            webSocket.request(1)
-            return CompletableFuture.completedFuture(null)
         }
 
-        override fun onClose(webSocket: WebSocket, statusCode: Int, reason: String): CompletionStage<*> {
-            AppLogger.info(TAG, "Waterfall WebSocket chiuso (code=$statusCode, reason=$reason)")
+        override fun onClosed(code: Int, reason: String) {
+            AppLogger.info(TAG, "Waterfall WebSocket chiuso (code=$code, reason=$reason)")
             val authRejected = _connectionState.value is ConnectionState.Error
             isConnected.set(false)
             cleanup()
             if (!authRejected) {
                 if (!isManualDisconnect.get()) {
-                    _connectionErrors.tryEmit("Connessione Waterfall chiusa dal server (codice $statusCode).")
+                    _connectionErrors.tryEmit("Connessione Waterfall chiusa dal server (codice $code).")
                 }
                 _connectionState.value = ConnectionState.Disconnected
             }
-            return CompletableFuture.completedFuture(null)
         }
 
-        override fun onError(webSocket: WebSocket, error: Throwable) {
+        override fun onError(error: Throwable) {
             val msg = error.message?.takeIf { it.isNotBlank() } ?: "Errore Waterfall WebSocket senza dettagli"
             AppLogger.error(TAG, msg, error)
             val manual = isManualDisconnect.get()

@@ -140,6 +140,7 @@ flowchart LR
     CTRL --> WFC[WaterfallCoordinator]
     CTRL --> HIS[RecordingHistoryCoordinator]
     CTRL --> ALR[QsoAlertCoordinator]
+    CTRL --> SCN[ChannelScanCoordinator]
     CTRL --> KCL[KiwiClient]
     CTRL --> AUD[DesktopAudioPlayer]
     CTRL --> REC[AudioRecorder]
@@ -289,6 +290,7 @@ L'infrastruttura non usa una `Result` monad globale né un framework di dependen
 - `WaterfallCoordinator`: socket W/F aperto dopo l'autenticazione SND, ritentativi sulle interruzioni temporanee (non sui rifiuti `badp`), palette, zoom, range dBm, inseguimento del VFO.
 - `RecordingHistoryCoordinator`: storico di registrazioni e utenti, ricerca full-text, coda di trascrizione offline; senza licenza lo storico risulta vuoto.
 - `QsoAlertCoordinator`: notifiche Telegram di inizio/fine QSO e, a trascrizione conclusa, parole chiave con audio e testo allegati; rispetta il gate di licenza e l'intervallo minimo tra messaggi.
+- `ChannelScanCoordinator`: scansione ciclica dei preferiti con `scanEnabled`. Dopo ogni cambio canale attende un tempo di assestamento (i primi frame possono riferirsi ancora alla frequenza precedente) e azzera lo squelch, poi ascolta per il tempo di permanenza; se il gate RF dello squelch si apre resta sul canale e, con la ripresa automatica, riparte alla chiusura del gate (dopo l'hang time). Rilegge canali e impostazioni a ogni passo. La sintonia manuale (`KiwiAppController.tune`) e la perdita della connessione fermano la scansione; il controller sintonizza per conto dello scanner con un percorso interno che non la interrompe. Funzione riservata alla licenza.
 - Riutilizzabilità: livello di orchestrazione desktop; in un'architettura futura i coordinatori possono diventare `UseCase` o `ViewModel` separati.
 
 ### 4.7 `AppSettings` e `SecretCipher`
@@ -421,7 +423,7 @@ Il progetto attuale è in uno stato di sviluppo desktop-first e già funzionale,
 
 - `shared` contiene la logica di protocollo e modelli chiave
 - `composeApp` fornisce l'interfaccia grafica desktop
-- `KiwiAppController` è la facciata della UI; `WaterfallCoordinator`, `RecordingHistoryCoordinator` e `QsoAlertCoordinator` orchestrano rispettivamente waterfall, storico/trascrizioni e notifiche, sopra `KiwiClient`, `WaterfallClient`, `AudioRecorder` e `StationMonitor`
+- `KiwiAppController` è la facciata della UI; `WaterfallCoordinator`, `RecordingHistoryCoordinator`, `QsoAlertCoordinator` e `ChannelScanCoordinator` orchestrano rispettivamente waterfall, storico/trascrizioni, notifiche e scansione dei canali, sopra `KiwiClient`, `WaterfallClient`, `AudioRecorder` e `StationMonitor`
 - la documentazione storica sotto `docs/` è utile come riferimento, ma la struttura architetturale ufficiale del progetto deve essere mantenuta in questo documento
 
 La direzione consigliata è di mantenere la base condivisa come asset riutilizzabile e di evitare duplicazioni tra la UI e i servizi di dominio. Qualsiasi futura espansione verso Android deve partire da questa separazione, senza introdurre accoppiamenti impropri tra codice condiviso e runtime specifici.

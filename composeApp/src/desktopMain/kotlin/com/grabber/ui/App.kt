@@ -83,7 +83,9 @@ fun App(
                             controller = controller,
                             favorites = appSettingsData.favorites,
                             currentFreqKhz = currentFrequency,
-                            currentMode = currentMode
+                            currentMode = currentMode,
+                            isMachineLicensed = isMachineLicensed,
+                            onActivate = openSettings
                         )
                         MainTab.AUDIO -> AudioTab(controller = controller, onActivate = openSettings)
                         MainTab.RECORDER -> if (isMachineLicensed) {

@@ -18,14 +18,14 @@ tuning controls, mini spectrum/waterfall, and tabs. Hide credentials and private
 
 ### Funzionalità principali
 
-- **Ricezione e sintonia:** collegamento a un KiwiSDR configurabile; modalità AM, USB, LSB, CW e NFM; passi di sintonia, preset di banda e preferiti.
+- **Ricezione e sintonia:** collegamento a un KiwiSDR configurabile; modalità AM, USB, LSB, CW e NFM; passi di sintonia, preset di banda e preferiti, con scansione dei canali selezionati che si ferma sui segnali sopra la soglia dello squelch.
 - **Visualizzazione dei segnali:** analizzatore di spettro in tempo reale e waterfall a scorrimento, con sintonia tramite clic e controlli di visualizzazione.
 - **Ascolto e registrazione:** volume e silenziamento; registrazioni MP3 o WAV, continue o suddivise a intervalli.
 - **Controllo del rumore e della voce:** squelch RF e rilevamento dell'attività vocale (VAD) per filtrare ascolto o registrazione. Pre-buffer e hang time aiutano a preservare l'inizio e la continuità delle trasmissioni.
 - **Trascrizione e avvisi:** trascrizione locale con Vosk e notifiche Telegram configurabili per attività radio e parole chiave.
 - **Monitoraggio del ricevitore:** visualizzazione degli utenti collegati e delle informazioni della stazione; registrazione facoltativa dello storico utenti.
 
-Registrazione, VAD, trascrizione, storico utenti e notifiche Telegram richiedono l'attivazione gratuita e offline descritta in [Licenza](#licenza).
+Registrazione, VAD, trascrizione, storico utenti, scansione dei canali e notifiche Telegram richiedono l'attivazione gratuita e offline descritta in [Licenza](#licenza).
 
 <!-- SCREENSHOT (IT/EN): scheda Spettro & Cascata con spettro FFT, righello delle
 frequenze, waterfall, indicatore VFO e controlli. / Spectrum & Waterfall tab showing
@@ -59,7 +59,7 @@ Non sono pubblicati requisiti minimi di processore, memoria o spazio su disco. A
 
 ### Download e installazione
 
-Scarica l'installer Windows **EXE** o **MSI** dalla [release KiwiSDR Grabber 1.0.1](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.0.1). La release include `SHA256SUMS.txt`: confronta l'hash del file scaricato prima di eseguirlo. Apri l'installer scelto e segui le istruzioni di Windows. Non è necessario installare Java separatamente.
+Scarica l'installer Windows **EXE** o **MSI** dalla [release KiwiSDR Grabber 1.1.0](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.1.0). La release include `SHA256SUMS.txt`: confronta l'hash del file scaricato prima di eseguirlo. Apri l'installer scelto e segui le istruzioni di Windows. Non è necessario installare Java separatamente.
 
 L'installer non è firmato digitalmente: Windows potrebbe mostrare un avviso sul publisher o SmartScreen. Prima di scegliere se continuare, verifica la provenienza del file e il relativo hash. Le versioni successive alla 1.0.1 sono compilate da GitHub Actions e hanno anche un'attestazione di provenienza; i comandi di verifica sono nella [guida utente](docs/USER_GUIDE.md#verifica-dellinstaller).
 
@@ -77,7 +77,7 @@ Consulta la [Guida rapida e manuale utente](docs/USER_GUIDE.md) per le istruzion
 
 - [Guida rapida e manuale utente](docs/USER_GUIDE.md)
 - [Funzionalità richieste dagli utenti](docs/piani/RICHIESTE_FUNZIONALITA.md)
-- [Note della release 1.0.1](docs/RELEASE_NOTES_1.0.1.md)
+- [Note della release 1.1.0](docs/RELEASE_NOTES_1.1.0.md)
 - [Cronologia delle versioni](docs/VERSION_HISTORY.md)
 - [Avvisi e licenze di terze parti](docs/THIRD_PARTY_NOTICES.md)
 
@@ -107,7 +107,7 @@ L'applicazione utilizza Kotlin e Compose Multiplatform, Vosk per il riconoscimen
 
 ### Stato del progetto
 
-La versione **1.0.1** è la release Windows pubblicata attualmente ed è disponibile nelle [GitHub Releases](https://github.com/Gig81/KiwiSDR-Grabber/releases). Il progetto non assegna all'applicazione un'etichetta di stabilità separata (stable, beta o sperimentale).
+La versione **1.1.0** è la release Windows pubblicata attualmente ed è disponibile nelle [GitHub Releases](https://github.com/Gig81/KiwiSDR-Grabber/releases). Il progetto non assegna all'applicazione un'etichetta di stabilità separata (stable, beta o sperimentale).
 
 ## English
 
@@ -117,14 +117,14 @@ KiwiSDR Grabber is a desktop application for amateur radio enthusiasts and short
 
 ### Key features
 
-- **Receive and tune:** Connect to a configured KiwiSDR, choose AM, USB, LSB, CW, or NFM, and use frequency steps, band presets, and saved favorites.
+- **Receive and tune:** Connect to a configured KiwiSDR, choose AM, USB, LSB, CW, or NFM, and use frequency steps, band presets, and saved favorites, with scanning of selected channels that stops on signals above the squelch threshold.
 - **See activity:** View a live spectrum analyzer and scrolling waterfall, with click-to-tune and display controls.
 - **Listen and record:** Adjust volume and mute audio. Save recordings as MP3 or WAV, continuously or in timed segments.
 - **Control noise and voice gates:** Use RF squelch and optional Voice Activity Detection (VAD) to gate live audio or recordings. Pre-buffering and hang time help preserve speech around transmissions.
 - **Transcribe and alert:** Transcribe recordings locally with Vosk and optionally send QSO and keyword alerts through a Telegram bot that you configure.
 - **Monitor the receiver:** View connected users and station information; optional user-history logging is available.
 
-Recording, VAD, transcription, user-history logging, and Telegram alerts require the free, offline activation described under [Licensing](#licensing).
+Recording, VAD, transcription, user-history logging, channel scanning, and Telegram alerts require the free, offline activation described under [Licensing](#licensing).
 
 ### System requirements
 
@@ -136,7 +136,7 @@ The project does not publish minimum CPU, memory, or disk-space requirements. ma
 
 ### Download and installation
 
-Download the Windows **EXE** or **MSI** installer from the [KiwiSDR Grabber 1.0.1 release](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.0.1). The release also includes `SHA256SUMS.txt`; compare the checksum for the installer you downloaded before running it. Install either package by opening it and following the Windows prompts. You do not need to install Java separately.
+Download the Windows **EXE** or **MSI** installer from the [KiwiSDR Grabber 1.1.0 release](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.1.0). The release also includes `SHA256SUMS.txt`; compare the checksum for the installer you downloaded before running it. Install either package by opening it and following the Windows prompts. You do not need to install Java separately.
 
 The installer is not digitally signed, so Windows may display a publisher or SmartScreen warning. Check the release source and checksum before deciding whether to continue. Releases after 1.0.1 are built by GitHub Actions and also carry a build provenance attestation; see the [user guide](docs/USER_GUIDE.md#verifying-the-installer) for the verification commands.
 
@@ -154,7 +154,7 @@ See the step-by-step [Quick Start and User Guide](docs/USER_GUIDE.md).
 
 - [Quick Start and User Guide](docs/USER_GUIDE.md)
 - [User feature requests](docs/piani/RICHIESTE_FUNZIONALITA.md)
-- [Release notes for 1.0.1](docs/RELEASE_NOTES_1.0.1.md)
+- [Release notes for 1.1.0](docs/RELEASE_NOTES_1.1.0.md)
 - [Version history](docs/VERSION_HISTORY.md)
 - [Third-party notices and licenses](docs/THIRD_PARTY_NOTICES.md)
 
@@ -184,4 +184,4 @@ The application uses Kotlin and Compose Multiplatform, Vosk for offline speech r
 
 ### Project status
 
-Version **1.0.1** is the currently published Windows release, available from [GitHub Releases](https://github.com/Gig81/KiwiSDR-Grabber/releases). The project does not assign a separate stable, beta, or experimental label to the application.
+Version **1.1.0** is the currently published Windows release, available from [GitHub Releases](https://github.com/Gig81/KiwiSDR-Grabber/releases). The project does not assign a separate stable, beta, or experimental label to the application.

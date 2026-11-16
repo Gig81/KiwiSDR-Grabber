@@ -6,12 +6,12 @@
 - I pacchetti si distribuiscono solo tramite **GitHub Releases** di questo repository. Ogni release contiene gli installer, gli hash SHA-256, la licenza, gli avvisi di terze parti e i sorgenti delle librerie LGPL.
 - Dalla versione `1.2.0` ogni release contiene anche l'APK Android (`KiwiSDRGrabber-<versione>.apk`), firmato con la chiave dell'app (vedi [Versione Android](#versione-android)). Il Play Store è rinviato: l'AAB non viene pubblicato.
 
-## Stato della versione desktop
+## Stato delle versioni
 
-- `1.1.0` è la release Windows pubblicata attualmente ed è la prima prodotta dal workflow `Release` con attestazioni di provenienza; `1.0.1` e `1.0.0` restano disponibili nelle GitHub Releases.
+- `1.2.0` è la release pubblicata attualmente: installer Windows e prima versione Android (APK). `1.1.0` è stata la prima prodotta dal workflow `Release` con attestazioni di provenienza; `1.0.1` e `1.0.0` restano disponibili nelle GitHub Releases.
 - I file di una release si preparano in una cartella **fuori dal repository** (o in una cartella `Rilascio*/`, ignorata da git) e non vanno committati: gli installer e gli allegati vivono solo nella GitHub Release.
 - Gli installer Windows includono il runtime Java. I task ordinari `:composeApp:packageExe` e `:composeApp:packageMsi` sono utili per lo sviluppo; per le release usare `:composeApp:packageExeRelease` e `:composeApp:packageMsiRelease`, che aggiungono la scelta post-installazione. Gli output si trovano in `composeApp\build\compose\binaries\main`. Per le release pubbliche usare Eclipse Temurin (vedi [TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md](./TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md)).
-- La 1.1.0 introduce la scansione dei canali preferiti. Le note sono in [RELEASE_NOTES_1.1.0.md](./RELEASE_NOTES_1.1.0.md); le versioni precedenti sono archiviate in [releases/](./releases/README.md).
+- La 1.2.0 introduce l'app Android e corregge la sincronizzazione dei preferiti del server sul desktop. Le note sono in [RELEASE_NOTES_1.2.0.md](./RELEASE_NOTES_1.2.0.md); le versioni precedenti sono archiviate in [releases/](./releases/README.md).
 - Indirizzo e password KiwiSDR sono configurabili dall'utente, anche nel setup iniziale. Password KiwiSDR e token del bot Telegram vengono salvati nelle impostazioni locali cifrati con Windows DPAPI, legati all'account Windows corrente; i valori in chiaro delle versioni precedenti vengono cifrati al primo avvio. Se il file viene copiato su un altro account o PC, le credenziali vanno reinserite.
 - La libreria Vosk è inclusa; il modello linguistico no: l'utente lo scarica dal sito ufficiale e sceglie la cartella nell'app.
 - Se il server rifiuta l'autenticazione (`badp=1`), l'app spiega che la causa può essere la password errata oppure l'esaurimento dei canali e indica di controllare le impostazioni.
@@ -30,7 +30,7 @@ Su Android l'ID ha il formato `GRAB-A-…` e deriva da `ANDROID_ID`, che a sua v
 - **Certificato dell'app**, SHA-256 `EF:6D:6C:A3:CE:92:C7:A0:47:15:43:A1:FE:48:68:42:47:C6:B7:D4:B7:DD:8C:7E:B3:68:B4:46:EC:20:21:29`. È pubblicato nella guida utente e controllato dal workflow `Release`, che fallisce se l'APK risulta firmato con un altro certificato.
 - **CI.** La chiave dell'app è nei segreti dell'environment GitHub `android-release` (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`), accessibile solo dal job Android del workflow `Release` e solo da tag `v*` e da `main`. Se la chiave cambia (non dovrebbe mai succedere) vanno aggiornati segreti, impronta nel workflow, guida utente e questo documento.
 - **Aggiornamenti.** Un APK si installa sopra un altro solo se ha la stessa firma e un `versionCode` più alto, ricavato da `appVersion` (`1.2.0` → `10200`).
-- **Play Store** (rinviato). Si potrà aggiungere in qualsiasi momento finché l'app non vi è mai stata pubblicata: alla creazione dell'app nella Play Console si carica la propria chiave dell'app con PEPK (Play App Signing) e si registra la chiave di upload, così APK GitHub e app Play hanno la stessa firma e gli stessi ID dispositivo. Un account sviluppatore personale deve prima completare un test chiuso con almeno 12 tester per 14 giorni. Dettagli in [piani/ANDROID.md](./piani/ANDROID.md).
+- **Play Store** (rinviato). Si potrà aggiungere in qualsiasi momento finché l'app non vi è mai stata pubblicata: alla creazione dell'app nella Play Console si carica la propria chiave dell'app con PEPK (Play App Signing) e si registra la chiave di upload, così APK GitHub e app Play hanno la stessa firma e gli stessi ID dispositivo. Un account sviluppatore personale deve prima completare un test chiuso con almeno 12 tester per 14 giorni. Prima della pubblicazione su Play servono anche scheda dello Store, informativa sulla privacy, modulo sulla sicurezza dei dati, dichiarazione del foreground service `mediaPlayback` (con video) e istruzioni per far provare ai revisori le funzioni con attivazione.
 - **Verifica dello sviluppatore Android.** Google ha annunciato che anche le app installate fuori da Play dovranno appartenere a sviluppatori registrati, con nome del pacchetto e chiave di firma registrati; l'obbligo parte da alcuni paesi nel 2026 e si estende gradualmente. Prima che riguardi l'Italia va completata la registrazione, altrimenti i dispositivi certificati bloccheranno l'installazione dell'APK.
 
 ## Licenza
@@ -116,4 +116,4 @@ Crea `Rilascio-<versione>\` (ignorata da git). Le versioni delle librerie LGPL s
 ## Possibili evoluzioni
 
 - La firma digitale Authenticode degli installer non è prevista: i certificati sono a pagamento e il programma gratuito SignPath Foundation richiede una licenza approvata OSI. Verifica di hash e attestazioni e l'invio a Microsoft ne fanno le veci.
-- Pubblicazione Android sul Play Store (AAB firmato con la chiave di upload) e registrazione alla verifica dello sviluppatore Android: vedi [Versione Android](#versione-android) e [piani/ANDROID.md](./piani/ANDROID.md).
+- Pubblicazione Android sul Play Store (AAB firmato con la chiave di upload) e registrazione alla verifica dello sviluppatore Android: vedi [Versione Android](#versione-android).

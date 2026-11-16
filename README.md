@@ -4,9 +4,9 @@
 
 ## Italiano
 
-**Ascolta i ricevitori KiwiSDR, esplora lo spettro e registra l'audio radio su Windows.**
+**Ascolta i ricevitori KiwiSDR, esplora lo spettro e registra l'audio radio su Windows e Android.**
 
-KiwiSDR Grabber è un'applicazione desktop per radioamatori e appassionati di onde corte. Collegati a un ricevitore KiwiSDR, sintonizza i segnali, osserva lo spettro e il waterfall e salva l'audio sul tuo computer. Tra le funzioni opzionali: rilevamento dell'attività vocale, trascrizione offline e notifiche Telegram configurabili.
+KiwiSDR Grabber è un'applicazione desktop per radioamatori e appassionati di onde corte. Collegati a un ricevitore KiwiSDR, sintonizza i segnali, osserva lo spettro e il waterfall e salva l'audio sul tuo computer. Tra le funzioni opzionali: rilevamento dell'attività vocale, trascrizione offline e notifiche Telegram configurabili. Dalla versione 1.2.0 è disponibile anche un'app Android di ascolto, con un sottoinsieme delle funzioni.
 
 <!-- SCREENSHOT (IT/EN): finestra principale con console radio, stato della connessione,
 controlli di frequenza e modalità, mini spettro/waterfall e schede. Nascondere credenziali
@@ -51,17 +51,19 @@ and keyword options, interval, and test button. Hide the bot token and chat ID. 
 
 ### Requisiti di sistema
 
-- **Sistema supportato:** Windows 10 o Windows 11 a 64 bit.
+- **Sistemi supportati:** Windows 10 o Windows 11 a 64 bit; Android 10 o successivo per l'app di ascolto.
 - **Java:** non serve installarlo separatamente; gli installer Windows includono un runtime Java.
 - **Connessione:** serve poter raggiungere un ricevitore KiwiSDR per ascoltare e visualizzare i dati in tempo reale.
 
-Non sono pubblicati requisiti minimi di processore, memoria o spazio su disco. Non sono disponibili pacchetti per macOS o Linux. Un'app Android di ascolto (Android 10 o successivo) è in preparazione per la versione 1.2.0: vedi la [guida utente](docs/USER_GUIDE.md#12-versione-android).
+Non sono pubblicati requisiti minimi di processore, memoria o spazio su disco. Non sono disponibili pacchetti per macOS o Linux.
 
 ### Download e installazione
 
-Scarica l'installer Windows **EXE** o **MSI** dalla [release KiwiSDR Grabber 1.1.0](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.1.0). La release include `SHA256SUMS.txt`: confronta l'hash del file scaricato prima di eseguirlo. Apri l'installer scelto e segui le istruzioni di Windows. Non è necessario installare Java separatamente.
+Scarica l'installer Windows **EXE** o **MSI** dalla [release KiwiSDR Grabber 1.2.0](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.2.0). La release include `SHA256SUMS.txt`: confronta l'hash del file scaricato prima di eseguirlo. Apri l'installer scelto e segui le istruzioni di Windows. Non è necessario installare Java separatamente.
 
 L'installer non è firmato digitalmente: Windows potrebbe mostrare un avviso sul publisher o SmartScreen. Prima di scegliere se continuare, verifica la provenienza del file e il relativo hash. Le versioni successive alla 1.0.1 sono compilate da GitHub Actions e hanno anche un'attestazione di provenienza; i comandi di verifica sono nella [guida utente](docs/USER_GUIDE.md#verifica-dellinstaller).
+
+**Android:** dalla stessa release scarica sul telefono `KiwiSDRGrabber-1.2.0.apk` e aprilo, consentendo l'installazione di app sconosciute se richiesto. L'app non è sul Play Store e non si aggiorna da sola: le versioni successive si installano sopra quella esistente. Istruzioni, verifica e attivazione nella [guida utente](docs/USER_GUIDE.md#12-versione-android).
 
 ### Avvio rapido
 
@@ -77,7 +79,7 @@ Consulta la [Guida rapida e manuale utente](docs/USER_GUIDE.md) per le istruzion
 
 - [Guida rapida e manuale utente](docs/USER_GUIDE.md)
 - [Funzionalità richieste dagli utenti](docs/piani/RICHIESTE_FUNZIONALITA.md)
-- [Note della release 1.1.0](docs/RELEASE_NOTES_1.1.0.md)
+- [Note della release 1.2.0](docs/RELEASE_NOTES_1.2.0.md)
 - [Cronologia delle versioni](docs/VERSION_HISTORY.md)
 - [Avvisi e licenze di terze parti](docs/THIRD_PARTY_NOTICES.md)
 
@@ -89,7 +91,7 @@ Consulta la [Guida rapida e manuale utente](docs/USER_GUIDE.md) per le istruzion
 - [Design system della GUI](docs/GUI_DESIGN_SYSTEM.md)
 - [Distribuzione e release](docs/DISTRIBUZIONE_E_RILASCI.md)
 - [Toolchain e ambiente di sviluppo](docs/TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md)
-- [Piano e stato della versione Android](docs/piani/ANDROID.md)
+- [Versione Android: architettura e decisioni](docs/ARCHITECTURE.md#410-android-ambito-attivazione-e-decisioni-di-progetto)
 
 ### Licenza
 
@@ -107,13 +109,13 @@ L'applicazione utilizza Kotlin e Compose Multiplatform, Vosk per il riconoscimen
 
 ### Stato del progetto
 
-La versione **1.1.0** è la release Windows pubblicata attualmente ed è disponibile nelle [GitHub Releases](https://github.com/Gig81/KiwiSDR-Grabber/releases). Il progetto non assegna all'applicazione un'etichetta di stabilità separata (stable, beta o sperimentale).
+La versione **1.2.0** è la release pubblicata attualmente (Windows e Android) ed è disponibile nelle [GitHub Releases](https://github.com/Gig81/KiwiSDR-Grabber/releases). Il progetto non assegna all'applicazione un'etichetta di stabilità separata (stable, beta o sperimentale).
 
 ## English
 
-**Listen to KiwiSDR receivers, explore the spectrum, and record radio audio on Windows.**
+**Listen to KiwiSDR receivers, explore the spectrum, and record radio audio on Windows and Android.**
 
-KiwiSDR Grabber is a desktop application for amateur radio enthusiasts and shortwave listeners. Connect to a KiwiSDR receiver, tune signals, follow the spectrum and waterfall, and save audio locally. Optional tools include voice activity detection, offline speech transcription, and configurable Telegram alerts.
+KiwiSDR Grabber is a desktop application for amateur radio enthusiasts and shortwave listeners. Connect to a KiwiSDR receiver, tune signals, follow the spectrum and waterfall, and save audio locally. Optional tools include voice activity detection, offline speech transcription, and configurable Telegram alerts. Starting with version 1.2.0 an Android listening app with a subset of the features is also available.
 
 ### Key features
 
@@ -128,17 +130,19 @@ Recording, VAD, transcription, user-history logging, channel scanning, and Teleg
 
 ### System requirements
 
-- **Supported:** Windows 10 or Windows 11, 64-bit.
+- **Supported:** Windows 10 or Windows 11, 64-bit; Android 10 or later for the listening app.
 - **Java:** Not required for the Windows installers; they include a Java runtime.
 - **Connection:** Access to a reachable KiwiSDR receiver is needed to listen and view live receiver data.
 
-The project does not publish minimum CPU, memory, or disk-space requirements. macOS and Linux packages are not provided. An Android listening app (Android 10 or later) is being prepared for version 1.2.0: see the [user guide](docs/USER_GUIDE.md#12-android-version).
+The project does not publish minimum CPU, memory, or disk-space requirements. macOS and Linux packages are not provided.
 
 ### Download and installation
 
-Download the Windows **EXE** or **MSI** installer from the [KiwiSDR Grabber 1.1.0 release](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.1.0). The release also includes `SHA256SUMS.txt`; compare the checksum for the installer you downloaded before running it. Install either package by opening it and following the Windows prompts. You do not need to install Java separately.
+Download the Windows **EXE** or **MSI** installer from the [KiwiSDR Grabber 1.2.0 release](https://github.com/Gig81/KiwiSDR-Grabber/releases/tag/v1.2.0). The release also includes `SHA256SUMS.txt`; compare the checksum for the installer you downloaded before running it. Install either package by opening it and following the Windows prompts. You do not need to install Java separately.
 
 The installer is not digitally signed, so Windows may display a publisher or SmartScreen warning. Check the release source and checksum before deciding whether to continue. Releases after 1.0.1 are built by GitHub Actions and also carry a build provenance attestation; see the [user guide](docs/USER_GUIDE.md#verifying-the-installer) for the verification commands.
+
+**Android:** from the same release, download `KiwiSDRGrabber-1.2.0.apk` on the phone and open it, allowing installation of unknown apps if asked. The app is not on the Play Store and does not update itself: later versions install over the existing one. Instructions, verification, and activation are in the [user guide](docs/USER_GUIDE.md#12-android-version).
 
 ### Quick start
 
@@ -154,7 +158,7 @@ See the step-by-step [Quick Start and User Guide](docs/USER_GUIDE.md).
 
 - [Quick Start and User Guide](docs/USER_GUIDE.md)
 - [User feature requests](docs/piani/RICHIESTE_FUNZIONALITA.md)
-- [Release notes for 1.1.0](docs/RELEASE_NOTES_1.1.0.md)
+- [Release notes for 1.2.0](docs/RELEASE_NOTES_1.2.0.md)
 - [Version history](docs/VERSION_HISTORY.md)
 - [Third-party notices and licenses](docs/THIRD_PARTY_NOTICES.md)
 
@@ -166,7 +170,7 @@ See the step-by-step [Quick Start and User Guide](docs/USER_GUIDE.md).
 - [GUI design system](docs/GUI_DESIGN_SYSTEM.md)
 - [Distribution and releases](docs/DISTRIBUZIONE_E_RILASCI.md)
 - [Toolchain and development environment](docs/TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md)
-- [Android version plan and status](docs/piani/ANDROID.md)
+- [Android version: architecture and decisions](docs/ARCHITECTURE.md#410-android-ambito-attivazione-e-decisioni-di-progetto) (Italian)
 
 ### Licensing
 
@@ -184,4 +188,4 @@ The application uses Kotlin and Compose Multiplatform, Vosk for offline speech r
 
 ### Project status
 
-Version **1.1.0** is the currently published Windows release, available from [GitHub Releases](https://github.com/Gig81/KiwiSDR-Grabber/releases). The project does not assign a separate stable, beta, or experimental label to the application.
+Version **1.2.0** is the currently published release (Windows and Android), available from [GitHub Releases](https://github.com/Gig81/KiwiSDR-Grabber/releases). The project does not assign a separate stable, beta, or experimental label to the application.

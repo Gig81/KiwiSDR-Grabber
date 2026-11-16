@@ -6,7 +6,7 @@ KiwiSDR Grabber & Station Recorder è un'applicazione desktop multipiattaforma s
 
 La soluzione è costruita con un'architettura modulare orientata al riutilizzo: la logica applicativa core è contenuta nel modulo `shared`, mentre il rendering e i componenti desktop specifici sono separati nella UI application `composeApp`.
 
-Il progetto ha una versione Desktop Windows completa e un client Android di ascolto con un sottoinsieme ridotto delle funzioni (vedi [piani/ANDROID.md](./piani/ANDROID.md)), che riusa la logica JVM condivisa. L'architettura non impone un framework applicativo complesso: mantiene un design semplice, reattivo e guidato da flussi di eventi (`Flow`/`Coroutine`) e da servizi dedicati per audio, monitoraggio, registrazione e connessione KiwiSDR.
+Il progetto ha una versione Desktop Windows completa e un client Android di ascolto con un sottoinsieme ridotto delle funzioni (vedi [§4.10](#410-android-ambito-attivazione-e-decisioni-di-progetto)), che riusa la logica JVM condivisa. L'architettura non impone un framework applicativo complesso: mantiene un design semplice, reattivo e guidato da flussi di eventi (`Flow`/`Coroutine`) e da servizi dedicati per audio, monitoraggio, registrazione e connessione KiwiSDR.
 
 ### Obiettivi principali
 
@@ -331,6 +331,41 @@ L'infrastruttura non usa una `Result` monad globale né un framework di dependen
 - Waterfall: socket W/F aperto solo con la schermata Waterfall visibile e l'app in primo piano; riaperto con lo stesso token SND.
 - `androidApp`: `KiwiGrabberApplication` (ciclo di vita del processo, avvio/arresto del servizio), `KiwiPlaybackService` (foreground service `mediaPlayback` con notifica, azione *Disconnetti*, Wi-Fi lock, chiusura della sessione alla rimozione dai recenti), `MainActivity` e UI Compose in `com.gig81.kiwisdrgrabber.ui.*` (Radio, Waterfall, Preferiti, Utenti, Impostazioni).
 
+### 4.10 Android: ambito, attivazione e decisioni di progetto
+
+L'app Android (dalla 1.2.0) è un **client di ascolto interattivo e attento ai consumi**, non un monitor continuo: niente automazioni né elaborazioni pesanti.
+
+**Ambito.** Incluso: ascolto (connessione, sintonia, passo, modo, volume, mute, squelch RF con soglia), spettro e waterfall (tocco per sintonizzare, trascinamento, pinch, palette, range dB), utenti connessi live da `user_cb` (con località), preferiti del server (canali DX `mkr`, sola lettura, ricaricati a ogni connessione) e personali (CRUD), registrazione manuale WAV PCM 16 bit mono, impostazioni (server, password, nome, licenza). Escluso, solo desktop: Vosk e ricerca, VAD e voice gate, squelch in registrazione, segmentazione e timer, MP3, storico utenti e archivio SQLite, Telegram e alert QSO, pannello DSP avanzato, player interno (i file si aprono con le app di sistema).
+
+**Attivazione.** Stesso meccanismo e stesso strumento di firma del desktop (§4.8): formato `KSR1:<base64url(machineId)>:<firma Ed25519>`, payload `KiwiSDRRecorder:license:v1:<machineId>`, stessa chiave pubblica; il License Manager accetta gli ID `GRAB-(?:A-)?…`. Una licenza desktop non attiva Android e viceversa.
+
+- ID dispositivo `GRAB-A-XXXX-XXXX-XXXX-XXXX`: SHA-256 di `KiwiSDRRecorder:machine:android:v1:` + `Settings.Secure.ANDROID_ID` (nessun permesso, non pubblicitario). Se `ANDROID_ID` non è leggibile l'ID è `GRAB-NON-DISPONIBILE` e nessuna licenza è valida.
+- `ANDROID_ID` è univoco per dispositivo + utente + **chiave di firma dell'APK**: cambia con ripristino di fabbrica, nuovo profilo utente o cambio di chiave. Per questo tutti i canali di distribuzione devono usare la stessa chiave dell'app (vedi [DISTRIBUZIONE_E_RILASCI.md](./DISTRIBUZIONE_E_RILASCI.md#versione-android)); un APK di debug e uno di release hanno ID diversi.
+- Verifica Ed25519 con BouncyCastle (`java.security` non lo garantisce su tutte le API supportate); nessun controllo anti-manomissione né Play Integrity, sproporzionati per un'attivazione gratuita. R8 attivo in release.
+- Flusso: Impostazioni → Licenza con ID, *Copia*, *Condividi* (intent avviato dall'utente), codice e *Attiva*; nessuna chiamata di rete automatica.
+
+**Limitazioni senza attivazione.** Tutto ciò che serve ad ascoltare e sintonizzare è libero; si limita ciò che produce valore persistente o occupa risorse a lungo. Nessun periodo di prova, limite di sessione o "nag".
+
+| Funzione | Non attivata | Attivata |
+|---|---|---|
+| Connessione, sintonia, modo, volume, squelch, spettro e waterfall, utenti, preferiti del server, impostazioni | ✅ | ✅ |
+| Preferiti personali: aggiunta, modifica, eliminazione | ❌ (quelli salvati restano sintonizzabili) | ✅ |
+| Ascolto con app in background o schermo spento | ❌ la connessione si chiude e libera lo slot del ricevitore; avviso al ritorno in primo piano | ✅ foreground service |
+| Registrazione manuale | ❌ | ✅ |
+
+Motivazioni: la registrazione è riservata anche su desktop (confine coerente); l'ascolto in background ha costi reali (batteria, slot del server occupato) ed è la principale differenza d'uso su mobile; senza preferiti personali restano quelli del server, completi. Il gate (`GatedFeature`: `BACKGROUND_PLAYBACK`, `MANUAL_RECORDING`, `PERSONAL_FAVORITES`) è applicato nel controller prima di ogni azione; se l'attivazione si perde, i preferiti personali non vengono cancellati.
+
+**Ciclo di vita e risorse.**
+
+- Il controller vive nell'`Application`, non nel service: `KiwiPlaybackService` serve solo a tenere vivo il processo in background quando la sessione è attiva e la licenza lo consente. La sessione sopravvive a rotazioni e cambi di app.
+- Socket W/F aperto solo con la schermata Waterfall visibile e l'app in primo piano, sempre con lo stesso token della sessione SND (regola `badp=5`); su rete a consumo velocità del waterfall al minimo. I canali DX si chiedono su SND (`KiwiProtocol.dxMarkers()`), quindi non richiedono il W/F.
+- Cambio rete: `NetworkMonitor` anticipa la riconnessione; nessun ritentativo sui rifiuti `badp`. Rimozione dai recenti o *Disconnetti* dalla notifica chiudono la sessione, liberando lo slot del KiwiSDR.
+- Registrazione: MediaStore `Recordings/KiwiGrabber` (`Music/KiwiGrabber` su Android 10–11) con `IS_PENDING`; i file interrotti vengono riparati all'avvio; spazio libero controllato all'avvio (50 MB) e durante la scrittura (20 MB); disconnessione o perdita di rete chiudono il file e avvisano l'utente.
+- Persistenza: `MobileSettings` in `filesDir/settings.json`, password cifrata con Android Keystore (`aks:`); impostazioni e log sono esclusi dal backup, perché la chiave Keystore non è trasferibile.
+- Permessi: `INTERNET`, `ACCESS_NETWORK_STATE`, `WAKE_LOCK` (Wi-Fi lock), `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `POST_NOTIFICATIONS` (chiesto solo con l'app attivata); nessun permesso di storage (`minSdk` 29) né microfono. `usesCleartextTraffic` è necessario perché il protocollo KiwiSDR usa `ws://`.
+
+**Scelte rispetto all'impostazione iniziale.** Non è stato estratto un `KiwiSessionCore` comune: la parte di sessione condivisibile (coordinamento W/F con token SND, ritentativi, `badp`) è già in `WaterfallCoordinator`, mentre registrazione segmentata, VAD, storico e alert restano desktop. Modulo `androidApp` separato da `composeApp`, perché il plugin applicazione Android non va combinato con il plugin KMP nello stesso modulo e la UI mobile è diversa.
+
 ---
 
 ## 5. Regole implementative
@@ -433,7 +468,8 @@ L'infrastruttura non usa una `Result` monad globale né un framework di dependen
 
 ### 6.4 Funzionalità mobile-specifiche
 
-- la logica mobile va progettata in modo da poter reusarare i servizi già condivisi
+- la logica mobile va progettata in modo da poter riusare i servizi già condivisi
+- un eventuale MP3 su Android va valutato per prestazioni e licenza (`jump3r` è Java puro, ma oggi è solo desktop)
 - i service Android e le notifiche di foreground vanno separati dalla business logic core
 - il binding UI e di render deve essere testato in modo da mantenere il modulo condiviso indipendente da `compose.desktop`
 
@@ -447,12 +483,12 @@ L'infrastruttura non usa una `Result` monad globale né un framework di dependen
 
 ## 7. Stato attuale del repository
 
-Il progetto attuale è in uno stato di sviluppo desktop-first e già funzionale, con i principali componenti core implementati e in uso:
+Il progetto è desktop-first, con un client Android di ascolto e con i principali componenti core implementati e in uso:
 
 - `shared` contiene la logica di protocollo e modelli chiave (`commonMain`), i servizi JVM condivisi (`jvmCommonMain`) e quelli specifici di desktop e Android
 - `composeApp` fornisce l'interfaccia grafica desktop
 - `KiwiAppController` è la facciata della UI; `WaterfallCoordinator`, `RecordingHistoryCoordinator`, `QsoAlertCoordinator` e `ChannelScanCoordinator` orchestrano rispettivamente waterfall, storico/trascrizioni, notifiche e scansione dei canali, sopra `KiwiClient`, `WaterfallClient`, `AudioRecorder` e `StationMonitor`
-- `androidApp` + `MobileAppController` forniscono il client Android di ascolto (implementato, da collaudare su dispositivo: vedi `piani/ANDROID.md`)
+- `androidApp` + `MobileAppController` forniscono il client Android di ascolto, pubblicato dalla 1.2.0 come APK nelle GitHub Releases (§4.9, §4.10)
 - la documentazione storica sotto `docs/` è utile come riferimento, ma la struttura architetturale ufficiale del progetto deve essere mantenuta in questo documento
 
 La direzione consigliata è di mantenere la base condivisa come asset riutilizzabile e di evitare duplicazioni tra la UI e i servizi di dominio, senza introdurre accoppiamenti impropri tra codice condiviso e runtime specifici.

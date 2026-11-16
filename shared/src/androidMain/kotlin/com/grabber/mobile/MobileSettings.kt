@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 const val DEFAULT_ANDROID_CLIENT_NAME = "KiwiGrabberAndroid"
 val FREQUENCY_STEPS_KHZ = listOf(0.1, 0.5, 1.0, 5.0, 9.0, 10.0, 100.0)
 
-/** Modello ridotto delle impostazioni Android (vedi `docs/piani/ANDROID.md` §4.6). */
+/** Modello ridotto delle impostazioni Android (vedi `docs/ARCHITECTURE.md` §4.10). */
 @Serializable
 data class MobileSettingsData(
     val serverAddress: String = DEFAULT_SERVER_ADDRESS,

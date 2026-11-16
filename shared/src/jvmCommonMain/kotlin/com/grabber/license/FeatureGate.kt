@@ -1,6 +1,6 @@
 package com.grabber.license
 
-/** Funzioni riservate alla versione attivata (vedi `docs/piani/ANDROID.md` §6). */
+/** Funzioni riservate alla versione attivata (vedi `docs/ARCHITECTURE.md` §4.10). */
 enum class GatedFeature(val description: String) {
     BACKGROUND_PLAYBACK("L'ascolto in background e a schermo spento"),
     MANUAL_RECORDING("La registrazione"),

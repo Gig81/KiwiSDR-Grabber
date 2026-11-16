@@ -82,18 +82,42 @@ Gli installer vengono generati sotto `composeApp\build\compose\binaries\main\exe
 
 Gli installer locali servono per lo sviluppo e per provare modifiche al packaging: quelli pubblicati nelle release si producono solo con il workflow `Release` (vedi sotto).
 
+### Android
+
+Sul PC di sviluppo non c'è l'SDK Android: la build gira in un container Docker e il target Android si attiva solo lì (dettagli in [TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md](./TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md#3-sviluppo-e-rilascio--mobile-android)).
+
+```powershell
+# Controllo standard Android: test host (jvmCommonTest + androidHostTest), lint, APK di debug
+.\scripts\android\build.ps1 :shared:testAndroidHostTest :androidApp:lintDebug :androidApp:assembleDebug
+```
+
+Docker Desktop non espone KVM, quindi l'emulatore non è utilizzabile: il collaudo si fa su un dispositivo fisico con l'APK `build\android-out\apk\debug\androidApp-debug.apk` (oppure con la release firmata, che ha un ID dispositivo diverso). Criteri di collaudo:
+
+- **Connessione:** con e senza password; rifiuti `badp` mostrati senza ritentativi; riconnessione dopo un cambio Wi-Fi ↔ rete mobile.
+- **Audio:** nessun underrun percepibile in 30 minuti; squelch e volume reattivi; pausa su chiamata in arrivo, mute allo scollegamento delle cuffie.
+- **Background:** con attivazione, audio continuo per 30 minuti a schermo spento con notifica visibile; senza attivazione, connessione chiusa e avviso al ritorno.
+- **Waterfall:** sintonia al tocco entro la risoluzione del bin; socket W/F chiuso fuori dalla schermata e in background, riaperto senza `badp=5`.
+- **Slot del server:** dopo *Disconnetti*, rimozione dai recenti o arresto forzato la connessione risulta chiusa sul KiwiSDR.
+- **Registrazione:** WAV riproducibili con durata corretta; nessun file `IS_PENDING` residuo dopo un'interruzione.
+- **Licenza:** il codice valido attiva le funzioni; codici desktop, di altri dispositivi o alterati vengono rifiutati; il gate tiene anche chiamando le API del controller senza passare dalla UI.
+- **Segreti:** password mai in chiaro in file, log e backup.
+- **Release:** con R8 attivo provare tutte le schede (una classe rimossa per errore da R8 si manifesta solo nella release).
+
+I log dell'app sono in `filesDir/logs` (escluso dal backup).
+
 ### Integrazione continua (GitHub Actions)
 
-- `.github/workflows/ci.yml` — a ogni push su `main` e pull request esegue su Windows `:composeApp:compileKotlinDesktop :shared:desktopTest`, lo stesso controllo da lanciare in locale prima di un commit.
-- `.github/workflows/release.yml` — sul push di un tag `v<versione>` compila gli installer con Eclipse Temurin 21, prepara gli allegati con `scripts/release/Prepare-ReleaseAssets.ps1`, crea le attestazioni di provenienza e una GitHub Release bozza. Avviato a mano (*Run workflow*) esegue solo la build e lascia gli allegati come artifact.
+- `.github/workflows/ci.yml` — a ogni push su `main` e pull request esegue su Windows `:composeApp:compileKotlinDesktop :shared:desktopTest`, lo stesso controllo da lanciare in locale prima di un commit, e su Ubuntu il controllo Android (test host, lint, APK di debug).
+- `.github/workflows/release.yml` — sul push di un tag `v<versione>` compila l'APK Android firmato con la chiave dell'app e gli installer con Eclipse Temurin 21, prepara gli allegati con `scripts/release/Prepare-ReleaseAssets.ps1`, crea le attestazioni di provenienza e una GitHub Release bozza. Avviato a mano (*Run workflow*) esegue solo la build e lascia gli allegati come artifact.
 - `.github/workflows/codeql.yml` — analisi CodeQL settimanale e su push/pull request.
 
 Lo script degli allegati si può eseguire anche in locale, dopo i task `package*Release`: `.\scripts\release\Prepare-ReleaseAssets.ps1 -Version <versione>` (output in `Rilascio-<versione>\`, ignorata da git).
 
 ## 4. Struttura dei moduli
 
-- `shared`: logica cross-platform, modelli, protocollo, client SDR, audio e monitoraggio
+- `shared`: logica cross-platform, modelli, protocollo, client SDR, audio e monitoraggio (`commonMain`, `jvmCommonMain` condiviso con Android, `desktopMain`, `androidMain`)
 - `composeApp`: UI desktop e entry point dell'applicazione
+- `androidApp`: app Android (UI Compose mobile, foreground service), presente nella build solo con l'SDK Android
 
 La GUI desktop è in `composeApp/src/desktopMain/kotlin/com/grabber/ui/`: `App.kt` compone la console radio persistente (`RadioConsole`), la barra delle schede (`MainTabBar`) e la scheda attiva; ogni scheda ha il proprio package in `ui/feature/<nome>/`. I token e i controlli visuali riutilizzabili sono in `ui/designsystem/`. Consultare `GUI_DESIGN_SYSTEM.md` per layout, palette e regole di coerenza; mantenere lo stato funzionale nel controller/impostazioni, non duplicarlo nei composable.
 
@@ -114,7 +138,7 @@ La GUI desktop è in `composeApp/src/desktopMain/kotlin/com/grabber/ui/`: `App.k
 
 ## 7. Procedure consigliate
 
-- aggiungere nuove utility in `shared` solo se possono essere usate tra desktop e futuro mobile
+- aggiungere nuove utility in `shared` solo se possono essere usate tra desktop e Android (in `jvmCommonMain` se usano API JVM)
 - lasciare la parte desktop-specifica in `desktopMain`, non in `commonMain`
 - fare attenzione alle dipendenze circolari e ai callback tra UI e servizi di business
 - documentare le nuove API pubbliche con KDoc chiaro, non solo per la sintassi ma per il contesto d'uso
@@ -133,4 +157,4 @@ La GUI desktop è in `composeApp/src/desktopMain/kotlin/com/grabber/ui/`: `App.k
 - `ARCHITECTURE.md`: architettura ufficiale e regole di sviluppo
 - `GUI_DESIGN_SYSTEM.md`: riferimenti visivi e struttura della GUI desktop
 - `TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md`: ambiente, build e packaging
-- `docs/`: documentazione ufficiale, guide operative e appunti per gli sviluppi Android e distribuzione
+- `DISTRIBUZIONE_E_RILASCI.md`: procedura di rilascio desktop e Android

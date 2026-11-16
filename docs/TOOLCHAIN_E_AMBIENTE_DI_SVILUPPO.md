@@ -82,7 +82,7 @@ Il 10 novembre 2026 l'utente ha verificato con esito positivo installazione e av
 
 ## 3. Sviluppo e Rilascio — Mobile (Android)
 
-Ambito, architettura e stato della versione mobile: [piani/ANDROID.md](./piani/ANDROID.md).
+Ambito, attivazione e decisioni di progetto della versione mobile: [ARCHITECTURE.md §4.10](./ARCHITECTURE.md#410-android-ambito-attivazione-e-decisioni-di-progetto); distribuzione e chiavi: [DISTRIBUZIONE_E_RILASCI.md](./DISTRIBUZIONE_E_RILASCI.md#versione-android).
 
 ### Parametri della build Android
 
@@ -127,7 +127,7 @@ Con Android Studio installato (SDK Platform 37, Build-Tools 37, Platform-Tools) 
 ### Firma e rilascio Android
 
 1. **Due chiavi**, custodite con backup offline **fuori dal repository** (`*.jks` è già in `.gitignore`), con le password in un password manager:
-   - **chiave di firma dell'app** (`kiwigrabber-release.jks`, alias `kiwigrabber`): firma l'APK GitHub ed è caricata una sola volta su Play App Signing, quindi è la stessa sui due canali (vedi `piani/ANDROID.md` §5.2). Non è sostituibile: perderla impedisce gli aggiornamenti e invalida tutte le licenze Android;
+   - **chiave di firma dell'app** (`kiwigrabber-release.jks`, alias `kiwigrabber`): firma l'APK GitHub ed è caricata una sola volta su Play App Signing, quindi è la stessa sui due canali (vedi [ARCHITECTURE.md §4.10](./ARCHITECTURE.md#410-android-ambito-attivazione-e-decisioni-di-progetto)). Non è sostituibile: perderla impedisce gli aggiornamenti e invalida tutte le licenze Android;
    - **chiave di upload** (`kiwigrabber-upload.jks`, alias `upload`): firma solo l'AAB caricato su Play; in caso di perdita Google la sostituisce.
    ```powershell
    keytool -genkeypair -v -keystore kiwigrabber-release.jks -storetype PKCS12 -keyalg RSA -keysize 4096 -validity 10000 -alias kiwigrabber

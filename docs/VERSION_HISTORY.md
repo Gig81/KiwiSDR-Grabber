@@ -4,6 +4,7 @@ Registro sintetico delle versioni desktop distribuite e in preparazione. Le date
 
 | Versione | Stato | Tipo | Riepilogo | Note |
 |---|---|---|---|---|
+| `1.1.0` | In preparazione | Minor | Scansione dei canali preferiti selezionati con arresto sui segnali sopra la soglia dello squelch e ripresa automatica (funzione avanzata). | [Note 1.1.0](./RELEASE_NOTES_1.1.0.md) |
 | `1.0.1` | Pubblicata (12/11/2026) | Patch | Correzione del primo avvio e del logging degli errori; scelta di avviare l'app e/o aprire le note dopo l'installazione Windows; nessuna finestra di console. | [Note 1.0.1](./RELEASE_NOTES_1.0.1.md) |
 | `1.0.0` | Pubblicata | Prima release desktop | Prima release pubblica per Windows. | [Archivio 1.0.0](./releases/RELEASE_NOTES_1.0.0.md) |
 

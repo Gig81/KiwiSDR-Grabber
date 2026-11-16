@@ -180,6 +180,8 @@ internal fun FavoriteChannelsPanel(
     searchQuery: String,
     onClearSearch: () -> Unit,
     isActive: (FavoriteFrequency) -> Boolean,
+    showScanToggle: Boolean,
+    onToggleScan: (FavoriteFrequency) -> Unit,
     onTune: (FavoriteFrequency) -> Unit,
     onEdit: (FavoriteFrequency) -> Unit,
     onDelete: (FavoriteFrequency) -> Unit,
@@ -230,6 +232,8 @@ internal fun FavoriteChannelsPanel(
                         FavoriteChannelCard(
                             favorite = fav,
                             isActive = isActive(fav),
+                            showScanToggle = showScanToggle,
+                            onToggleScan = { onToggleScan(fav) },
                             onTune = { onTune(fav) },
                             onEdit = { onEdit(fav) },
                             onDelete = { onDelete(fav) }

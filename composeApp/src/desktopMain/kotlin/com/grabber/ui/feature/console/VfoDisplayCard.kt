@@ -39,7 +39,9 @@ internal fun VfoDisplayCard(
     currentStep: FrequencyStep,
     onTune: (Double) -> Unit,
     onStepDelta: (Double) -> Unit,
-    onStepChange: (FrequencyStep) -> Unit
+    onStepChange: (FrequencyStep) -> Unit,
+    /** Etichetta e colore dell'indicatore di scansione; null se la scansione è ferma. */
+    scanIndicator: Pair<String, Color>? = null
 ) {
     var inputBuffer by remember { mutableStateOf(String.format(Locale.US, "%.6f", frequencyKhz / 1000.0)) }
     var isEditing by remember { mutableStateOf(false) }
@@ -133,6 +135,9 @@ internal fun VfoDisplayCard(
                             keyboardActions = KeyboardActions(onDone = { commitTuning() }),
                             cursorBrush = SolidColor(GrabberColors.Primary)
                         )
+                        scanIndicator?.let { (label, color) ->
+                            Text(text = label, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = color)
+                        }
                         Text(
                             text = "MHz",
                             fontSize = 10.sp,

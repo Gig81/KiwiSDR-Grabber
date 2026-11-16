@@ -21,12 +21,16 @@ data class FavoriteFrequency(
     val name: String,
     val frequencyKhz: Double,
     val modeCode: String, // "am", "usb", "lsb", "cw", "nbfm"
-    val group: String = "" // "LW", "MW", "HAM", "CB", "BC", ecc.
+    val group: String = "", // "LW", "MW", "HAM", "CB", "BC", ecc.
+    val scanEnabled: Boolean = false // Incluso nella scansione dei canali
 ) {
     val mode: ModulationMode get() = ModulationMode.entries.find { it.code == modeCode } ?: ModulationMode.AM
 }
 
 const val DEFAULT_SERVER_ADDRESS = KiwiServerDefaults.ADDRESS
+
+const val DEFAULT_SCAN_DWELL_SECONDS = 3
+val SCAN_DWELL_SECONDS_RANGE = 1..30
 
 fun parseServerAddress(address: String): Pair<String, Int> {
     var clean = address.trim()
@@ -85,7 +89,10 @@ data class SettingsData(
     val waterfallMaxDb: Int = -10,
     val waterfallSpeed: Int = 2,
     val waterfallAutoFollowVfo: Boolean = true,
-    val waterfallZoom: Int = 0
+    val waterfallZoom: Int = 0,
+    // Scansione dei canali preferiti
+    val scanDwellSeconds: Int = DEFAULT_SCAN_DWELL_SECONDS, // Ascolto per canale in assenza di segnale
+    val scanAutoResume: Boolean = true                      // Riprende dopo la chiusura dello squelch
 ) {
     val logLevel: LogLevel get() = LogLevel.entries.find { it.name == logLevelName } ?: LogLevel.WARN
     val lastMode: ModulationMode get() = ModulationMode.entries.find { it.code == lastModeCode } ?: ModulationMode.AM
@@ -350,6 +357,25 @@ class AppSettings(
     }
 
     fun updateFavorites(favorites: List<FavoriteFrequency>) = updateCustomFavorites { favorites }
+
+    /** Include o esclude dalla scansione i preferiti indicati, senza cambiare l'ordine dell'elenco. */
+    fun setFavoritesScanEnabled(targets: Collection<FavoriteFrequency>, enabled: Boolean) {
+        val targetSet = targets.toSet()
+        updateCustomFavorites { favorites ->
+            if (favorites.none { it in targetSet && it.scanEnabled != enabled }) return@updateCustomFavorites null
+            favorites.map { if (it in targetSet) it.copy(scanEnabled = enabled) else it }
+        }
+    }
+
+    fun setScanDwellSeconds(seconds: Int) {
+        updateAndSave {
+            it.copy(scanDwellSeconds = seconds.coerceIn(SCAN_DWELL_SECONDS_RANGE.first, SCAN_DWELL_SECONDS_RANGE.last))
+        }
+    }
+
+    fun setScanAutoResume(enabled: Boolean) {
+        updateAndSave { it.copy(scanAutoResume = enabled) }
+    }
 
     /** `transform` restituisce null quando la lista non cambia: in quel caso non si salva nulla. */
     private fun updateCustomFavorites(transform: (List<FavoriteFrequency>) -> List<FavoriteFrequency>?) {

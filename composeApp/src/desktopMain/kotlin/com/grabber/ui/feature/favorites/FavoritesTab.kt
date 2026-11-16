@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,8 +34,12 @@ fun FavoritesTab(
     favorites: List<FavoriteFrequency>,
     currentFreqKhz: Double,
     currentMode: ModulationMode,
+    isMachineLicensed: Boolean,
+    onActivate: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val settings by controller.settings.collectAsState()
+    val scanState by controller.channelScanState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilterId by remember { mutableStateOf("CB") }
 
@@ -70,6 +75,21 @@ fun FavoritesTab(
             onResetDefaults = { showResetConfirm = true },
             modifier = Modifier.width(260.dp).fillMaxHeight()
         )
+        ChannelScanPanel(
+            scanState = scanState,
+            selectedCount = favorites.count { it.scanEnabled },
+            dwellSeconds = settings.scanDwellSeconds,
+            autoResume = settings.scanAutoResume,
+            isMachineLicensed = isMachineLicensed,
+            onStart = controller::startChannelScan,
+            onStop = controller::stopChannelScan,
+            onDwellChange = controller::setScanDwellSeconds,
+            onAutoResumeChange = controller::setScanAutoResume,
+            onSelectVisible = { controller.setFavoritesScanEnabled(filteredFavorites, true) },
+            onClearSelection = { controller.setFavoritesScanEnabled(favorites, false) },
+            onActivate = onActivate,
+            modifier = Modifier.width(240.dp).fillMaxHeight()
+        )
         FavoriteChannelsPanel(
             filterLabel = availableFilters.find { it.id.equals(selectedFilterId, ignoreCase = true) }?.label
                 ?: selectedFilterId,
@@ -77,6 +97,8 @@ fun FavoritesTab(
             searchQuery = searchQuery,
             onClearSearch = { searchQuery = "" },
             isActive = { abs(it.frequencyKhz - currentFreqKhz) < 0.1 && it.mode == currentMode },
+            showScanToggle = isMachineLicensed,
+            onToggleScan = { controller.setFavoritesScanEnabled(listOf(it), !it.scanEnabled) },
             onTune = { controller.tune(it.frequencyKhz, it.mode) },
             onEdit = { editingFavorite = it },
             onDelete = { deletingFavorite = it },
@@ -125,7 +147,10 @@ fun FavoritesTab(
             initialGroup = fav.group,
             onDismiss = { editingFavorite = null },
             onConfirm = { name, freq, mode, group ->
-                controller.editFavorite(fav, favoriteOf(name, freq, mode, group))
+                controller.editFavorite(
+                    fav,
+                    fav.copy(name = name, frequencyKhz = freq, modeCode = mode.code, group = group)
+                )
                 editingFavorite = null
             }
         )

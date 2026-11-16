@@ -32,6 +32,8 @@ import java.util.Locale
 internal fun FavoriteChannelCard(
     favorite: FavoriteFrequency,
     isActive: Boolean,
+    showScanToggle: Boolean,
+    onToggleScan: () -> Unit,
     onTune: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -138,6 +140,24 @@ internal fun FavoriteChannelCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
+                    if (showScanToggle) {
+                        IconButton(
+                            onClick = onToggleScan,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                if (favorite.scanEnabled) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank,
+                                contentDescription = if (favorite.scanEnabled) {
+                                    "Escludi dalla scansione"
+                                } else {
+                                    "Includi nella scansione"
+                                },
+                                tint = if (favorite.scanEnabled) GrabberColors.Primary else GrabberColors.TextSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+
                     IconButton(
                         onClick = onTune,
                         modifier = Modifier.size(24.dp)

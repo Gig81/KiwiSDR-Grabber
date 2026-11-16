@@ -18,14 +18,14 @@ tuning controls, mini spectrum/waterfall, and tabs. Hide credentials and private
 
 ### Funzionalità principali
 
-- **Ricezione e sintonia:** collegamento a un KiwiSDR configurabile; modalità AM, USB, LSB, CW e NFM; passi di sintonia, preset di banda e preferiti.
+- **Ricezione e sintonia:** collegamento a un KiwiSDR configurabile; modalità AM, USB, LSB, CW e NFM; passi di sintonia, preset di banda e preferiti, con scansione dei canali selezionati che si ferma sui segnali sopra la soglia dello squelch.
 - **Visualizzazione dei segnali:** analizzatore di spettro in tempo reale e waterfall a scorrimento, con sintonia tramite clic e controlli di visualizzazione.
 - **Ascolto e registrazione:** volume e silenziamento; registrazioni MP3 o WAV, continue o suddivise a intervalli.
 - **Controllo del rumore e della voce:** squelch RF e rilevamento dell'attività vocale (VAD) per filtrare ascolto o registrazione. Pre-buffer e hang time aiutano a preservare l'inizio e la continuità delle trasmissioni.
 - **Trascrizione e avvisi:** trascrizione locale con Vosk e notifiche Telegram configurabili per attività radio e parole chiave.
 - **Monitoraggio del ricevitore:** visualizzazione degli utenti collegati e delle informazioni della stazione; registrazione facoltativa dello storico utenti.
 
-Registrazione, VAD, trascrizione, storico utenti e notifiche Telegram richiedono l'attivazione gratuita e offline descritta in [Licenza](#licenza).
+Registrazione, VAD, trascrizione, storico utenti, scansione dei canali e notifiche Telegram richiedono l'attivazione gratuita e offline descritta in [Licenza](#licenza).
 
 <!-- SCREENSHOT (IT/EN): scheda Spettro & Cascata con spettro FFT, righello delle
 frequenze, waterfall, indicatore VFO e controlli. / Spectrum & Waterfall tab showing
@@ -117,14 +117,14 @@ KiwiSDR Grabber is a desktop application for amateur radio enthusiasts and short
 
 ### Key features
 
-- **Receive and tune:** Connect to a configured KiwiSDR, choose AM, USB, LSB, CW, or NFM, and use frequency steps, band presets, and saved favorites.
+- **Receive and tune:** Connect to a configured KiwiSDR, choose AM, USB, LSB, CW, or NFM, and use frequency steps, band presets, and saved favorites, with scanning of selected channels that stops on signals above the squelch threshold.
 - **See activity:** View a live spectrum analyzer and scrolling waterfall, with click-to-tune and display controls.
 - **Listen and record:** Adjust volume and mute audio. Save recordings as MP3 or WAV, continuously or in timed segments.
 - **Control noise and voice gates:** Use RF squelch and optional Voice Activity Detection (VAD) to gate live audio or recordings. Pre-buffering and hang time help preserve speech around transmissions.
 - **Transcribe and alert:** Transcribe recordings locally with Vosk and optionally send QSO and keyword alerts through a Telegram bot that you configure.
 - **Monitor the receiver:** View connected users and station information; optional user-history logging is available.
 
-Recording, VAD, transcription, user-history logging, and Telegram alerts require the free, offline activation described under [Licensing](#licensing).
+Recording, VAD, transcription, user-history logging, channel scanning, and Telegram alerts require the free, offline activation described under [Licensing](#licensing).
 
 ### System requirements
 

@@ -84,6 +84,17 @@ class KiwiAppController(
         onTranscriptionFinished = alerts::onTranscriptionFinished
     )
 
+    private val channelScan = ChannelScanCoordinator(
+        scope = scope,
+        selectedChannels = { appSettings.settings.value.favorites.filter { it.scanEnabled } },
+        dwellMillis = { appSettings.settings.value.scanDwellSeconds * 1000L },
+        autoResume = { appSettings.settings.value.scanAutoResume },
+        signalGateOpen = squelch.isGateOpen,
+        tuneTo = { applyTuning(it.frequencyKhz, it.mode) },
+        resetSignalDetection = squelch::reset,
+        onStoppedOnSignal = { _connectionNotifications.tryEmit("Scansione fermata: segnale su ${it.name}") }
+    )
+
     val settings: StateFlow<SettingsData> = appSettings.settings
     val serverEndpoint: String get() = "${client.host}:${client.port}"
     val recordingsDirectory: File get() = recorder.baseDirectory
@@ -137,6 +148,8 @@ class KiwiAppController(
     val waterfallBufferVersion = waterfallBuffer.version
     val waterfallPalette: StateFlow<WaterfallPaletteType> = waterfall.palette
     val waterfallAutoFollow: StateFlow<Boolean> = waterfall.autoFollow
+
+    val channelScanState: StateFlow<ChannelScanState> = channelScan.state
 
     val userLogs: StateFlow<List<UserLogEntry>> = history.userLogs
     val recordingHistory: StateFlow<List<RecordingHistoryEntry>> = history.recordingHistory
@@ -254,6 +267,7 @@ class KiwiAppController(
     private fun observeConnectionLifecycle() {
         client.connectionState
             .onEach { state ->
+                if (state !is ConnectionState.Connected) channelScan.stop()
                 when (state) {
                     is ConnectionState.Connected -> resumeRecordingAfterReconnect()
                     is ConnectionState.Reconnecting -> {
@@ -326,12 +340,19 @@ class KiwiAppController(
 
     fun disconnect() {
         wasRecordingBeforeDisconnect = false
+        channelScan.stop()
         waterfall.stopStream()
         if (isRecording.value) stopRecording()
         client.disconnect()
     }
 
+    /** Sintonia richiesta dall'utente: interrompe un'eventuale scansione dei canali. */
     fun tune(freqKhz: Double, mode: ModulationMode? = null) {
+        channelScan.stop()
+        applyTuning(freqKhz, mode)
+    }
+
+    private fun applyTuning(freqKhz: Double, mode: ModulationMode?) {
         val bounded = freqKhz.coerceIn(0.0, MAX_FREQUENCY_KHZ)
         val targetMode = mode ?: currentMode.value
         squelch.reset()
@@ -395,12 +416,18 @@ class KiwiAppController(
             client.requestDxLabels()
             return
         }
+        // Le spunte di scansione restano sui canali con stessa frequenza e modo.
+        val scanSelection = appSettings.settings.value.favorites
+            .filter { it.scanEnabled }
+            .map { it.frequencyKhz to it.modeCode }
+            .toSet()
         val favorites = labels.map { label ->
             FavoriteFrequency(
                 name = label.i.ifBlank { "${label.f.toInt()} kHz" },
                 frequencyKhz = label.f,
                 modeCode = label.mode.code,
-                group = label.g
+                group = label.g,
+                scanEnabled = (label.f to label.mode.code) in scanSelection
             )
         }
         appSettings.updateFavorites(favorites)
@@ -432,6 +459,39 @@ class KiwiAppController(
     fun editFavorite(oldFav: FavoriteFrequency, newFav: FavoriteFrequency) = appSettings.editFavorite(oldFav, newFav)
 
     fun removeFavorite(fav: FavoriteFrequency) = appSettings.removeFavorite(fav)
+
+    // ── Scansione dei canali (funzione avanzata) ─────────────────
+
+    fun setFavoritesScanEnabled(favorites: Collection<FavoriteFrequency>, enabled: Boolean) {
+        if (!hasAdvancedFeatures()) return
+        appSettings.setFavoritesScanEnabled(favorites, enabled)
+    }
+
+    fun setScanDwellSeconds(seconds: Int) {
+        if (!hasAdvancedFeatures()) return
+        appSettings.setScanDwellSeconds(seconds)
+    }
+
+    fun setScanAutoResume(enabled: Boolean) {
+        if (!hasAdvancedFeatures()) return
+        appSettings.setScanAutoResume(enabled)
+    }
+
+    fun startChannelScan() {
+        val problem = when {
+            !hasAdvancedFeatures() -> "La scansione dei canali richiede l'attivazione della licenza."
+            client.connectionState.value !is ConnectionState.Connected -> "Connettiti al ricevitore per avviare la scansione."
+            appSettings.settings.value.favorites.none { it.scanEnabled } -> "Seleziona almeno un canale da scansionare."
+            else -> null
+        }
+        if (problem != null) {
+            _connectionNotifications.tryEmit(problem)
+            return
+        }
+        channelScan.start()
+    }
+
+    fun stopChannelScan() = channelScan.stop()
 
     // ── Squelch e VAD ────────────────────────────────────────────
 
@@ -614,6 +674,7 @@ class KiwiAppController(
     private fun hasAdvancedFeatures(): Boolean = isLicenseValid(appSettings.settings.value.licenseKey)
 
     fun shutdown() {
+        channelScan.stop()
         appSettings.setLastTuned(currentFrequencyKhz.value, currentMode.value)
         if (isRecording.value) stopRecording()
         waterfall.stopStream()

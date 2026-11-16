@@ -25,7 +25,7 @@ Occorrono:
 
 Il flusso di lavoro tipico è: configurare il ricevitore, collegarsi, sintonizzare e ascoltare, quindi, se necessario, registrare o attivare le funzioni avanzate di elaborazione e avviso.
 
-Registrazione, VAD, trascrizione, storico utenti e notifiche Telegram richiedono un'attivazione gratuita. La licenza viene verificata offline; vedi [Impostazioni e configurazione](#9-impostazioni-e-configurazione).
+Registrazione, VAD, trascrizione, storico utenti, scansione dei canali e notifiche Telegram richiedono un'attivazione gratuita. La licenza viene verificata offline; vedi [Impostazioni e configurazione](#9-impostazioni-e-configurazione).
 
 ### 2. Installazione e primo avvio
 
@@ -93,6 +93,18 @@ and Spectrum & Waterfall tab showing tuning controls and displays. -->
 6. Regola **VOL** nella console in alto per cambiare il volume. Seleziona l'icona del volume per silenziare o riattivare l'audio.
 
 La console in alto include una vista compatta di spettro e waterfall. Apri **Spettro & Cascata** per visualizzarla più grande. Facendo clic su un segnale nello spettro o nel waterfall, la sintonia si sposta su quel punto. La vista estesa offre anche zoom, scelta della palette, pausa e pulizia del waterfall, velocità di aggiornamento e regolazione della gamma del segnale.
+
+#### Scansione dei canali
+
+La scansione ascolta a turno i canali preferiti selezionati e si ferma su quelli in cui c'è un segnale. Richiede l'attivazione e un ricevitore collegato.
+
+1. In **Preferiti** spunta la casella di ogni canale da includere. **Spunta elenco** seleziona tutti i canali visibili con il filtro e la ricerca attivi; **Togli spunte** azzera la selezione.
+2. Nel pannello **SCANSIONE CANALI** scegli con **Ascolto per canale** quanti secondi restare su ogni canale (da 1 a 30).
+3. Seleziona **Avvia scansione**. Il pannello mostra il canale in ascolto e la posizione nella sequenza; nel display VFO compare l'indicazione `SCAN`.
+4. Quando il segnale supera la soglia dello squelch (regolabile nella console in alto), la scansione resta sul canale. Con **Riprendi dopo il segnale** attivo riparte da sola quando il segnale cessa e trascorre l'hang time; se l'opzione è disattivata la scansione si ferma su quel canale.
+5. Per fermarla seleziona **Ferma scansione**. Anche sintonizzare a mano, scegliere un altro preferito o disconnettersi interrompe la scansione.
+
+La soglia dello squelch determina cosa conta come segnale: se la scansione si ferma sul rumore, alza la soglia; se salta canali attivi, abbassala.
 
 ### 5. Registrazione audio
 
@@ -232,7 +244,7 @@ You need:
 
 The usual workflow is: configure the receiver, connect, tune and listen, then optionally record audio or enable the advanced processing and alert features.
 
-Recording, VAD, transcription, user-history logging, and Telegram alerts require a free activation. The activation is verified offline; see [Settings and configuration](#9-settings-and-configuration).
+Recording, VAD, transcription, user-history logging, channel scanning, and Telegram alerts require a free activation. The activation is verified offline; see [Settings and configuration](#9-settings-and-configuration).
 
 ### 2. Installation and first launch
 
@@ -300,6 +312,18 @@ and Spectrum & Waterfall tab showing tuning controls and displays. -->
 6. Adjust **VOL** in the top console to change volume. Select the volume icon to mute or unmute.
 
 The top console includes a compact spectrum/waterfall view. Open **Spectrum & Waterfall** (`Spettro & Cascata`) for the larger view. Click a signal on the spectrum or waterfall to tune to it. The expanded view also offers zoom, palette, waterfall pause/clear, update-speed and signal-range controls.
+
+#### Channel scanning
+
+Channel scanning listens to the selected favorite channels in turn and stops on channels that carry a signal. It requires activation and a connected receiver.
+
+1. In **Favorites** (`Preferiti`), tick the box of each channel to include. **Select list** (`Spunta elenco`) selects every channel visible with the current filter and search; **Clear selection** (`Togli spunte`) unticks all channels.
+2. In the **Channel scan** panel (`SCANSIONE CANALI`), use **Listen per channel** (`Ascolto per canale`) to choose how many seconds to stay on each channel (1 to 30).
+3. Select **Start scan** (`Avvia scansione`). The panel shows the channel being monitored and its position in the sequence; the VFO display shows `SCAN`.
+4. When a signal exceeds the squelch threshold (set in the top console), scanning stays on that channel. With **Resume after signal** (`Riprendi dopo il segnale`) enabled, it resumes automatically once the signal ends and the hang time elapses; when disabled, scanning stops on that channel.
+5. Select **Stop scan** (`Ferma scansione`) to stop. Tuning manually, choosing another favorite, or disconnecting also stops scanning.
+
+The squelch threshold decides what counts as a signal: if scanning stops on noise, raise the threshold; if it skips active channels, lower it.
 
 ### 5. Audio recording
 

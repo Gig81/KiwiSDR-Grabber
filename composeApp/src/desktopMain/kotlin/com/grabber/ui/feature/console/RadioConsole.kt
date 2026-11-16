@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.grabber.app.ChannelScanState
 import com.grabber.app.KiwiAppController
 import com.grabber.model.ConnectionState
 import com.grabber.ui.designsystem.GrabberColors
@@ -49,6 +50,12 @@ fun RadioConsole(
     val currentFrequency by controller.currentFrequencyKhz.collectAsState()
     val currentMode by controller.currentMode.collectAsState()
     val connectionState by controller.connectionState.collectAsState()
+    val scanState by controller.channelScanState.collectAsState()
+    val scanIndicator = when (scanState) {
+        ChannelScanState.Idle -> null
+        is ChannelScanState.Scanning -> "SCAN" to GrabberColors.Primary
+        is ChannelScanState.SignalFound -> "SCAN" to GrabberColors.Success
+    }
 
     Surface(
         modifier = modifier,
@@ -73,7 +80,8 @@ fun RadioConsole(
                     currentStep = currentStep,
                     onTune = { controller.tune(it) },
                     onStepDelta = controller::stepFrequency,
-                    onStepChange = onStepChange
+                    onStepChange = onStepChange,
+                    scanIndicator = scanIndicator
                 )
                 ModeAndBandsCard(
                     currentMode = currentMode,

@@ -11,7 +11,7 @@ Questa pagina è l'indice della documentazione ufficiale e delle guide operative
 - [GUI_DESIGN_SYSTEM.md](./GUI_DESIGN_SYSTEM.md) — sistema visivo e componenti della GUI.
 - [TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md](./TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md) — ambiente, toolchain e procedure di build.
 - [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) — componenti di terze parti inclusi nell'installer, licenze, sorgenti LGPL e procedura di aggiornamento; testi integrali in [licenses/](./licenses/).
-- [RELEASE_NOTES_1.2.0.md](./RELEASE_NOTES_1.2.0.md) — note della release 1.2.0, la versione pubblicata attualmente (prima versione Android).
+- [RELEASE_NOTES_1.3.0.md](./RELEASE_NOTES_1.3.0.md) — note della release 1.3.0, la versione pubblicata attualmente (tema chiaro, scansione di intervallo, DSP, mappa rx-tx.info).
 - [VERSION_HISTORY.md](./VERSION_HISTORY.md) — registro sintetico delle versioni pubblicate e in preparazione.
 - [RELEASE_TEMPLATE.md](./RELEASE_TEMPLATE.md) — modello bilingue per le future note di rilascio.
 - [releases/](./releases/README.md) — archivio delle note delle versioni precedenti.

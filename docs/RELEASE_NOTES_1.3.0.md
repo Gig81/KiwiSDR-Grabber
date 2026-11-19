@@ -1,6 +1,6 @@
 # KiwiSDR Grabber & Station Recorder 1.3.0
 
-**Stato: bozza, in collaudo.**
+**Stato: pubblicata il 19 novembre 2026.**
 
 **[Italiano](#italiano) | [English](#english)**
 

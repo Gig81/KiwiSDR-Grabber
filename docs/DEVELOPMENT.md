@@ -52,9 +52,9 @@ I test di regressione coprono, tra l'altro, parser e trasformazioni waterfall, p
 - I test automatici condivisi coprono anche i limiti temporali del cooldown.
 - Revisione del codice e aggiornamento della toolchain (Gradle 9.9.1, Kotlin 2.4.21, Compose 1.12.2, JNA 5.19.1): verificati dall'utente con esito positivo il 10 novembre 2026, compresi connessione con password cifrata, oscuramento della password nei log, migrazione di impostazioni e database, attivazione della licenza sul nuovo Machine ID, trascrizione Vosk con la nuova JNA, registrazione e riproduzione, aspetto di tutte le schede.
 
-### Collaudo funzionale della 1.3.0 (da eseguire)
+### Collaudo funzionale della 1.3.0
 
-Verifiche manuali delle novità 1.3.0, con un KiwiSDR raggiungibile e una licenza attiva salvo dove indicato.
+Verifiche manuali delle novità 1.3.0 (superate dall'utente su Windows e Android il 19 novembre 2026), con un KiwiSDR raggiungibile e una licenza attiva salvo dove indicato.
 
 **Tema chiaro**
 

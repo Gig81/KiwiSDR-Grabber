@@ -8,10 +8,10 @@
 
 ## Stato delle versioni
 
-- `1.2.0` è la release pubblicata attualmente: installer Windows e prima versione Android (APK). `1.1.0` è stata la prima prodotta dal workflow `Release` con attestazioni di provenienza; `1.0.1` e `1.0.0` restano disponibili nelle GitHub Releases.
+- `1.3.0` è la release pubblicata attualmente (Windows e Android). `1.2.0` ha introdotto la prima versione Android (APK); `1.1.0` è stata la prima prodotta dal workflow `Release` con attestazioni di provenienza; `1.0.1` e `1.0.0` restano disponibili nelle GitHub Releases.
 - I file di una release si preparano in una cartella **fuori dal repository** (o in una cartella `Rilascio*/`, ignorata da git) e non vanno committati: gli installer e gli allegati vivono solo nella GitHub Release.
 - Gli installer Windows includono il runtime Java. I task ordinari `:composeApp:packageExe` e `:composeApp:packageMsi` sono utili per lo sviluppo; per le release usare `:composeApp:packageExeRelease` e `:composeApp:packageMsiRelease`, che aggiungono la scelta post-installazione. Gli output si trovano in `composeApp\build\compose\binaries\main`. Per le release pubbliche usare Eclipse Temurin (vedi [TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md](./TOOLCHAIN_E_AMBIENTE_DI_SVILUPPO.md)).
-- La 1.2.0 introduce l'app Android e corregge la sincronizzazione dei preferiti del server sul desktop. Le note sono in [RELEASE_NOTES_1.2.0.md](./RELEASE_NOTES_1.2.0.md); le versioni precedenti sono archiviate in [releases/](./releases/README.md).
+- La 1.3.0 introduce su Windows e Android tema chiaro, scansione di un intervallo di frequenze, equalizzatore e filtri DSP e il collegamento alla mappa dei ricevitori di rx-tx.info. Le note sono in [RELEASE_NOTES_1.3.0.md](./RELEASE_NOTES_1.3.0.md); le versioni precedenti sono archiviate in [releases/](./releases/README.md).
 - Indirizzo e password KiwiSDR sono configurabili dall'utente, anche nel setup iniziale. Password KiwiSDR e token del bot Telegram vengono salvati nelle impostazioni locali cifrati con Windows DPAPI, legati all'account Windows corrente; i valori in chiaro delle versioni precedenti vengono cifrati al primo avvio. Se il file viene copiato su un altro account o PC, le credenziali vanno reinserite.
 - La libreria Vosk è inclusa; il modello linguistico no: l'utente lo scarica dal sito ufficiale e sceglie la cartella nell'app.
 - Se il server rifiuta l'autenticazione (`badp=1`), l'app spiega che la causa può essere la password errata oppure l'esaurimento dei canali e indica di controllare le impostazioni.

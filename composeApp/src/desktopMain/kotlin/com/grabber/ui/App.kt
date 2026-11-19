@@ -54,7 +54,7 @@ fun App(
     }
     val openSettings = { activeTab = MainTab.SETTINGS }
 
-    GrabberTheme {
+    GrabberTheme(mode = appSettingsData.uiTheme) {
         Box(
             modifier = Modifier.fillMaxSize().background(GrabberColors.Background)
         ) {

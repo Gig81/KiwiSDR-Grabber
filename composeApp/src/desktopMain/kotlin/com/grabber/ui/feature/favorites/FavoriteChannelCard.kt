@@ -105,11 +105,11 @@ internal fun FavoriteChannelCard(
                     }
 
                     val modeColor = when (favorite.mode) {
-                        ModulationMode.AM -> Color(0xFFFBBF24)
-                        ModulationMode.USB -> Color(0xFF58A6FF)
-                        ModulationMode.LSB -> Color(0xFFBC8CFF)
-                        ModulationMode.CW -> Color(0xFFFF7B72)
-                        ModulationMode.NFM -> Color(0xFF34D399)
+                        ModulationMode.AM -> GrabberColors.ModeAm
+                        ModulationMode.USB -> GrabberColors.ModeUsb
+                        ModulationMode.LSB -> GrabberColors.ModeLsb
+                        ModulationMode.CW -> GrabberColors.ModeCw
+                        ModulationMode.NFM -> GrabberColors.ModeNfm
                     }
                     StatusBadge(
                         text = favorite.mode.displayName,

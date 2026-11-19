@@ -54,7 +54,7 @@ fun CompactTextField(
         modifier = modifier,
         singleLine = singleLine,
         textStyle = TextStyle(
-            color = Color.White,
+            color = GrabberColors.TextPrimary,
             fontSize = fontSize,
             fontFamily = if (monospace) FontFamily.Monospace else FontFamily.SansSerif,
             fontWeight = FontWeight.Normal
@@ -80,7 +80,7 @@ fun CompactTextField(
                 if (value.isEmpty() && placeholder.isNotEmpty()) {
                     Text(
                         text = placeholder,
-                        color = Color.Gray,
+                        color = GrabberColors.TextDisabled,
                         fontSize = fontSize,
                         maxLines = 1
                     )

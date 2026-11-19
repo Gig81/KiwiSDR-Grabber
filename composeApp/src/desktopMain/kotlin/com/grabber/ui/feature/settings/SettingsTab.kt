@@ -25,6 +25,7 @@ import com.grabber.ui.designsystem.*
 enum class SettingsSection {
     SERVER,
     CALLSIGN,
+    APPEARANCE,
     LOGS,
     STT,
     TELEGRAM,
@@ -38,6 +39,7 @@ enum class SettingsSection {
  * Raccoglie tutte le configurazioni globali e avanzate della stazione:
  * - Server KiwiSDR / Ricevitore remoto (indirizzo, porta, link mappa)
  * - Identificativo operatore / Callsign trasmesso al server
+ * - Aspetto: tema scuro, chiaro o di sistema
  * - Livello di Log & diagnostica su file
  * - Trascrizione vocale offline con Vosk (cartella modello locale)
  * - Configurazione Bot Telegram per allerte QSO e parole chiave sentinella
@@ -140,6 +142,13 @@ fun SettingsTab(
                     settings,
                     isExpanded = SettingsSection.CALLSIGN in expandedSections,
                     onToggle = { toggleSection(SettingsSection.CALLSIGN) }
+                )
+
+                AppearanceSettingsSection(
+                    controller,
+                    settings,
+                    isExpanded = SettingsSection.APPEARANCE in expandedSections,
+                    onToggle = { toggleSection(SettingsSection.APPEARANCE) }
                 )
 
                 LogSettingsSection(

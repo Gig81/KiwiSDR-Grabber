@@ -18,7 +18,7 @@
 
 ## Attivazione offline
 
-L'attivazione delle funzioni avanzate (registrazione, VAD, trascrizione, storico utenti, scansione dei canali, notifiche Telegram) è gratuita. L'utente copia il Machine ID dalla sezione Licenza dell'app e lo comunica all'autore tramite il canale ufficiale. Il Machine ID deriva dal `MachineGuid` di Windows: non cambia con rete, VPN o rinomina del PC, ma cambia reinstallando Windows, nel qual caso va richiesta una nuova attivazione.
+L'attivazione delle funzioni avanzate (registrazione, VAD, trascrizione, storico utenti, scansione dei canali e degli intervalli, DSP, notifiche Telegram) è gratuita. L'utente copia il Machine ID dalla sezione Licenza dell'app e lo comunica all'autore tramite il canale ufficiale. Il Machine ID deriva dal `MachineGuid` di Windows: non cambia con rete, VPN o rinomina del PC, ma cambia reinstallando Windows, nel qual caso va richiesta una nuova attivazione.
 
 L'autore genera offline un codice `KSR1`, firmato con una chiave privata Ed25519 conservata separatamente da questo repository. L'utente inserisce il codice nell'app, che lo verifica localmente con la chiave pubblica inclusa (`LicenseFormat` in `shared`); non avviene alcuna comunicazione con server dell'autore. Una nuova coppia di chiavi richiede di aggiornare la chiave pubblica nell'app e di distribuire una nuova versione.
 

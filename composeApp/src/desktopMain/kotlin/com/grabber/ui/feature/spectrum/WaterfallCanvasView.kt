@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.grabber.app.FavoriteFrequency
 import com.grabber.app.KiwiAppController
-import com.grabber.ui.designsystem.GrabberColors
+import com.grabber.ui.designsystem.DisplayColors
 import java.awt.image.BufferedImage
 import java.awt.image.DataBufferInt
 import kotlin.math.roundToInt
@@ -76,7 +76,7 @@ internal fun WaterfallCanvasView(
     val favLabelStyle = remember {
         TextStyle(
             fontSize = 8.sp,
-            color = GrabberColors.Warning,
+            color = DisplayColors.Warning,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold
         )
@@ -95,8 +95,8 @@ internal fun WaterfallCanvasView(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(3.dp))
-            .background(Color(0xFF05080E))
-            .border(1.dp, GrabberColors.Border, RoundedCornerShape(3.dp))
+            .background(DisplayColors.WaterfallBackground)
+            .border(1.dp, DisplayColors.Border, RoundedCornerShape(3.dp))
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
                     if (spanKhz > 0 && size.width > 0) {
@@ -137,7 +137,7 @@ internal fun WaterfallCanvasView(
                 val vfoX = (vfoFrac * w).coerceIn(0f, w)
 
                 drawLine(
-                    color = GrabberColors.Error.copy(alpha = 0.85f),
+                    color = DisplayColors.Error.copy(alpha = 0.85f),
                     start = Offset(vfoX, 0f),
                     end = Offset(vfoX, h),
                     strokeWidth = 1.5f
@@ -148,7 +148,7 @@ internal fun WaterfallCanvasView(
                     val frac = ((freqKhz - startFreqKhz) / spanKhz).coerceIn(0.0, 1.0).toFloat()
                     val x = frac * w
                     drawLine(
-                        color = GrabberColors.Warning.copy(alpha = 0.7f),
+                        color = DisplayColors.Warning.copy(alpha = 0.7f),
                         start = Offset(x, 0f),
                         end = Offset(x, h),
                         strokeWidth = 1f
@@ -157,7 +157,7 @@ internal fun WaterfallCanvasView(
                     val labelX = (x + 3f).coerceIn(1f, (w - textLayout.size.width - 2f).coerceAtLeast(1f))
                     if (labelX >= previousLabelRight + 3f) {
                         drawRect(
-                            color = Color.Black.copy(alpha = 0.7f),
+                            color = DisplayColors.LabelBackdrop,
                             topLeft = Offset(labelX - 1f, 1f),
                             size = Size(textLayout.size.width + 2f, textLayout.size.height + 2f)
                         )

@@ -28,9 +28,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.grabber.app.ChannelScanState
+import com.grabber.app.ScanState
 import com.grabber.app.KiwiAppController
 import com.grabber.model.ConnectionState
+import com.grabber.ui.designsystem.DisplayColors
 import com.grabber.ui.designsystem.GrabberColors
 import com.grabber.ui.designsystem.GrabberShapes
 import com.grabber.ui.feature.spectrum.WaterfallAndSpectrumCard
@@ -50,12 +51,16 @@ fun RadioConsole(
     val currentFrequency by controller.currentFrequencyKhz.collectAsState()
     val currentMode by controller.currentMode.collectAsState()
     val connectionState by controller.connectionState.collectAsState()
-    val scanState by controller.channelScanState.collectAsState()
-    val scanIndicator = when (scanState) {
-        ChannelScanState.Idle -> null
-        is ChannelScanState.Scanning -> "SCAN" to GrabberColors.Primary
-        is ChannelScanState.SignalFound -> "SCAN" to GrabberColors.Success
-    }
+    val scanState by controller.scanState.collectAsState()
+    val isDspActive by controller.isDspActive.collectAsState()
+    val indicators = listOfNotNull(
+        when (scanState) {
+            ScanState.Idle -> null
+            is ScanState.Scanning -> "SCAN" to DisplayColors.Primary
+            is ScanState.SignalFound -> "SCAN" to DisplayColors.Success
+        },
+        if (isDspActive) "DSP" to DisplayColors.Warning else null
+    )
 
     Surface(
         modifier = modifier,
@@ -81,7 +86,7 @@ fun RadioConsole(
                     onTune = { controller.tune(it) },
                     onStepDelta = controller::stepFrequency,
                     onStepChange = onStepChange,
-                    scanIndicator = scanIndicator
+                    indicators = indicators
                 )
                 ModeAndBandsCard(
                     currentMode = currentMode,

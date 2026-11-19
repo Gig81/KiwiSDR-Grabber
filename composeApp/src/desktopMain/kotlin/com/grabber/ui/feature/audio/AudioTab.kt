@@ -13,7 +13,8 @@ import androidx.compose.ui.unit.dp
 import com.grabber.app.KiwiAppController
 
 /**
- * Scheda dei controlli audio: DSP e squelch a sinistra, Voice Activity Detection a destra.
+ * Scheda dei controlli audio: tempi dello squelch a sinistra, DSP (equalizzatore e filtri) al centro,
+ * Voice Activity Detection a destra.
  * I valori sono sincronizzati in tempo reale con la console radio superiore.
  */
 @Composable
@@ -31,9 +32,15 @@ fun AudioTab(
         modifier = modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        AudioSquelchTimingPanel(
+            controller = controller,
+            modifier = Modifier.weight(0.9f).fillMaxHeight()
+        )
         AudioDspPanel(
             controller = controller,
-            modifier = Modifier.weight(1f).fillMaxHeight()
+            isMachineLicensed = isMachineLicensed,
+            onActivate = onActivate,
+            modifier = Modifier.weight(1.2f).fillMaxHeight()
         )
         AudioVadPanel(
             controller = controller,

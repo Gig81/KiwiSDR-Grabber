@@ -36,7 +36,7 @@ internal fun InitialSetupDialog(
         title = {
             Text(
                 if (step == 0) "Configurazione iniziale" else "Notifiche Telegram (facoltativo)",
-                color = Color.White,
+                color = GrabberColors.TextPrimary,
                 fontWeight = FontWeight.Bold
             )
         },
@@ -48,7 +48,7 @@ internal fun InitialSetupDialog(
                 Text(
                     if (step == 0) "Inserisci il nominativo e l'indirizzo del ricevitore. Se il KiwiSDR richiede una password, inseriscila qui. La password viene salvata cifrata (Windows DPAPI) nel file impostazioni locale."
                     else "Puoi configurare Telegram ora oppure saltare questo passaggio e completarlo in seguito nelle Impostazioni. Il token del bot viene salvato cifrato (Windows DPAPI) nel file impostazioni locale.",
-                    color = Color.LightGray,
+                    color = GrabberColors.TextSecondary,
                     fontSize = 12.sp
                 )
 
@@ -87,7 +87,7 @@ internal fun InitialSetupDialog(
                             onCheckedChange = { configureTelegram = it; error = null }
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text("Configura avvisi Telegram", color = Color.White, fontSize = 12.sp)
+                        Text("Configura avvisi Telegram", color = GrabberColors.TextPrimary, fontSize = 12.sp)
                     }
                     if (configureTelegram) {
                         OutlinedTextField(

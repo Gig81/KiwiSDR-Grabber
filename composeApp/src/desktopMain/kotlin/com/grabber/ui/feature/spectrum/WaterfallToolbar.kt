@@ -84,7 +84,7 @@ internal fun WaterfallToolbar(
                 Text(
                     text = "VFO: ${String.format(Locale.US, "%.3f", currentVfoKhz)} kHz",
                     fontSize = 9.sp,
-                    color = Color.White,
+                    color = GrabberColors.TextPrimary,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold
                 )
@@ -103,7 +103,7 @@ internal fun WaterfallToolbar(
                 icon = Icons.Default.MyLocation,
                 iconTint = GrabberColors.Primary,
                 size = ControlSize.Mini,
-                contentColor = Color.White
+                contentColor = GrabberColors.TextPrimary
             )
             AppToggleButton(
                 text = "Insegui VFO",
@@ -132,7 +132,7 @@ internal fun WaterfallToolbar(
                 onClick = controller::clearWaterfall,
                 icon = Icons.Default.DeleteOutline,
                 size = ControlSize.Mini,
-                contentColor = Color.LightGray
+                contentColor = GrabberColors.TextSecondary
             )
         }
     }
@@ -199,7 +199,7 @@ internal fun WaterfallDynamicRangeBar(
             )
             ToolbarDivider()
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Velocità:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.LightGray)
+                Text("Velocità:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = GrabberColors.TextSecondary)
                 AppSegmentedControl(
                     options = WATERFALL_SPEEDS_HZ.map { "$it Hz" },
                     selectedIndex = WATERFALL_SPEEDS_HZ.indexOf(speed),
@@ -213,7 +213,7 @@ internal fun WaterfallDynamicRangeBar(
                 text = "Reset dBm",
                 onClick = { controller.setWaterfallDbRange(DEFAULT_FLOOR_DBM, DEFAULT_CEILING_DBM) },
                 size = ControlSize.Mini,
-                contentColor = Color.LightGray
+                contentColor = GrabberColors.TextSecondary
             )
         }
     }
@@ -222,14 +222,14 @@ internal fun WaterfallDynamicRangeBar(
 @Composable
 private fun WaterfallTitle(title: String, iconSize: Int) {
     Icon(Icons.Default.GraphicEq, contentDescription = null, tint = GrabberColors.Primary, modifier = Modifier.size(iconSize.dp))
-    Text(title, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.White)
+    Text(title, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = GrabberColors.TextPrimary)
 }
 
 /** Stato del flusso W/F: disconnesso, in pausa, live o in connessione. */
 @Composable
 private fun WaterfallStatusBadge(connectionState: ConnectionState, waterfallState: ConnectionState, isPaused: Boolean) {
     val (color, text) = when {
-        connectionState !is ConnectionState.Connected -> Color.Gray to "DISCONNESSO"
+        connectionState !is ConnectionState.Connected -> GrabberColors.TextDisabled to "DISCONNESSO"
         isPaused -> GrabberColors.Warning to "IN PAUSA"
         waterfallState is ConnectionState.Connected -> GrabberColors.Success to "LIVE (1024 BIN)"
         else -> GrabberColors.Warning to "CONNESSIONE..."
@@ -290,7 +290,7 @@ private fun RowScope.DbmSlider(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.LightGray)
+        Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = GrabberColors.TextSecondary)
         Text(
             "$valueDbm dBm",
             fontSize = 10.sp,

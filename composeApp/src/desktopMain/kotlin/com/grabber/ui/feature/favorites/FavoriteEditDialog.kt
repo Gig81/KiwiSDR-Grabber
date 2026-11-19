@@ -91,7 +91,7 @@ internal fun FavoriteEditDialog(
                         onSelectionChange = { selectedMode = ModulationMode.entries[it] },
                         size = ControlSize.Compact,
                         accentColor = GrabberColors.Primary,
-                        selectedContentColor = Color.White,
+                        selectedContentColor = GrabberColors.OnStrongAccent,
                         fillWidth = true,
                         modifier = Modifier.fillMaxWidth()
                     )

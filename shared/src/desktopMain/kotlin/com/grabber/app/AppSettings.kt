@@ -1,7 +1,9 @@
 package com.grabber.app
 
+import com.grabber.audio.dsp.AudioDspConfig
 import com.grabber.kiwi.KiwiServerDefaults
 import com.grabber.model.ModulationMode
+import com.grabber.model.UiThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -65,8 +67,24 @@ data class SettingsData(
     val waterfallZoom: Int = 0,
     // Scansione dei canali preferiti
     val scanDwellSeconds: Int = DEFAULT_SCAN_DWELL_SECONDS, // Ascolto per canale in assenza di segnale
-    val scanAutoResume: Boolean = true                      // Riprende dopo la chiusura dello squelch
+    val scanAutoResume: Boolean = true,                     // Riprende dopo la chiusura dello squelch
+    // Scansione di un intervallo di frequenze (predefinito: banda CB a passi di 10 kHz)
+    val rangeScanStartKhz: Double = 26965.0,
+    val rangeScanEndKhz: Double = 27405.0,
+    val rangeScanStepKhz: Double = 10.0,
+    val rangeScanModeCode: String = "am",
+    val rangeScanDwellMs: Int = RangeScanLimits.DEFAULT_DWELL_MS,
+    val rangeScanAutoResume: Boolean = true,
+    val rangeScanExcludedKhz: List<Double> = emptyList(),
+    // Tema dell'interfaccia (UiThemeMode): scuro predefinito per non cambiare l'aspetto a chi aggiorna
+    val uiThemeName: String = UiThemeMode.DARK.name,
+    // Equalizzatore e filtri DSP (spenti finché l'utente non li configura)
+    val audioDsp: AudioDspConfig = AudioDspConfig()
 ) {
+    val uiTheme: UiThemeMode get() = UiThemeMode.fromName(uiThemeName)
+    val rangeScanMode: ModulationMode get() = ModulationMode.entries.find { it.code == rangeScanModeCode } ?: ModulationMode.AM
+    val rangeScanParams: RangeScanParams
+        get() = RangeScanParams(rangeScanStartKhz, rangeScanEndKhz, rangeScanStepKhz, rangeScanMode, rangeScanExcludedKhz)
     val logLevel: LogLevel get() = LogLevel.entries.find { it.name == logLevelName } ?: LogLevel.WARN
     val lastMode: ModulationMode get() = ModulationMode.entries.find { it.code == lastModeCode } ?: ModulationMode.AM
     val serverHost: String get() = parseServerAddress(serverAddress).first
@@ -481,6 +499,54 @@ class AppSettings(
 
     fun setWaterfallAutoFollow(autoFollow: Boolean) {
         updateAndSave { it.copy(waterfallAutoFollowVfo = autoFollow) }
+    }
+
+    /** Salva i parametri dell'intervallo solo se validi; restituisce l'errore altrimenti. */
+    fun setRangeScanParameters(startKhz: Double, endKhz: Double, stepKhz: Double, mode: ModulationMode): String? {
+        val current = _settings.value
+        val candidate = RangeScanParams(roundToHz(startKhz), roundToHz(endKhz), roundToHz(stepKhz), mode, current.rangeScanExcludedKhz)
+        validateRangeScan(candidate.copy(excludedKhz = emptyList()))?.let { return it }
+        updateAndSave {
+            it.copy(
+                rangeScanStartKhz = candidate.startKhz,
+                rangeScanEndKhz = candidate.endKhz,
+                rangeScanStepKhz = candidate.stepKhz,
+                rangeScanModeCode = mode.code
+            )
+        }
+        return null
+    }
+
+    fun setRangeScanDwellMs(ms: Int) {
+        updateAndSave { it.copy(rangeScanDwellMs = ms.coerceIn(RangeScanLimits.MIN_DWELL_MS, RangeScanLimits.MAX_DWELL_MS)) }
+    }
+
+    fun setRangeScanAutoResume(enabled: Boolean) {
+        updateAndSave { it.copy(rangeScanAutoResume = enabled) }
+    }
+
+    fun addRangeScanExclusion(frequencyKhz: Double) {
+        val rounded = roundToHz(frequencyKhz)
+        updateAndSave {
+            if (it.rangeScanExcludedKhz.any { e -> kotlin.math.abs(e - rounded) < 0.0005 }) it
+            else it.copy(rangeScanExcludedKhz = (it.rangeScanExcludedKhz + rounded).sorted())
+        }
+    }
+
+    fun removeRangeScanExclusion(frequencyKhz: Double) {
+        updateAndSave { it.copy(rangeScanExcludedKhz = it.rangeScanExcludedKhz.filterNot { e -> kotlin.math.abs(e - frequencyKhz) < 0.0005 }) }
+    }
+
+    fun clearRangeScanExclusions() {
+        updateAndSave { it.copy(rangeScanExcludedKhz = emptyList()) }
+    }
+
+    fun setAudioDsp(config: AudioDspConfig) {
+        updateAndSave { it.copy(audioDsp = config.normalized()) }
+    }
+
+    fun setUiTheme(mode: UiThemeMode) {
+        updateAndSave { it.copy(uiThemeName = mode.name) }
     }
 }
 

@@ -47,6 +47,7 @@ import com.grabber.ui.designsystem.AppSubtleDivider
 import com.grabber.ui.designsystem.AppSwitch
 import com.grabber.ui.designsystem.ControlSize
 import com.grabber.ui.designsystem.DangerButton
+import com.grabber.ui.designsystem.DisplayColors
 import com.grabber.ui.designsystem.GrabberColors
 import com.grabber.ui.designsystem.GrabberShapes
 import com.grabber.ui.designsystem.OutlinedButton
@@ -111,15 +112,15 @@ internal fun RecordingControlPanel(
                     label = "DURATA",
                     value = formatElapsed(recordingElapsed),
                     isActive = isRecording,
-                    activeBorder = GrabberColors.Error,
-                    activeValue = GrabberColors.SignalAmber
+                    activeBorder = DisplayColors.Error,
+                    activeValue = DisplayColors.Warning
                 )
                 LcdCounter(
                     label = if (isRecordingSquelchArmed) "QSO" else "SEGMENTI",
                     value = "$recordedSegments",
                     isActive = isRecording,
-                    activeBorder = GrabberColors.Primary,
-                    activeValue = GrabberColors.Primary
+                    activeBorder = DisplayColors.Primary,
+                    activeValue = DisplayColors.Primary
                 )
             }
             if (isRecording) CurrentFileNotice(currentFilePath)
@@ -204,7 +205,7 @@ private fun RowScope.RecordButton(
             recordSquelchEnabled -> GrabberColors.Primary
             else -> GrabberColors.Success
         },
-        contentColor = Color.Black,
+        contentColor = GrabberColors.OnAccent,
         modifier = modifier
     )
 }
@@ -219,22 +220,22 @@ private fun RowScope.LcdCounter(
 ) {
     Surface(
         modifier = Modifier.weight(0.9f).fillMaxHeight(),
-        color = GrabberColors.LcdBackground,
+        color = DisplayColors.LcdBackground,
         shape = RoundedCornerShape(GrabberShapes.control),
-        border = BorderStroke(1.dp, if (isActive) activeBorder.copy(alpha = 0.6f) else GrabberColors.Border)
+        border = BorderStroke(1.dp, if (isActive) activeBorder.copy(alpha = 0.6f) else DisplayColors.Border)
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 2.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(text = label, fontSize = 8.sp, fontWeight = FontWeight.SemiBold, color = GrabberColors.TextDisabled)
+            Text(text = label, fontSize = 8.sp, fontWeight = FontWeight.SemiBold, color = DisplayColors.TextMuted)
             Text(
                 text = value,
                 fontSize = 13.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.ExtraBold,
-                color = if (isActive) activeValue else GrabberColors.TextDisabled
+                color = if (isActive) activeValue else DisplayColors.TextMuted
             )
         }
     }

@@ -34,14 +34,14 @@ Se il toolchain JDK non è presente, installare Java 17+ e verificare che `JAVA_
 Per verificare le modifiche della GUI desktop e i test di regressione del modulo condiviso:
 
 ```powershell
-.\gradlew.bat :composeApp:compileKotlinDesktop :shared:desktopTest
+.\gradlew.bat :composeApp:compileKotlinDesktop :composeApp:desktopTest :shared:desktopTest
 ```
 
 Le prove di compilazione/test non sostituiscono la verifica interattiva con un KiwiSDR raggiungibile, né il controllo del layout su monitor e scaling DPI differenti.
 
-La suite desktop comprende 65 test automatici. Al 10 novembre 2026 è stata eseguita senza errori, anche dopo l'aggiornamento della toolchain.
+La suite `:shared:desktopTest` comprende 137 test automatici (inclusi i `jvmCommonTest`, eseguiti anche come test host Android) e `:composeApp:desktopTest` 4 test di contrasto delle palette. Al 17 novembre 2026 sono stati eseguiti senza errori, insieme al controllo Android (test host, lint, APK di debug).
 
-I test di regressione coprono, tra l'altro, parser e trasformazioni waterfall, preferiti DX e loro persistenza, impostazioni e cifratura DPAPI delle credenziali, logging, Squelch/VAD, cooldown Telegram, codifica e oscuramento dei comandi KiwiSDR, parser dei messaggi del server (`user_cb`, canali DX `mkr`, frame `SND`), coda dei comandi WebSocket, Machine ID e licenze, migrazione del database. Le verifiche manuali di protocollo/audio restano separate dai test automatici.
+I test di regressione coprono, tra l'altro, parser e trasformazioni waterfall, preferiti DX e loro persistenza, impostazioni e cifratura DPAPI delle credenziali, logging, Squelch/VAD, cooldown Telegram, codifica e oscuramento dei comandi KiwiSDR, parser dei messaggi del server (`user_cb`, canali DX `mkr`, frame `SND`), coda dei comandi WebSocket, Machine ID e licenze, migrazione del database, tema dell'interfaccia (persistenza e contrasto WCAG delle palette), scansione dei canali e degli intervalli (sorgente dei passi, validazione, esclusioni, segnali trovati, mutua esclusione), motore DSP (risposta dei filtri, continuità tra blocchi, limitatore, riduzione rumore, prestazioni) e percorso dell'audio tra DSP, squelch, ascolto e registrazione, anche senza licenza. Le verifiche manuali di protocollo/audio restano separate dai test automatici.
 
 ### Collaudi desktop riportati (10 novembre 2026)
 
@@ -51,6 +51,45 @@ I test di regressione coprono, tra l'altro, parser e trasformazioni waterfall, p
 - Contrasto dei pulsanti colorati nella scheda Impostazioni: verificato dall'utente con esito positivo il 10 novembre 2026.
 - I test automatici condivisi coprono anche i limiti temporali del cooldown.
 - Revisione del codice e aggiornamento della toolchain (Gradle 9.9.1, Kotlin 2.4.21, Compose 1.12.2, JNA 5.19.1): verificati dall'utente con esito positivo il 10 novembre 2026, compresi connessione con password cifrata, oscuramento della password nei log, migrazione di impostazioni e database, attivazione della licenza sul nuovo Machine ID, trascrizione Vosk con la nuova JNA, registrazione e riproduzione, aspetto di tutte le schede.
+
+### Collaudo funzionale della 1.3.0 (da eseguire)
+
+Verifiche manuali delle novità 1.3.0, con un KiwiSDR raggiungibile e una licenza attiva salvo dove indicato.
+
+**Tema chiaro**
+
+- Impostazioni → *Aspetto*: *Scuro*, *Chiaro*, *Sistema*. In ogni tema scorrere tutte le schede: nessun testo illeggibile, nessun pannello rimasto con i colori dell'altro tema; display del VFO, S-meter, spettro, waterfall e righello restano scuri.
+- Cambio tema a caldo con connessione attiva: audio, waterfall e scansione non si interrompono; lo spettro resta fluido.
+- Pulsanti colorati (Salva, Attiva Licenza, Telegram), segmented control, menu a tendina, tooltip, dialoghi di conferma, `FeatureLockedOverlay` e dialogo del primo avvio leggibili nel tema chiaro.
+- *Sistema*: cambiare il tema delle app di Windows con l'app aperta e annotare se l'aggiornamento è immediato o richiede il riavvio.
+- Il tema scelto resta dopo il riavvio. Scalatura 100% e 150%.
+
+**Scansione dell'intervallo**
+
+- Banda CB con soglia squelch adatta: la scansione si ferma sui canali attivi e riparte alla chiusura del gate; senza *Riprendi dopo il segnale* si ferma e mostra la notifica.
+- Valori non validi (inizio ≥ fine, passo 0, oltre 30 MHz): messaggio d'errore, nessuna scansione.
+- *Escludi* durante una sosta, riammissione dall'elenco, *Svuota*; *Segnali trovati*: sintonizza, aggiungi ai preferiti (gruppo `SCAN`), escludi.
+- Avviare l'intervallo durante la scansione dei canali (e viceversa): la prima si ferma.
+- Click sul waterfall, sintonia manuale, disconnessione: la scansione si ferma e non sintonizza più.
+- Passo minimo (0,3 s) per qualche minuto: nessun `too_busy` né disconnessione dal server.
+- Registrazione con squelch attiva durante la scansione: segmenti creati sulle soste.
+- Senza licenza: pannello *SCANSIONE* bloccato.
+
+**DSP**
+
+- Scheda Audio: pannello squelch rinominato *SQUELCH: ANTI-POP E HANG TIME*, invariato nel comportamento; nuovo pannello *DSP*.
+- Ogni preset su SSB, AM e CW; *A/B* per confrontare; nessun clic cambiando preset, destinazione o cursori; indicazione `DSP` sul display del VFO.
+- *Solo ascolto*: le nuove registrazioni (WAV e MP3) restano originali. *Ascolto e registrazione*: le nuove registrazioni contengono l'audio filtrato; allegato Telegram e trascrizione Vosk coerenti.
+- Riproduzione dall'archivio di una registrazione già salvata: nessun filtro applicato.
+- Squelch e voice gate attivi con riduzione rumore: aperture del gate paragonabili a DSP spento.
+- Cambio frequenza e riconnessione: nessun transitorio rumoroso.
+- Licenza non attiva: pannello bloccato e audio non filtrato anche con una configurazione salvata; attivando la licenza la configurazione torna attiva senza riavvio.
+- La configurazione resta dopo il riavvio (anche chiudendo l'app subito dopo aver mosso un cursore).
+
+**Mappa dei ricevitori**
+
+- Impostazioni → Server: *Mappa ricevitori SDR (rx-tx.info)* apre `https://rx-tx.info/map-sdr-points` nel browser e mostra la conferma; *Mappa pubblica KiwiSDR* funziona come prima.
+- Pulsanti leggibili e non tagliati alla larghezza minima della finestra.
 
 ### Diagnostica UI Windows
 
@@ -107,7 +146,7 @@ I log dell'app sono in `filesDir/logs` (escluso dal backup).
 
 ### Integrazione continua (GitHub Actions)
 
-- `.github/workflows/ci.yml` — a ogni push su `main` e pull request esegue su Windows `:composeApp:compileKotlinDesktop :shared:desktopTest`, lo stesso controllo da lanciare in locale prima di un commit, e su Ubuntu il controllo Android (test host, lint, APK di debug).
+- `.github/workflows/ci.yml` — a ogni push su `main` e pull request esegue su Windows `:composeApp:compileKotlinDesktop :composeApp:desktopTest :shared:desktopTest`, lo stesso controllo da lanciare in locale prima di un commit, e su Ubuntu il controllo Android (test host, lint, APK di debug).
 - `.github/workflows/release.yml` — sul push di un tag `v<versione>` compila l'APK Android firmato con la chiave dell'app e gli installer con Eclipse Temurin 21, prepara gli allegati con `scripts/release/Prepare-ReleaseAssets.ps1`, crea le attestazioni di provenienza e una GitHub Release bozza. Avviato a mano (*Run workflow*) esegue solo la build e lascia gli allegati come artifact.
 - `.github/workflows/codeql.yml` — analisi CodeQL settimanale e su push/pull request.
 

@@ -158,7 +158,7 @@ private fun BandFilterList(
 @Composable
 private fun FilterCountPill(count: Int, isSelected: Boolean) {
     Surface(
-        color = if (isSelected) Color.White.copy(alpha = 0.25f) else GrabberColors.Surface,
+        color = if (isSelected) GrabberColors.OnStrongAccent.copy(alpha = 0.25f) else GrabberColors.Surface,
         shape = RoundedCornerShape(GrabberShapes.chip),
         border = BorderStroke(1.dp, if (isSelected) Color.Transparent else GrabberColors.Border)
     ) {
@@ -166,7 +166,7 @@ private fun FilterCountPill(count: Int, isSelected: Boolean) {
             text = "$count",
             style = GrabberTypography.status,
             fontSize = 9.sp,
-            color = if (isSelected) Color.White else GrabberColors.TextSecondary,
+            color = if (isSelected) GrabberColors.OnStrongAccent else GrabberColors.TextSecondary,
             modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
         )
     }

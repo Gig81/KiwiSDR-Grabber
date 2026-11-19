@@ -17,6 +17,10 @@ kotlin {
         implementation(libs.compose.material.icons.extended)
         implementation(libs.kotlinx.coroutines.swing)
     }
+    // Test dei token del design system (contrasto delle palette); nessun test di UI interattiva.
+    sourceSets.getByName("desktopTest").dependencies {
+        implementation(kotlin("test"))
+    }
 }
 
 compose.desktop {

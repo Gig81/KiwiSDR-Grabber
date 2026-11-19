@@ -8,9 +8,9 @@ KiwiSDR Grabber & Station Recorder: a Kotlin Multiplatform app that connects to 
 
 ```powershell
 .\gradlew.bat :composeApp:run                                    # run the desktop app
-.\gradlew.bat :shared:desktopTest                                # all desktop tests (kotlin.test, only in :shared)
+.\gradlew.bat :shared:desktopTest                                # all shared desktop tests (kotlin.test)
 .\gradlew.bat :shared:desktopTest --tests "com.grabber.kiwi.KiwiProtocolTests"   # single test class
-.\gradlew.bat :composeApp:compileKotlinDesktop :shared:desktopTest               # standard pre-commit check
+.\gradlew.bat :composeApp:compileKotlinDesktop :composeApp:desktopTest :shared:desktopTest   # standard pre-commit check
 .\gradlew.bat :composeApp:createDistributable                   # app image (bundled jlink runtime)
 .\gradlew.bat :composeApp:packageMsiRelease :composeApp:packageExeRelease        # release installers
 .\gradlew.bat :composeApp:suggestRuntimeModules                  # check JDK modules before dependency upgrades
@@ -20,19 +20,20 @@ KiwiSDR Grabber & Station Recorder: a Kotlin Multiplatform app that connects to 
 .\scripts\android\build.ps1 :androidApp:assembleRelease :androidApp:bundleRelease
 ```
 
-Use the Gradle wrapper with JDK 21 (Eclipse Temurin required for public releases — the bundled runtime must be GPL, not Oracle). `composeApp` has no tests. Lint exists only for Android (`:androidApp:lintDebug`, with `checkDependencies` so it also checks `shared/androidMain`). Do not install software on the dev PC: Android tooling lives in `docker/android-build/` (Docker Desktop has no KVM, so no emulator — Android is tested on a physical device).
+Use the Gradle wrapper with JDK 21 (Eclipse Temurin required for public releases — the bundled runtime must be GPL, not Oracle). `composeApp` only tests design-system tokens (`:composeApp:desktopTest`, palette contrast); there are no UI interaction tests. Lint exists only for Android (`:androidApp:lintDebug`, with `checkDependencies` so it also checks `shared/androidMain`). Do not install software on the dev PC: Android tooling lives in `docker/android-build/` (Docker Desktop has no KVM, so no emulator — Android is tested on a physical device).
 
 ## Architecture
 
 Three modules:
 
 - **`shared`** — almost all logic. `commonMain` holds pure Kotlin (`com.grabber.kiwi` protocol command builders, `com.grabber.model`); it must not use any `java.*` API (`Locale`, `String.format`, `System`…). `jvmCommonMain` holds JVM code shared by desktop and Android (`KiwiClient`, `WaterfallClient`, `WebSocketCommandQueue`, parser, squelch/VAD, `AppLogger`, `WaterfallCoordinator`, `WavWriter`, license logic): no `java.net.http`, `javax.*`, `java.awt`, JNA, and no covariant `java.nio.Buffer` methods (`flip()`, `position(int)`…, missing on Android 10). `desktopMain` holds desktop services, `androidMain` the Android ones (`com.grabber.mobile`). Tests: `desktopTest`, plus `jvmCommonTest` (runs on desktop and as Android host tests).
-- **`composeApp`** — only the desktop Compose UI and entry point (`com/grabber/ui/Main.kt`). `App.kt` composes the persistent `RadioConsole`, `MainTabBar` and the active tab; each tab lives in `ui/feature/<name>/`, shared visual components/tokens in `ui/designsystem/` (spec: `docs/GUI_DESIGN_SYSTEM.md`).
+- **`composeApp`** — only the desktop Compose UI and entry point (`com/grabber/ui/Main.kt`). `App.kt` composes the persistent `RadioConsole`, `MainTabBar` and the active tab; each tab lives in `ui/feature/<name>/`, shared visual components/tokens in `ui/designsystem/` (spec: `docs/GUI_DESIGN_SYSTEM.md`). Colors only from `GrabberColors` (theme palette via `LocalGrabberPalette`, `@Composable` getters: read them before `Canvas`/`remember` blocks) or `DisplayColors` (instrument displays — LCD, spectrum, waterfall, ruler — dark in every theme); no `Color(0x…)`/`Color.White` in features.
 - **`androidApp`** — Android app (`applicationId` `com.gig81.kiwisdrgrabber`, definitive: changing it changes device IDs). Included, together with the Android target of `shared`, only when an Android SDK is available (`ANDROID_HOME`/`local.properties`, or `-Pkiwi.android=true`), so desktop builds never need the SDK.
 
 Key rules that span files:
 
-- **`KiwiAppController` (desktop) and `MobileAppController` (Android) are the single facades for their UI.** UI code only uses their APIs and `StateFlow`s — never `KiwiClient`, `AppSettings`/`MobileSettings`, recorders, `LicenseManager` etc. directly, and never keeps a second source of truth for tuning/audio/recording/waterfall. Only exception: `waterfallBuffer` is read directly by the renderer for performance. Desktop orchestration is split into `WaterfallCoordinator`, `RecordingHistoryCoordinator`, `QsoAlertCoordinator`, `ChannelScanCoordinator`. Desktop user tuning goes through `tune()`, which stops a running channel scan.
+- **`KiwiAppController` (desktop) and `MobileAppController` (Android) are the single facades for their UI.** UI code only uses their APIs and `StateFlow`s — never `KiwiClient`, `AppSettings`/`MobileSettings`, recorders, `LicenseManager` etc. directly, and never keeps a second source of truth for tuning/audio/recording/waterfall. Only exception: `waterfallBuffer` is read directly by the renderer for performance. Desktop orchestration is split into `WaterfallCoordinator`, `RecordingHistoryCoordinator`, `QsoAlertCoordinator`, `ScanCoordinator` (one scan at a time: favorite channels or a frequency range). Desktop user tuning goes through `tune()`, which stops a running scan.
+- **Desktop audio path (`AudioPipeline`):** frame → DSP (only target "listen and record") → `SquelchController` → DSP (only target "listen") → player; the recorder (and squelch pre-buffer) gets the frame after the pre-squelch DSP. The DSP engine (`AudioDspChain`, `com.grabber.audio.dsp`) is pure Kotlin in `jvmCommonMain`; DSP, range scan and channel scan are license-gated in the controller. Saved recordings are never processed.
 - **Two WebSockets per session:** `/SND` (audio + control, `KiwiClient`) and `/W/F` (waterfall, `WaterfallClient`). W/F opens only after SND auth (`badp=0`) and must reuse the same token/timestamp, otherwise the server rejects it with `badp=5`. Never route W/F commands/frames over SND (exception: DX labels are requested with the common command `KiwiProtocol.dxMarkers()` on SND; the server only accepts the full 8-parameter `SET MARKER` and kicks unknown variants with `too_busy`). `badp` rejections are not auto-retried.
 - Transport is abstracted by `KiwiWebSocketConnector` (`JdkWebSocketConnector` desktop, `OkHttpWebSocketConnector` Android). All WebSocket sends go through `WebSocketCommandQueue`. Audio frames are processed FIFO on a serialized dispatcher — don't parallelize per-frame work.
 - SND frame: 10-byte header (seq u32 LE, RSSI u16 BE); flag `0x80` = little-endian PCM, otherwise convert from big-endian. After `audio_rate` reply `SET AR OK in=… out=…` before streaming. Listener names come from `user_cb`, not `/status`.

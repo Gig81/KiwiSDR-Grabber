@@ -25,7 +25,7 @@ Occorrono:
 
 Il flusso di lavoro tipico è: configurare il ricevitore, collegarsi, sintonizzare e ascoltare, quindi, se necessario, registrare o attivare le funzioni avanzate di elaborazione e avviso.
 
-Registrazione, VAD, trascrizione, storico utenti, scansione dei canali e notifiche Telegram richiedono un'attivazione gratuita. La licenza viene verificata offline; vedi [Impostazioni e configurazione](#9-impostazioni-e-configurazione).
+Registrazione, VAD, DSP (equalizzatore e filtri), trascrizione, storico utenti, scansione dei canali e degli intervalli e notifiche Telegram richiedono un'attivazione gratuita. La licenza viene verificata offline; vedi [Impostazioni e configurazione](#9-impostazioni-e-configurazione).
 
 ### 2. Installazione e primo avvio
 
@@ -74,6 +74,8 @@ server address beside the power icon and connected status. Hide private addresse
 3. L'icona è rossa quando il ricevitore è disconnesso, gialla durante il collegamento o la riconnessione e verde quando è collegato. In basso nella finestra può comparire anche una notifica sullo stato.
 4. Per modificare indirizzo o password, apri **Impostazioni avanzate**, espandi **SERVER KIWISDR / RICEVITORE REMOTO**, salva la modifica e, se necessario, ricollegati.
 
+Per trovare un ricevitore, nella stessa sezione usa **Mappa pubblica KiwiSDR** oppure **Mappa ricevitori SDR (rx-tx.info)**: entrambi aprono la mappa nel browser. La mappa di rx-tx.info elenca anche ricevitori WebSDR e OpenWebRX, ma l'app si collega solo ai **KiwiSDR**: copia l'indirizzo `host:porta` del ricevitore scelto nel campo **Indirizzo Server** e salva.
+
 Se il collegamento non riesce, verifica nome host e porta, che il ricevitore sia online e raggiungibile e che la password sia corretta. Potrebbero anche essere esauriti i canali utente del ricevitore. In particolare, un rifiuto `badp=1` può indicare una password errata oppure l'esaurimento dei canali: l'applicazione non può distinguere le due cause.
 
 ### 4. Ascolto dei segnali radio
@@ -94,17 +96,30 @@ and Spectrum & Waterfall tab showing tuning controls and displays. -->
 
 La console in alto include una vista compatta di spettro e waterfall. Apri **Spettro & Cascata** per visualizzarla più grande. Facendo clic su un segnale nello spettro o nel waterfall, la sintonia si sposta su quel punto. La vista estesa offre anche zoom, scelta della palette, pausa e pulizia del waterfall, velocità di aggiornamento e regolazione della gamma del segnale.
 
-#### Scansione dei canali
+#### Scansione
 
-La scansione ascolta a turno i canali preferiti selezionati e si ferma su quelli in cui c'è un segnale. Richiede l'attivazione e un ricevitore collegato.
+Il pannello **SCANSIONE** della scheda **Preferiti** ha due modalità, scelte con **Canali** / **Intervallo**: la scansione dei canali preferiti selezionati e quella di un intervallo di frequenze. Entrambe ascoltano a turno ogni passo e si fermano quando c'è un segnale. Richiedono l'attivazione e un ricevitore collegato; può essere attiva una sola scansione alla volta (avviarne una ferma l'altra).
+
+**Canali**
 
 1. In **Preferiti** spunta la casella di ogni canale da includere. **Spunta elenco** seleziona tutti i canali visibili con il filtro e la ricerca attivi; **Togli spunte** azzera la selezione.
-2. Nel pannello **SCANSIONE CANALI** scegli con **Ascolto per canale** quanti secondi restare su ogni canale (da 1 a 30).
+2. Scegli con **Ascolto per canale** quanti secondi restare su ogni canale (da 1 a 30).
 3. Seleziona **Avvia scansione**. Il pannello mostra il canale in ascolto e la posizione nella sequenza; nel display VFO compare l'indicazione `SCAN`.
-4. Quando il segnale supera la soglia dello squelch (regolabile nella console in alto), la scansione resta sul canale. Con **Riprendi dopo il segnale** attivo riparte da sola quando il segnale cessa e trascorre l'hang time; se l'opzione è disattivata la scansione si ferma su quel canale.
-5. Per fermarla seleziona **Ferma scansione**. Anche sintonizzare a mano, scegliere un altro preferito o disconnettersi interrompe la scansione.
 
-La soglia dello squelch determina cosa conta come segnale: se la scansione si ferma sul rumore, alza la soglia; se salta canali attivi, abbassala.
+**Intervallo**
+
+1. Inserisci **Inizio** e **Fine** in kHz (tra 0 e 30.000), il **Passo** (da 0,1 a 1.000 kHz) e il modo di demodulazione. I valori predefiniti coprono la banda CB (26.965–27.405 kHz a passi di 10 kHz, AM).
+2. Scegli con **Ascolto per passo** quanto restare su ogni frequenza (da 0,3 a 10 secondi).
+3. Seleziona **Avvia scansione intervallo**: i valori vengono controllati e salvati, poi la scansione parte dalla frequenza iniziale e ricomincia dall'inizio dopo quella finale. Se modifichi i campi durante la scansione, seleziona **Applica intervallo**.
+4. Quando si ferma su un segnale, **Escludi** toglie quella frequenza dalla scansione (utile per portanti fisse e disturbi). Le frequenze escluse sono elencate in fondo al pannello e si possono riammettere una per una o tutte con **Svuota**.
+5. **Segnali trovati** elenca i segnali della sessione (frequenza, ora, numero di volte, picco S-meter): per ognuno puoi sintonizzarti, aggiungerlo ai **Preferiti** (gruppo `SCAN`) o escluderlo.
+
+**Comportamento comune**
+
+- Quando il segnale supera la soglia dello squelch (regolabile nella console in alto), la scansione resta sulla frequenza. Con **Riprendi dopo il segnale** attivo riparte da sola quando il segnale cessa e trascorre l'hang time; se l'opzione è disattivata la scansione si ferma lì.
+- Per fermarla seleziona **Ferma scansione** (o **Ferma**). Anche sintonizzare a mano, scegliere un preferito o un segnale trovato, fare clic sul waterfall o disconnettersi interrompe la scansione.
+
+La soglia dello squelch determina cosa conta come segnale: se la scansione si ferma sul rumore, alza la soglia; se salta segnali attivi, abbassala.
 
 ### 5. Registrazione audio
 
@@ -137,13 +152,25 @@ sensitivity and status, and the console gates. -->
 
 **Voice Activity Detection (VAD)** analizza l'audio per distinguere la voce dal silenzio o dal rumore impulsivo. Seleziona **VAD** nella console per filtrare l'ascolto in base alla voce rilevata. Nella scheda **Audio**, regola la sensibilità e l'hangover vocale; nella scheda Registratore, **Voice-Gate in Registrazione** limita la registrazione ai segmenti con voce rilevata. Queste funzioni VAD richiedono l'attivazione.
 
-La scheda Audio offre inoltre:
+Nel pannello **SQUELCH: ANTI-POP E HANG TIME** della scheda Audio trovi inoltre:
 
 - **Soft Mute (Anti-Pop):** rende graduale l'apertura e la chiusura del gate per ridurre i clic.
 - **Pre-Buffer:** conserva in un buffer circolare un breve tratto audio per ridurre il rischio di tagliare l'inizio delle trasmissioni nelle registrazioni filtrate.
 - **Hang Time:** mantiene aperto per qualche istante il gate RF dopo un calo del segnale, aiutando a unire le pause all'interno di una trasmissione.
 
 Quando abilitati, squelch e VAD cambiano l'audio inviato alla riproduzione o alla registrazione. Non migliorano la ricezione del segnale radio.
+
+#### Equalizzatore e filtri (DSP)
+
+Il pannello **DSP** della scheda Audio elabora l'audio sul computer con filtri ed equalizzatore. Richiede l'attivazione.
+
+- **Destinazione:** **Spento**; **Solo ascolto** (filtra solo quello che senti, le registrazioni restano originali); **Ascolto e registrazione** (anche le nuove registrazioni, gli allegati Telegram e le trascrizioni usano l'audio filtrato). Le registrazioni già salvate non vengono mai modificate.
+- **Preset:** **Neutro**, **Voce SSB**, **AM broadcast**, **CW stretto**, **Riduzione QRM**. Un preset imposta i filtri e mantiene la destinazione scelta; modificando un controllo il preset diventa **Personalizzato**. **Reimposta** toglie tutti i filtri.
+- **Filtri:** **Passa-alto** (taglia ronzii e bassi), **Passa-basso** (taglia fruscio e acuti), **Notch** con larghezza regolabile (elimina una portante o un fischio fisso), **Riduzione rumore** (filtro adattivo che attenua il fruscio a larga banda; valori alti possono rendere la voce "metallica").
+- **Equalizzatore:** sette bande da 100 Hz a 4 kHz, da −12 a +12 dB. Un limitatore evita la saturazione quando alzi i livelli.
+- **A/B:** passa per un momento all'audio originale per confrontarlo con quello filtrato; non viene salvato e termina a ogni modifica.
+
+Quando il DSP è attivo compare l'indicazione `DSP` nel display VFO. Suggerimenti: per la fonia SSB parti da **Voce SSB**; per un segnale CW usa **CW stretto** e, se serve, sposta il notch sui disturbi vicini; con **Riduzione QRM** abbassa la riduzione rumore se la voce diventa innaturale.
 
 ### 7. Trascrizione vocale
 
@@ -193,7 +220,9 @@ showing server, callsign, license, and credential protection. Hide secrets. -->
 
 *Le impostazioni sono raggruppate in sezioni espandibili.*
 
-La scheda **Impostazioni avanzate** contiene le sezioni espandibili per indirizzo e password del ricevitore, nominativo, log, modello Vosk, Telegram, licenza e informazioni sull'applicazione. Le impostazioni vengono salvate in locale e mantenute tra gli avvii.
+La scheda **Impostazioni avanzate** contiene le sezioni espandibili per indirizzo e password del ricevitore, nominativo, aspetto, log, modello Vosk, Telegram, licenza e informazioni sull'applicazione. Le impostazioni vengono salvate in locale e mantenute tra gli avvii.
+
+Nella sezione **ASPETTO & TEMA DELL'INTERFACCIA** scegli il tema: **Scuro** (predefinito), **Chiaro** oppure **Sistema**, che segue l'impostazione chiaro/scuro delle app di Windows. Il cambio è immediato. Il display della frequenza, lo spettro e il waterfall restano scuri in tutti i temi, come il pannello di una radio.
 
 Su Windows, il file delle impostazioni si trova in `C:\Users\<nome-utente>\.kiwigrabber\settings.json`. La password del ricevitore e il token Telegram sono protetti con Windows DPAPI per l'utente Windows corrente. Se il file viene copiato su un altro account o computer, potrebbero non essere più decifrabili. La protezione riguarda il file locale: **non** cifra il collegamento al KiwiSDR. Il protocollo KiwiSDR usato dall'app non cifra la password durante il trasferimento; usa una password dedicata e non riutilizzata altrove.
 
@@ -292,7 +321,7 @@ You need:
 
 The usual workflow is: configure the receiver, connect, tune and listen, then optionally record audio or enable the advanced processing and alert features.
 
-Recording, VAD, transcription, user-history logging, channel scanning, and Telegram alerts require a free activation. The activation is verified offline; see [Settings and configuration](#9-settings-and-configuration).
+Recording, VAD, DSP (equalizer and filters), transcription, user-history logging, channel and range scanning, and Telegram alerts require a free activation. The activation is verified offline; see [Settings and configuration](#9-settings-and-configuration).
 
 ### 2. Installation and first launch
 
@@ -341,6 +370,8 @@ server address beside the power icon and connected status. Hide private addresse
 3. The icon is red when disconnected, yellow while connecting or reconnecting, and green when connected. A connection notification may also appear at the bottom of the window.
 4. If you need to change the address or password, open **Settings** (`Impostazioni avanzate`), expand **KiwiSDR Server / Remote Receiver** (`SERVER KIWISDR / RICEVITORE REMOTO`), save the change, then reconnect if needed.
 
+To find a receiver, use **KiwiSDR public map** (`Mappa pubblica KiwiSDR`) or **SDR receiver map (rx-tx.info)** (`Mappa ricevitori SDR (rx-tx.info)`) in the same section: both open the map in your browser. The rx-tx.info map also lists WebSDR and OpenWebRX receivers, but the app only connects to **KiwiSDR** receivers: copy the chosen receiver's `host:port` into **Server address** (`Indirizzo Server`) and save.
+
 If connection fails, confirm the host name and port, check that the receiver is online and reachable, and verify any required password. The receiver may also have no free user channels. In particular, a `badp=1` rejection can indicate either an incorrect password or exhausted channels; it does not distinguish between them.
 
 ### 4. Listening to radio signals
@@ -361,17 +392,30 @@ and Spectrum & Waterfall tab showing tuning controls and displays. -->
 
 The top console includes a compact spectrum/waterfall view. Open **Spectrum & Waterfall** (`Spettro & Cascata`) for the larger view. Click a signal on the spectrum or waterfall to tune to it. The expanded view also offers zoom, palette, waterfall pause/clear, update-speed and signal-range controls.
 
-#### Channel scanning
+#### Scanning
 
-Channel scanning listens to the selected favorite channels in turn and stops on channels that carry a signal. It requires activation and a connected receiver.
+The **Scan** panel (`SCANSIONE`) in **Favorites** (`Preferiti`) has two modes, chosen with **Channels** / **Range** (`Canali` / `Intervallo`): scanning the selected favorite channels, or scanning a frequency range. Both listen to each step in turn and stop when a signal is present. They require activation and a connected receiver; only one scan runs at a time (starting one stops the other).
 
-1. In **Favorites** (`Preferiti`), tick the box of each channel to include. **Select list** (`Spunta elenco`) selects every channel visible with the current filter and search; **Clear selection** (`Togli spunte`) unticks all channels.
-2. In the **Channel scan** panel (`SCANSIONE CANALI`), use **Listen per channel** (`Ascolto per canale`) to choose how many seconds to stay on each channel (1 to 30).
+**Channels**
+
+1. In **Favorites**, tick the box of each channel to include. **Select list** (`Spunta elenco`) selects every channel visible with the current filter and search; **Clear selection** (`Togli spunte`) unticks all channels.
+2. Use **Listen per channel** (`Ascolto per canale`) to choose how many seconds to stay on each channel (1 to 30).
 3. Select **Start scan** (`Avvia scansione`). The panel shows the channel being monitored and its position in the sequence; the VFO display shows `SCAN`.
-4. When a signal exceeds the squelch threshold (set in the top console), scanning stays on that channel. With **Resume after signal** (`Riprendi dopo il segnale`) enabled, it resumes automatically once the signal ends and the hang time elapses; when disabled, scanning stops on that channel.
-5. Select **Stop scan** (`Ferma scansione`) to stop. Tuning manually, choosing another favorite, or disconnecting also stops scanning.
 
-The squelch threshold decides what counts as a signal: if scanning stops on noise, raise the threshold; if it skips active channels, lower it.
+**Range**
+
+1. Enter **Start** and **End** in kHz (`Inizio` / `Fine`, between 0 and 30,000), the **Step** (`Passo`, 0.1 to 1,000 kHz) and the demodulation mode. The defaults cover the CB band (26,965–27,405 kHz in 10 kHz steps, AM).
+2. Use **Listen per step** (`Ascolto per passo`) to choose how long to stay on each frequency (0.3 to 10 seconds).
+3. Select **Start range scan** (`Avvia scansione intervallo`): the values are checked and saved, then scanning starts at the first frequency and wraps around after the last one. If you edit the fields while scanning, select **Apply range** (`Applica intervallo`).
+4. When it stops on a signal, **Exclude** (`Escludi`) removes that frequency from the scan (useful for fixed carriers and interference). Excluded frequencies are listed at the bottom of the panel; re-include them one by one or all at once with **Clear** (`Svuota`).
+5. **Signals found** (`Segnali trovati`) lists the session's signals (frequency, time, number of hits, peak S-meter): you can tune to each one, add it to **Favorites** (group `SCAN`) or exclude it.
+
+**Common behavior**
+
+- When a signal exceeds the squelch threshold (set in the top console), scanning stays on that frequency. With **Resume after signal** (`Riprendi dopo il segnale`) enabled, it resumes automatically once the signal ends and the hang time elapses; when disabled, scanning stops there.
+- Select **Stop scan** (`Ferma scansione` or `Ferma`) to stop. Tuning manually, choosing a favorite or a found signal, clicking the waterfall, or disconnecting also stops scanning.
+
+The squelch threshold decides what counts as a signal: if scanning stops on noise, raise the threshold; if it skips active signals, lower it.
 
 ### 5. Audio recording
 
@@ -404,13 +448,25 @@ sensitivity and status, and the console gates. -->
 
 **Voice Activity Detection (VAD)** analyzes audio to distinguish speech from silence or impulsive noise. Select **VAD** in the console to gate live listening by detected voice. In the Audio tab (`Audio`), adjust sensitivity and vocal hangover; in the Recorder tab, **Voice-Gate in Recording** (`Voice-Gate in Registrazione`) gates recordings based on detected speech. These VAD features require activation.
 
-The Audio tab also provides:
+The **Squelch: anti-pop and hang time** panel (`SQUELCH: ANTI-POP E HANG TIME`) in the Audio tab also provides:
 
 - **Soft Mute (Anti-Pop):** smooths the opening and closing of a gate to reduce clicks.
 - **Pre-Buffer:** keeps a short rolling audio buffer so the beginning of a transmission is less likely to be cut off in gated recordings.
 - **Hang Time:** keeps the RF gate open briefly between signal drops, helping combine pauses within a transmission.
 
 Squelch and VAD change which audio is passed to live playback or recording when their respective gates are enabled. They do not improve the receiver's radio-frequency reception.
+
+#### Equalizer and filters (DSP)
+
+The **DSP** panel in the Audio tab processes audio on your computer with filters and an equalizer. It requires activation.
+
+- **Target:** **Off** (`Spento`); **Listening only** (`Solo ascolto`: filters only what you hear, recordings stay original); **Listening and recording** (`Ascolto e registrazione`: new recordings, Telegram attachments and transcriptions also use the filtered audio). Recordings already saved are never changed.
+- **Presets:** **Neutral**, **SSB voice**, **AM broadcast**, **Narrow CW**, **QRM reduction** (`Neutro`, `Voce SSB`, `AM broadcast`, `CW stretto`, `Riduzione QRM`). A preset sets the filters and keeps the chosen target; changing any control turns the preset into **Custom** (`Personalizzato`). **Reset** (`Reimposta`) removes all filters.
+- **Filters:** **High-pass** (`Passa-alto`, cuts hum and lows), **Low-pass** (`Passa-basso`, cuts hiss and highs), **Notch** with adjustable width (removes a fixed carrier or whistle), **Noise reduction** (`Riduzione rumore`, an adaptive filter that attenuates broadband hiss; high values can make voices sound "metallic").
+- **Equalizer:** seven bands from 100 Hz to 4 kHz, from −12 to +12 dB. A limiter prevents clipping when you raise levels.
+- **A/B:** briefly switches to the original audio to compare it with the filtered one; it is not saved and ends with any change.
+
+When DSP is active, the VFO display shows `DSP`. Tips: for SSB voice start from **SSB voice**; for CW use **Narrow CW** and move the notch onto nearby interference if needed; with **QRM reduction**, lower noise reduction if voices sound unnatural.
 
 ### 7. Speech transcription
 
@@ -460,7 +516,9 @@ showing server, callsign, license, and credential protection. Hide secrets. -->
 
 *Settings are grouped into expandable sections.*
 
-The **Settings** tab contains expandable sections for the receiver address and password, operator callsign, logs, Vosk model, Telegram, license, and application information. Your settings are saved locally and persist between launches.
+The **Settings** tab contains expandable sections for the receiver address and password, operator callsign, appearance, logs, Vosk model, Telegram, license, and application information. Your settings are saved locally and persist between launches.
+
+In **Appearance & interface theme** (`ASPETTO & TEMA DELL'INTERFACCIA`), choose the theme: **Dark** (`Scuro`, default), **Light** (`Chiaro`) or **System** (`Sistema`), which follows the Windows light/dark app setting. The change applies immediately. The frequency display, spectrum and waterfall stay dark in every theme, like a radio front panel.
 
 On Windows, the settings file is `C:\Users\<your-name>\.kiwigrabber\settings.json`. The receiver password and Telegram bot token are protected with Windows DPAPI for the current Windows user. They may not be readable if the file is copied to another account or PC. This protects the local settings file; it does **not** encrypt the connection to the KiwiSDR. The KiwiSDR protocol used here does not encrypt the password in transit, so use a dedicated password that you do not reuse elsewhere.
 

@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.grabber.audio.squelch.SMeterUtils
+import com.grabber.ui.designsystem.DisplayColors
 import com.grabber.ui.designsystem.GrabberColors
 import java.util.Locale
 import kotlinx.coroutines.flow.StateFlow
@@ -53,7 +54,7 @@ internal fun IsolatedSMeterView(rssiFlow: StateFlow<Double>, thresholdDbm: Doubl
                     text = "S-METER",
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Gray
+                    color = GrabberColors.TextDisabled
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Box(
@@ -107,7 +108,7 @@ internal fun IsolatedSMeterView(rssiFlow: StateFlow<Double>, thresholdDbm: Doubl
                 for (fraction in S_METER_TICK_FRACTIONS) {
                     val x = fraction * width
                     drawLine(
-                        color = if (fraction > 0.56f) Color(0xFF552222) else Color(0xFF223322),
+                        color = if (fraction > 0.56f) DisplayColors.MeterTickHigh else DisplayColors.MeterTickLow,
                         start = Offset(x, 0f),
                         end = Offset(x, height),
                         strokeWidth = 1f
@@ -120,7 +121,7 @@ internal fun IsolatedSMeterView(rssiFlow: StateFlow<Double>, thresholdDbm: Doubl
                     val greenWidth = minOf(activeWidth, s9X)
                     drawRect(
                         brush = Brush.horizontalGradient(
-                            colors = listOf(GrabberColors.Success, GrabberColors.Warning),
+                            colors = listOf(DisplayColors.Success, DisplayColors.Warning),
                             startX = 0f,
                             endX = s9X
                         ),
@@ -130,7 +131,7 @@ internal fun IsolatedSMeterView(rssiFlow: StateFlow<Double>, thresholdDbm: Doubl
 
                     if (activeWidth > s9X) {
                         drawRect(
-                            color = GrabberColors.Error,
+                            color = DisplayColors.Error,
                             topLeft = Offset(s9X, 0f),
                             size = Size(activeWidth - s9X, height)
                         )
@@ -141,7 +142,7 @@ internal fun IsolatedSMeterView(rssiFlow: StateFlow<Double>, thresholdDbm: Doubl
                 if (normalizedThreshold != null) {
                     val threshX = normalizedThreshold * width
                     drawLine(
-                        color = GrabberColors.Warning,
+                        color = DisplayColors.Warning,
                         start = Offset(threshX, 0f),
                         end = Offset(threshX, height),
                         strokeWidth = 2f

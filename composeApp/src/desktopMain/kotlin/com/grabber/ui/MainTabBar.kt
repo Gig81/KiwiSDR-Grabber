@@ -48,7 +48,6 @@ enum class MainTab(val label: String, val icon: ImageVector) {
     SETTINGS("Impostazioni avanzate", Icons.Default.Settings)
 }
 
-private val SelectedTabBackground = Color(0xFF2E3D52)
 
 /** Barra delle schede; la scheda Utenti mostra il numero di utenti connessi. */
 @Composable
@@ -90,7 +89,7 @@ private fun RowScope.MainTabItem(
     Surface(
         modifier = Modifier.weight(1f).fillMaxHeight(),
         shape = RoundedCornerShape(8.dp),
-        color = if (selected) SelectedTabBackground else Color.Transparent,
+        color = if (selected) GrabberColors.SelectedTab else Color.Transparent,
         border = if (selected) BorderStroke(1.dp, GrabberColors.Primary) else null
     ) {
         Box(modifier = Modifier.fillMaxSize().clickable(onClick = onClick), contentAlignment = Alignment.Center) {
@@ -105,7 +104,7 @@ private fun RowScope.MainTabItem(
                     text = tab.label,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (selected) Color.White else GrabberColors.TextSecondary
+                    color = if (selected) GrabberColors.TextPrimary else GrabberColors.TextSecondary
                 )
                 if (badgeCount > 0) CountBadge(badgeCount)
             }
@@ -121,6 +120,6 @@ private fun CountBadge(count: Int) {
             .background(GrabberColors.Success)
             .padding(horizontal = 5.dp, vertical = 1.dp)
     ) {
-        Text(text = "$count", fontSize = 9.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+        Text(text = "$count", fontSize = 9.sp, color = GrabberColors.OnAccent, fontWeight = FontWeight.Bold)
     }
 }

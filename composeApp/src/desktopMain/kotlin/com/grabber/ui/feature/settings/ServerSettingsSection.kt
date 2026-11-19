@@ -18,8 +18,6 @@ import com.grabber.app.KiwiAppController
 import com.grabber.app.SettingsData
 import com.grabber.app.parseServerAddress
 import com.grabber.ui.designsystem.*
-import java.awt.Desktop
-import java.net.URI
 
 /** Indirizzo e password del ricevitore KiwiSDR. */
 @Composable
@@ -92,7 +90,7 @@ internal fun ServerSettingsSection(
                 icon = Icons.Default.Save,
                 size = ControlSize.Compact,
                 containerColor = GrabberColors.Secondary,
-                contentColor = Color.Black
+                contentColor = GrabberColors.OnAccent
             )
 
             OutlinedButton(
@@ -139,28 +137,44 @@ internal fun ServerSettingsSection(
                 icon = Icons.Default.Save,
                 size = ControlSize.Compact,
                 containerColor = GrabberColors.Secondary,
-                contentColor = Color.Black
+                contentColor = GrabberColors.OnAccent
             )
         }
 
-        OutlinedButton(
-            text = "Mappa pubblica KiwiSDR",
-            onClick = {
-                try {
-                    val desktop = Desktop.getDesktop()
-                    if (!Desktop.isDesktopSupported() || !desktop.isSupported(Desktop.Action.BROWSE)) {
-                        serverAddressFeedback = "✗ Apertura del browser non supportata su questo sistema."
-                    } else {
-                        desktop.browse(URI("https://kiwisdr.com/public/"))
-                        serverAddressFeedback = "✓ Mappa pubblica dei ricevitori KiwiSDR aperta nel browser."
-                    }
-                } catch (e: Exception) {
-                    serverAddressFeedback = "✗ Impossibile aprire la mappa KiwiSDR: ${e.message ?: "errore browser"}"
-                }
-            },
-            icon = Icons.AutoMirrored.Filled.OpenInNew,
-            size = ControlSize.Compact,
-            contentColor = GrabberColors.Primary
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                text = "Mappa pubblica KiwiSDR",
+                onClick = {
+                    serverAddressFeedback = openInBrowser(
+                        ExternalLinks.KIWISDR_PUBLIC_MAP,
+                        "la mappa pubblica dei ricevitori KiwiSDR"
+                    )
+                },
+                icon = Icons.AutoMirrored.Filled.OpenInNew,
+                size = ControlSize.Compact,
+                contentColor = GrabberColors.Primary
+            )
+            OutlinedButton(
+                text = "Mappa ricevitori SDR (rx-tx.info)",
+                onClick = {
+                    serverAddressFeedback = openInBrowser(
+                        ExternalLinks.RX_TX_SDR_MAP,
+                        "la mappa dei ricevitori SDR di rx-tx.info"
+                    )
+                },
+                icon = Icons.AutoMirrored.Filled.OpenInNew,
+                size = ControlSize.Compact,
+                contentColor = GrabberColors.Primary
+            )
+        }
+        Text(
+            text = "La mappa di rx-tx.info elenca anche ricevitori WebSDR e OpenWebRX: l'app si collega solo ai KiwiSDR. Copia l'indirizzo host:porta del ricevitore scelto nel campo Indirizzo Server.",
+            fontSize = 10.sp,
+            color = GrabberColors.TextSecondary
         )
 
         if (serverAddressFeedback != null) {

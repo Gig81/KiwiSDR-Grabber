@@ -211,7 +211,7 @@ private fun ConsoleVadTelemetryRow(
                         when {
                             vadConfidence >= 0.45f -> GrabberColors.Success
                             vadConfidence >= 0.25f -> GrabberColors.Warning
-                            else -> Color.Gray
+                            else -> GrabberColors.TextDisabled
                         }
                     )
             )

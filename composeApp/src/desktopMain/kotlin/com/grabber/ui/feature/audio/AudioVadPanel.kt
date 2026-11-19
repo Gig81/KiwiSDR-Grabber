@@ -227,7 +227,7 @@ private fun CompactVadTelemetry(
                         .width(2.dp)
                         .fillMaxHeight()
                         .align(Alignment.CenterEnd)
-                        .background(Color.White.copy(alpha = 0.9f))
+                        .background(GrabberColors.TextPrimary.copy(alpha = 0.9f))
                 )
             }
         }

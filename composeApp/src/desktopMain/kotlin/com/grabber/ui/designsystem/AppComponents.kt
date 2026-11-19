@@ -262,7 +262,7 @@ fun PrimaryButton(
     icon: ImageVector? = null,
     size: ControlSize = ControlSize.Regular,
     containerColor: Color = GrabberColors.Primary,
-    contentColor: Color = Color.White,
+    contentColor: Color = GrabberColors.OnStrongAccent,
     iconTint: Color? = null
 ) {
     AppButton(
@@ -429,7 +429,7 @@ fun <T> AppMenuButton(
             onClick = { expanded = true },
             modifier = Modifier.height(size.height),
             shape = RoundedCornerShape(size.cornerRadius),
-            colors = ButtonDefaults.buttonColors(containerColor = GrabberColors.Surface, contentColor = Color.White),
+            colors = ButtonDefaults.buttonColors(containerColor = GrabberColors.Surface, contentColor = GrabberColors.TextPrimary),
             contentPadding = PaddingValues(horizontal = size.horizontalPadding, vertical = 0.dp)
         ) {
             if (icon != null) {
@@ -438,7 +438,7 @@ fun <T> AppMenuButton(
             }
             Text(label(selected), fontSize = size.fontSize)
             Spacer(modifier = Modifier.width(2.dp))
-            Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(size.iconSize), tint = Color.Gray)
+            Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(size.iconSize), tint = GrabberColors.TextDisabled)
         }
         DropdownMenu(
             expanded = expanded,
@@ -453,7 +453,7 @@ fun <T> AppMenuButton(
                             label(option),
                             fontSize = 10.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) accentColor else Color.White
+                            color = if (isSelected) accentColor else GrabberColors.TextPrimary
                         )
                     },
                     onClick = {
@@ -503,7 +503,7 @@ fun DangerButton(
         icon = icon,
         size = size,
         containerColor = GrabberColors.Error,
-        contentColor = Color.White
+        contentColor = GrabberColors.OnStrongAccent
     )
 }
 
@@ -516,7 +516,7 @@ fun CompactButton(
     selected: Boolean = false
 ) {
     val container = if (selected) GrabberColors.Primary else GrabberColors.SurfaceVariant
-    val contentColor = if (selected) Color.White else GrabberColors.TextPrimary
+    val contentColor = if (selected) GrabberColors.OnStrongAccent else GrabberColors.TextPrimary
     Button(
         onClick = onClick,
         modifier = modifier.height(30.dp),
@@ -770,7 +770,7 @@ fun AppCheckbox(
                 colors = CheckboxDefaults.colors(
                     checkedColor = accentColor,
                     uncheckedColor = GrabberColors.Border,
-                    checkmarkColor = Color.White
+                    checkmarkColor = GrabberColors.OnStrongAccent
                 )
             )
             Text(text = text, style = GrabberTypography.body)
@@ -861,7 +861,7 @@ fun AppSwitch(
             enabled = enabled,
             modifier = Modifier.height(20.dp),
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
+                checkedThumbColor = GrabberColors.OnStrongAccent,
                 checkedTrackColor = accentColor,
                 uncheckedThumbColor = GrabberColors.TextDisabled,
                 uncheckedTrackColor = GrabberColors.SurfaceElevated,
@@ -988,7 +988,7 @@ fun AppSegmentedControl(
     modifier: Modifier = Modifier,
     size: ControlSize = ControlSize.Regular,
     accentColor: Color = GrabberColors.Secondary,
-    selectedContentColor: Color = Color.Black,
+    selectedContentColor: Color = GrabberColors.OnAccent,
     fillWidth: Boolean = false
 ) {
     val isDense = size == ControlSize.Dense || size == ControlSize.Mini
@@ -1173,7 +1173,7 @@ fun SelectableListItem(
                         text = title,
                         fontSize = 11.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (selected) Color.White else GrabberColors.TextPrimary
+                        color = if (selected) GrabberColors.OnStrongAccent else GrabberColors.TextPrimary
                     )
                     if (subtitle != null && !selected) {
                         Text(text = subtitle, fontSize = 9.sp, color = GrabberColors.TextDisabled)

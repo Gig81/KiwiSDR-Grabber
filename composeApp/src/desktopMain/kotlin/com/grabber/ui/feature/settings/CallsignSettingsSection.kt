@@ -60,7 +60,7 @@ internal fun CallsignSettingsSection(
                 icon = Icons.Default.Save,
                 size = ControlSize.Compact,
                 containerColor = GrabberColors.Secondary,
-                contentColor = Color.Black
+                contentColor = GrabberColors.OnAccent
             )
         }
     }

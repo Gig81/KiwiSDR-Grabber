@@ -27,7 +27,7 @@ fun AppConfirmDialog(
     onDismiss: () -> Unit,
     dismissText: String = "Annulla",
     accentColor: Color = GrabberColors.Error,
-    confirmContentColor: Color = Color.White
+    confirmContentColor: Color = GrabberColors.OnStrongAccent
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,

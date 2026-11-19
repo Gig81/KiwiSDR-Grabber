@@ -160,7 +160,7 @@ Con Android Studio installato (SDK Platform 37, Build-Tools 37, Platform-Tools) 
 | :--- | :--- |
 | **Compilare tutto il progetto** | `.\gradlew.bat assemble` |
 | **Avviare App Desktop Windows** | `.\gradlew.bat :composeApp:run` |
-| **Verificare compilazione GUI desktop e test condivisi** | `.\gradlew.bat :composeApp:compileKotlinDesktop :shared:desktopTest` |
+| **Verificare compilazione GUI desktop e test condivisi** | `.\gradlew.bat :composeApp:compileKotlinDesktop :composeApp:desktopTest :shared:desktopTest` |
 | **Creare cartella portabile Desktop** | `.\gradlew.bat :composeApp:createDistributable` |
 | **Creare installer di release Windows (.msi)** | `.\gradlew.bat :composeApp:packageMsiRelease` |
 | **Creare installer di release Windows (.exe)** | `.\gradlew.bat :composeApp:packageExeRelease` |

@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.grabber.model.ModulationMode
 import com.grabber.waterfall.WaterfallFrame
 import kotlinx.coroutines.flow.StateFlow
-import com.grabber.ui.designsystem.GrabberColors
+import com.grabber.ui.designsystem.DisplayColors
 
 @Composable
 internal fun SpectrumAnalyzerView(
@@ -48,7 +48,7 @@ internal fun SpectrumAnalyzerView(
     val dbTextStyle = remember {
         TextStyle(
             fontSize = 8.sp,
-            color = Color(0xFF4A5568),
+            color = DisplayColors.SpectrumScaleText,
             fontFamily = FontFamily.Monospace
         )
     }
@@ -81,8 +81,8 @@ internal fun SpectrumAnalyzerView(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(3.dp))
-            .background(Color(0xFF070B10))
-            .border(1.dp, GrabberColors.Border, RoundedCornerShape(3.dp))
+            .background(DisplayColors.SpectrumBackground)
+            .border(1.dp, DisplayColors.Border, RoundedCornerShape(3.dp))
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
                     val f = currentFrame
@@ -116,7 +116,7 @@ internal fun SpectrumAnalyzerView(
                 if (db in (minDb + 5)..(maxDb - 5)) {
                     val y = h - ((db - minDb).toFloat() / dbRange) * h
                     drawLine(
-                        color = Color(0xFF1E2630),
+                        color = DisplayColors.SpectrumGrid,
                         start = Offset(0f, y),
                         end = Offset(w, y),
                         strokeWidth = 1f
@@ -136,7 +136,7 @@ internal fun SpectrumAnalyzerView(
                     val frac = curFrame.fractionAtFrequency(tick)
                     val x = frac * w
                     drawLine(
-                        color = Color(0xFF1E2630),
+                        color = DisplayColors.SpectrumGrid,
                         start = Offset(x, 0f),
                         end = Offset(x, h),
                         strokeWidth = 1f
@@ -152,7 +152,7 @@ internal fun SpectrumAnalyzerView(
                 for (i in 1..4) {
                     val x = w * (i / 5f)
                     drawLine(
-                        color = Color(0xFF1E2630),
+                        color = DisplayColors.SpectrumGrid,
                         start = Offset(x, 0f),
                         end = Offset(x, h),
                         strokeWidth = 1f
@@ -163,7 +163,7 @@ internal fun SpectrumAnalyzerView(
             // Se non ci sono frame, mostra linea piatta
             if (curFrame == null || curFrame.binCount == 0) {
                 drawLine(
-                    color = Color.Gray.copy(alpha = 0.3f),
+                    color = DisplayColors.TextMuted.copy(alpha = 0.3f),
                     start = Offset(0f, h * 0.9f),
                     end = Offset(w, h * 0.9f),
                     strokeWidth = 1f
@@ -189,7 +189,7 @@ internal fun SpectrumAnalyzerView(
             val filterWidth = (filterRightX - filterLeftX).coerceAtLeast(2f)
 
             drawRect(
-                color = GrabberColors.Primary.copy(alpha = 0.18f),
+                color = DisplayColors.Primary.copy(alpha = 0.18f),
                 topLeft = Offset(filterLeftX, 0f),
                 size = Size(filterWidth, h)
             )
@@ -197,7 +197,7 @@ internal fun SpectrumAnalyzerView(
             // Linea centrale VFO (Marker sintonizzazione)
             val vfoX = (vfoFrac * w).coerceIn(0f, w)
             drawLine(
-                color = GrabberColors.Error,
+                color = DisplayColors.Error,
                 start = Offset(vfoX, 0f),
                 end = Offset(vfoX, h),
                 strokeWidth = 1.5f
@@ -225,7 +225,7 @@ internal fun SpectrumAnalyzerView(
 
                 drawPath(
                     path = spectrumPath,
-                    color = GrabberColors.LcdPrimary,
+                    color = DisplayColors.LcdPrimary,
                     style = Stroke(width = 1.2f, cap = StrokeCap.Round)
                 )
             }

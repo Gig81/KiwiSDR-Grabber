@@ -75,7 +75,7 @@ internal fun ModeAndBandsCard(
                                     Text(
                                         text = "${preset.frequencyKhz.toInt()}k",
                                         fontSize = 7.sp,
-                                        color = Color.LightGray
+                                        color = GrabberColors.TextSecondary
                                     )
                                 }
                             }

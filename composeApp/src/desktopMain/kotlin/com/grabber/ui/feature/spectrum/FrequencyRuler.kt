@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.log10
 import kotlin.math.pow
+import com.grabber.ui.designsystem.DisplayColors
 import com.grabber.ui.designsystem.GrabberColors
 
 @Composable
@@ -61,7 +62,7 @@ internal fun WaterfallScaleSummary(
         Text(
             text = "◀ Inizio: $startStr",
             fontSize = 9.sp,
-            color = Color.Gray,
+            color = GrabberColors.TextDisabled,
             fontFamily = FontFamily.Monospace
         )
 
@@ -102,7 +103,7 @@ internal fun WaterfallScaleSummary(
         Text(
             text = "Fine: $stopStr ▶",
             fontSize = 9.sp,
-            color = Color.Gray,
+            color = GrabberColors.TextDisabled,
             fontFamily = FontFamily.Monospace
         )
     }
@@ -269,7 +270,7 @@ internal fun FrequencyRulerView(
     val tickLabelStyle = remember {
         TextStyle(
             fontSize = 8.sp,
-            color = Color(0xFFADBBC8),
+            color = DisplayColors.RulerText,
             fontFamily = FontFamily.Monospace
         )
     }
@@ -285,7 +286,7 @@ internal fun FrequencyRulerView(
     val bandLabelStyle = remember {
         TextStyle(
             fontSize = 7.sp,
-            color = GrabberColors.Warning.copy(alpha = 0.7f),
+            color = DisplayColors.Warning.copy(alpha = 0.7f),
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold
         )
@@ -302,8 +303,8 @@ internal fun FrequencyRulerView(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(2.dp))
-            .background(Color(0xFF0D1117))
-            .border(1.dp, GrabberColors.Border, RoundedCornerShape(2.dp))
+            .background(DisplayColors.RulerBackground)
+            .border(1.dp, DisplayColors.Border, RoundedCornerShape(2.dp))
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
                     if (spanKhz > 0 && size.width > 0) {
@@ -321,7 +322,7 @@ internal fun FrequencyRulerView(
             if (spanKhz <= 0 || tickInfo == null) {
                 // Nessun dato: disegna solo una linea orizzontale di base
                 drawLine(
-                    color = Color(0xFF30363D),
+                    color = DisplayColors.RulerTick,
                     start = Offset(0f, 0f),
                     end = Offset(w, 0f),
                     strokeWidth = 1f
@@ -331,7 +332,7 @@ internal fun FrequencyRulerView(
 
             // Linea di base del righello (bordo superiore)
             drawLine(
-                color = Color(0xFF58A6FF).copy(alpha = 0.4f),
+                color = DisplayColors.Primary.copy(alpha = 0.4f),
                 start = Offset(0f, 0f),
                 end = Offset(w, 0f),
                 strokeWidth = 1f
@@ -342,7 +343,7 @@ internal fun FrequencyRulerView(
                 val frac = ((tick - startFreqKhz) / spanKhz).coerceIn(0.0, 1.0).toFloat()
                 val x = frac * w
                 drawLine(
-                    color = Color(0xFF30363D),
+                    color = DisplayColors.RulerTick,
                     start = Offset(x, 0f),
                     end = Offset(x, h * 0.3f),
                     strokeWidth = 1f
@@ -356,7 +357,7 @@ internal fun FrequencyRulerView(
 
                 // Tacca principale
                 drawLine(
-                    color = Color(0xFF58A6FF).copy(alpha = 0.6f),
+                    color = DisplayColors.Primary.copy(alpha = 0.6f),
                     start = Offset(x, 0f),
                     end = Offset(x, h * 0.5f),
                     strokeWidth = 1f
@@ -382,7 +383,7 @@ internal fun FrequencyRulerView(
 
                 // Tacca banda (colore diverso, ambra)
                 drawLine(
-                    color = GrabberColors.Warning.copy(alpha = 0.5f),
+                    color = DisplayColors.Warning.copy(alpha = 0.5f),
                     start = Offset(x, h * 0.55f),
                     end = Offset(x, h),
                     strokeWidth = 1f
@@ -403,7 +404,7 @@ internal fun FrequencyRulerView(
             val vfoFrac = ((vfoKhz - startFreqKhz) / spanKhz).coerceIn(0.0, 1.0).toFloat()
             val vfoX = (vfoFrac * w).coerceIn(0f, w)
             drawLine(
-                color = GrabberColors.Error,
+                color = DisplayColors.Error,
                 start = Offset(vfoX, 0f),
                 end = Offset(vfoX, h),
                 strokeWidth = 1.5f

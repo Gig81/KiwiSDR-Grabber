@@ -34,7 +34,7 @@ jobs:
 
       # Il runner ha l'SDK Android preinstallato: qui serve solo la build desktop.
       - name: Compilazione e test
-        run: .\gradlew.bat --no-daemon "-Pkiwi.android=false" :composeApp:compileKotlinDesktop :shared:desktopTest
+        run: .\gradlew.bat --no-daemon "-Pkiwi.android=false" :composeApp:compileKotlinDesktop :composeApp:desktopTest :shared:desktopTest
 
       - name: Report dei test
         if: failure()

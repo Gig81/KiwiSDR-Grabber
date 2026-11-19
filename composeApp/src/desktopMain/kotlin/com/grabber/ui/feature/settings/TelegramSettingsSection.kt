@@ -218,7 +218,7 @@ internal fun TelegramSettingsSection(
                     icon = Icons.Default.Save,
                     size = ControlSize.Compact,
                     containerColor = GrabberColors.Success,
-                    contentColor = Color.Black
+                    contentColor = GrabberColors.OnAccent
                 )
 
                 PrimaryButton(
@@ -240,7 +240,7 @@ internal fun TelegramSettingsSection(
                     icon = Icons.AutoMirrored.Filled.Send,
                     size = ControlSize.Compact,
                     containerColor = GrabberColors.Secondary,
-                    contentColor = Color.Black
+                    contentColor = GrabberColors.OnAccent
                 )
             }
 

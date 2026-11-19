@@ -30,19 +30,24 @@ class ChannelScanTests {
     ) {
         val selected = MutableStateFlow(channels)
         val gate = MutableStateFlow(false)
-        val tuned = mutableListOf<FavoriteFrequency>()
-        val stoppedOn = mutableListOf<FavoriteFrequency>()
-        val scanner = ChannelScanCoordinator(
+        val tuned = mutableListOf<ScanTarget>()
+        val stoppedOn = mutableListOf<ScanTarget>()
+        val scanner = ScanCoordinator(
             scope = scope.backgroundScope,
-            selectedChannels = { selected.value },
-            dwellMillis = { DWELL_MS },
-            autoResume = { autoResume },
             signalGateOpen = gate,
             tuneTo = { tuned += it },
             resetSignalDetection = { gate.value = false },
-            onStoppedOnSignal = { stoppedOn += it }
+            onStoppedOnSignal = { _, target -> stoppedOn += target }
+        )
+        val plan = ScanPlan(
+            kind = ScanKind.CHANNELS,
+            source = { ListScanSource(selected.value.map { it.toScanTarget() }) },
+            dwellMillis = { DWELL_MS },
+            autoResume = { autoResume }
         )
     }
+
+    private val FavoriteFrequency.t: ScanTarget get() = toScanTarget()
 
     private fun TestScope.advanceStep(ms: Long = STEP_MS) {
         advanceTimeBy(ms)
@@ -52,97 +57,97 @@ class ChannelScanTests {
     @Test
     fun cyclesThroughSelectedChannelsWithoutSignal() = runTest {
         val h = Harness(this, listOf(ch1, ch2, ch3))
-        assertTrue(h.scanner.start())
+        assertTrue(h.scanner.start(h.plan))
         runCurrent()
-        assertEquals(listOf(ch1), h.tuned)
-        assertEquals(ChannelScanState.Scanning(ch1, 1, 3), h.scanner.state.value)
+        assertEquals(listOf(ch1.t), h.tuned)
+        assertEquals(ScanState.Scanning(ScanKind.CHANNELS, ch1.t, 1, 3), h.scanner.state.value)
 
         advanceStep()
         advanceStep()
         advanceStep()
-        assertEquals(listOf(ch1, ch2, ch3, ch1), h.tuned)
+        assertEquals(listOf(ch1, ch2, ch3, ch1).map { it.t }, h.tuned)
         h.scanner.stop()
     }
 
     @Test
     fun staysOnSignalAndResumesWhenSquelchCloses() = runTest {
         val h = Harness(this, listOf(ch1, ch2))
-        h.scanner.start()
+        h.scanner.start(h.plan)
         runCurrent()
         advanceStep(SCAN_SETTLE_MS + 500)
         h.gate.value = true
         runCurrent()
-        assertIs<ChannelScanState.SignalFound>(h.scanner.state.value)
+        assertIs<ScanState.SignalFound>(h.scanner.state.value)
 
         advanceStep(60_000)
-        assertEquals(listOf(ch1), h.tuned, "durante il segnale la scansione non cambia canale")
+        assertEquals(listOf(ch1.t), h.tuned, "durante il segnale la scansione non cambia canale")
 
         h.gate.value = false
         runCurrent()
-        assertEquals(listOf(ch1, ch2), h.tuned)
-        assertEquals(ChannelScanState.Scanning(ch2, 2, 2), h.scanner.state.value)
+        assertEquals(listOf(ch1, ch2).map { it.t }, h.tuned)
+        assertEquals(ScanState.Scanning(ScanKind.CHANNELS, ch2.t, 2, 2), h.scanner.state.value)
         h.scanner.stop()
     }
 
     @Test
     fun stopsOnSignalWhenAutoResumeIsDisabled() = runTest {
         val h = Harness(this, listOf(ch1, ch2), autoResume = false)
-        h.scanner.start()
+        h.scanner.start(h.plan)
         runCurrent()
         advanceStep(SCAN_SETTLE_MS + 100)
         h.gate.value = true
         runCurrent()
 
-        assertEquals(listOf(ch1), h.stoppedOn)
-        assertEquals(ChannelScanState.Idle, h.scanner.state.value)
+        assertEquals(listOf(ch1.t), h.stoppedOn)
+        assertEquals(ScanState.Idle, h.scanner.state.value)
         assertFalse(h.scanner.isActive)
         advanceStep(60_000)
-        assertEquals(listOf(ch1), h.tuned)
+        assertEquals(listOf(ch1.t), h.tuned)
     }
 
     @Test
     fun signalDuringSettleTimeIsIgnored() = runTest {
         val h = Harness(this, listOf(ch1, ch2))
-        h.scanner.start()
+        h.scanner.start(h.plan)
         runCurrent()
         // Frame residui della frequenza precedente: lo squelch viene azzerato dopo l'assestamento.
         h.gate.value = true
         advanceStep()
-        assertEquals(listOf(ch1, ch2), h.tuned)
+        assertEquals(listOf(ch1, ch2).map { it.t }, h.tuned)
         h.scanner.stop()
     }
 
     @Test
     fun stopPreventsFurtherTuning() = runTest {
         val h = Harness(this, listOf(ch1, ch2))
-        h.scanner.start()
+        h.scanner.start(h.plan)
         runCurrent()
         h.scanner.stop()
         advanceStep(60_000)
-        assertEquals(listOf(ch1), h.tuned)
-        assertEquals(ChannelScanState.Idle, h.scanner.state.value)
+        assertEquals(listOf(ch1.t), h.tuned)
+        assertEquals(ScanState.Idle, h.scanner.state.value)
     }
 
     @Test
     fun selectionChangesApplyDuringScan() = runTest {
         val h = Harness(this, listOf(ch1, ch2, ch3))
-        h.scanner.start()
+        h.scanner.start(h.plan)
         runCurrent()
         h.selected.value = listOf(ch1, ch3)
         advanceStep()
         advanceStep()
-        assertEquals(listOf(ch1, ch3, ch1), h.tuned)
+        assertEquals(listOf(ch1, ch3, ch1).map { it.t }, h.tuned)
         h.scanner.stop()
     }
 
     @Test
     fun cannotStartWithoutSelectedChannelsOrTwice() = runTest {
         val empty = Harness(this, emptyList())
-        assertFalse(empty.scanner.start())
+        assertFalse(empty.scanner.start(empty.plan))
 
         val h = Harness(this, listOf(ch1))
-        assertTrue(h.scanner.start())
-        assertFalse(h.scanner.start())
+        assertTrue(h.scanner.start(h.plan))
+        assertFalse(h.scanner.start(h.plan))
         h.scanner.stop()
     }
 

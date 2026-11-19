@@ -36,7 +36,7 @@ Il repository è attualmente organizzato così:
 
 1. L'applicazione avvia `KiwiAppController` con tutte le dipendenze concrete.
 2. `KiwiClient` si connette via WebSocket al server KiwiSDR e inizializza lo stream audio e i messaggi di controllo.
-3. `DesktopAudioPlayer` riceve i frame audio PCM e li rende in output audio locale.
+3. `AudioPipeline` fa passare ogni frame audio PCM dal DSP (equalizzatore e filtri, se attivo) e dallo squelch, poi lo consegna a `DesktopAudioPlayer`, che lo rende in output audio locale, e ad `AudioRecorder` (§4.3.1).
 4. `AudioRecorder` registra i segmenti audio in formato MP3 o WAV.
 5. `StationMonitor` interroga periodicamente `/status` del ricevitore ed espone lo stato della stazione; lo storico degli utenti connessi viene scritto in `HistoryDatabase` solo quando cambia l'elenco dei nominativi.
 6. Dopo l'autenticazione SND, `WaterfallCoordinator` (per conto di `KiwiAppController`) apre automaticamente la WebSocket dedicata `/W/F` usando lo stesso token/timestamp di sessione della socket SND, come fa il client web ufficiale. La W/F resta attiva indipendentemente dalla schermata; in caso di riconnessione SND viene chiusa e riaperta con il nuovo token.
@@ -150,7 +150,10 @@ flowchart LR
     CTRL --> WFC[WaterfallCoordinator]
     CTRL --> HIS[RecordingHistoryCoordinator]
     CTRL --> ALR[QsoAlertCoordinator]
-    CTRL --> SCN[ChannelScanCoordinator]
+    CTRL --> SCN[ScanCoordinator]
+    CTRL --> PIPE[AudioPipeline]
+    PIPE --> DSP[AudioDspChain]
+    PIPE --> SQL[SquelchController]
     CTRL --> KCL[KiwiClient]
     CTRL --> AUD[DesktopAudioPlayer]
     CTRL --> REC[AudioRecorder]
@@ -179,7 +182,7 @@ La UI Compose vive in `composeApp/src/desktopMain/kotlin/com/grabber/ui/`. `Main
 - Utenti & Monitor (`UsersTab`)
 - Impostazioni (`SettingsTab`)
 
-La console rimane montata mentre cambia la scheda. Le schermate accedono all'applicazione solo tramite le API e i `StateFlow` di `KiwiAppController` (unica eccezione: `waterfallBuffer`, letto direttamente dal renderer per prestazioni) e non devono introdurre una seconda sorgente di verità per sintonia, audio, registrazione o waterfall. La vista waterfall compatta e quella estesa riutilizzano lo stesso componente e lo stato gestito dal controller. I token e i componenti Compose condivisi sono in `ui/designsystem/`; la specifica visuale è in `docs/GUI_DESIGN_SYSTEM.md`.
+La console rimane montata mentre cambia la scheda. Le schermate accedono all'applicazione solo tramite le API e i `StateFlow` di `KiwiAppController` (unica eccezione: `waterfallBuffer`, letto direttamente dal renderer per prestazioni) e non devono introdurre una seconda sorgente di verità per sintonia, audio, registrazione o waterfall. La vista waterfall compatta e quella estesa riutilizzano lo stesso componente e lo stato gestito dal controller. I token e i componenti Compose condivisi sono in `ui/designsystem/`; la specifica visuale è in `docs/GUI_DESIGN_SYSTEM.md`. Il tema (scuro, chiaro o di sistema) è letto da `settings.uiTheme` in `App.kt` e applicato da `GrabberTheme`, che fornisce la palette del tema (`LocalGrabberPalette`); i display strumentali (LCD del VFO, spettro, waterfall, righello) usano `DisplayColors` e restano scuri in tutti i temi.
 
 ### 3.3 Gestione dello stato
 
@@ -232,6 +235,9 @@ L'infrastruttura non usa una `Result` monad globale né un framework di dependen
 - Log applicativi: `~/.kiwigrabber/logs`; file giornalieri creati all'avvio, con rotazione a 5 MiB, tre backup per giornata e rimozione dei file oltre 14 giorni
 - Waterfall: le frequenze preferite salvate nelle impostazioni sono mostrate come marker ed etichette quando rientrano nella banda visibile
 - Waterfall: il livello di zoom viene salvato nelle impostazioni e ripristinato alla riapertura
+- Tema dell'interfaccia: `uiThemeName` (`UiThemeMode`: `DARK` predefinito, `LIGHT`, `SYSTEM`); un valore sconosciuto torna al tema scuro
+- Scansione dell'intervallo: `rangeScanStartKhz`, `rangeScanEndKhz`, `rangeScanStepKhz`, `rangeScanModeCode`, `rangeScanDwellMs` (300–10.000 ms), `rangeScanAutoResume`, `rangeScanExcludedKhz`; predefinito banda CB 26.965–27.405 kHz a passi di 10 kHz in AM. I parametri vengono salvati solo se validi (`validateRangeScan`)
+- DSP: `audioDsp` (`AudioDspConfig`), riportato nei limiti (`normalized()`) dal controller al caricamento e da `AppSettings` al salvataggio; assente nei file delle versioni precedenti, vale la configurazione neutra con destinazione spenta
 - Squelch: quando lo squelch RF e il voice gate sono entrambi attivi, lo stato RF prevale; il VAD non può chiudere un gate RF aperto
 - Machine ID: SHA-256 del `MachineGuid` di Windows (registro, vista 64 bit), nel formato `GRAB-XXXX-XXXX-XXXX-XXXX`; non cambia con rete, VPN o rinomina del PC, cambia reinstallando Windows. Se il valore non è leggibile si usa `GRAB-NON-DISPONIBILE`, che nessuna licenza può validare. L'esito della verifica della firma viene memorizzato finché la chiave non cambia.
 - Licenza desktop: verifica locale legata al Machine ID e richiesta di attivazione via canale Telegram dedicato. Non esiste un periodo di prova: senza attivazione restano disponibili le funzioni di base (ascolto, sintonia, spettro/waterfall, utenti connessi, preferiti) e le funzioni avanzate sono bloccate. Le chiavi sono firmate offline con Ed25519 dall'app License Manager del repository privato di gestione licenze.
@@ -282,6 +288,22 @@ L'infrastruttura non usa una `Result` monad globale né un framework di dependen
 - Dipendenze: `AudioFrame`
 - Riutilizzabilità: parziale; la logica di base del player audio è portabile, ma l'implementazione Java Sound è fortemente desktop-only
 
+### 4.3.1 Pipeline audio e DSP: `AudioPipeline`, `AudioDspChain`
+
+- `AudioPipeline` (`desktopMain`, package `com.grabber.audio`): percorso di ogni frame SND, chiamato in ordine sul flusso seriale dei frame. Ordine degli stadi:
+
+  ```
+  frame ─▶ [DSP pre-squelch] ─▶ SquelchController ─▶ [DSP post-squelch] ─▶ DesktopAudioPlayer
+                  │
+                  └──────────────▶ AudioRecorder (e pre-buffer dello squelch)
+  ```
+
+  Con destinazione *Ascolto e registrazione* (`DspTarget.LISTEN_AND_RECORD`) il DSP agisce **prima** dello squelch, così pre-buffer, registrazione, ascolto, allegati Telegram e trascrizioni contengono lo stesso audio; il VAD analizza l'audio filtrato. Con *Solo ascolto* (`LISTEN`) agisce sui byte in uscita dallo squelch e il registratore riceve l'originale. "Solo registrazione" non esiste per scelta. RSSI e gate RF non cambiano (dipendono dall'header del frame). Le due catene hanno stato separato; la catena che entra in uso viene azzerata, e `KiwiAppController.applyTuning` azzera i filtri a ogni cambio frequenza.
+- `AudioDspChain` (`jvmCommonMain`, package `com.grabber.audio.dsp`, Kotlin puro riusabile su Android): passa-alto → passa-basso → notch → riduzione rumore (`LmsNoiseReducer`, predittore NLMS) → equalizzatore a 7 bande (shelf a 100 Hz e 4 kHz, peaking in mezzo) → limitatore morbido. Filtri biquad RBJ (`Biquad`, `BiquadDesign`, formule di pubblico dominio). Coefficienti calcolati da `AudioFrame.sampleRate` e ricalcolati se cambia; bande oltre 0,45 × sample rate ignorate. La configurazione (`AudioDspConfig`, immutabile e serializzata in `settings.json`) si cambia da qualsiasi thread e si applica all'inizio del blocco successivo senza azzerare lo stato dei filtri; con configurazione neutra la catena restituisce lo stesso array senza elaborarlo.
+- Licenza: senza attivazione la pipeline tratta la destinazione come spenta anche se le impostazioni contengono una configurazione attiva; il controller riapplica la configurazione quando cambia la chiave di licenza. Le registrazioni già salvate non vengono mai elaborate.
+- Controller: `dspConfig` (`StateFlow`) applica subito le modifiche all'audio e le salva su disco con un debounce di 300 ms (salvataggio immediato allo spegnimento); `setDspBypass` (confronto A/B) non viene salvato; `isDspActive` alimenta l'indicatore `DSP` della console.
+- Prestazioni: 60 s di audio con la catena completa sono elaborati in poche centinaia di ms (test `fullChainIsMuchFasterThanRealTime`).
+
 ### 4.4 `AudioRecorder`
 
 - Package: `com.grabber.recording.AudioRecorder`
@@ -303,7 +325,7 @@ L'infrastruttura non usa una `Result` monad globale né un framework di dependen
 - `WaterfallCoordinator` (`jvmCommonMain`, condiviso con Android): socket W/F aperto dopo l'autenticazione SND, ritentativi sulle interruzioni temporanee (non sui rifiuti `badp`), palette, zoom, range dBm, inseguimento del VFO. Persiste le impostazioni tramite l'interfaccia `WaterfallPreferences` (`AppSettingsWaterfallPreferences` su desktop, `MobileSettings` su Android).
 - `RecordingHistoryCoordinator`: storico di registrazioni e utenti, ricerca full-text, coda di trascrizione offline; senza licenza lo storico risulta vuoto.
 - `QsoAlertCoordinator`: notifiche Telegram di inizio/fine QSO e, a trascrizione conclusa, parole chiave con audio e testo allegati; rispetta il gate di licenza e l'intervallo minimo tra messaggi.
-- `ChannelScanCoordinator`: scansione ciclica dei preferiti con `scanEnabled`. Dopo ogni cambio canale attende un tempo di assestamento (i primi frame possono riferirsi ancora alla frequenza precedente) e azzera lo squelch, poi ascolta per il tempo di permanenza; se il gate RF dello squelch si apre resta sul canale e, con la ripresa automatica, riparte alla chiusura del gate (dopo l'hang time). Rilegge canali e impostazioni a ogni passo. La sintonia manuale (`KiwiAppController.tune`) e la perdita della connessione fermano la scansione; il controller sintonizza per conto dello scanner con un percorso interno che non la interrompe. Funzione riservata alla licenza.
+- `ScanCoordinator` (file `ScanCoordinator.kt`, `FrequencyRangeScan.kt`): motore unico delle scansioni. Un `ScanPlan` indica il tipo (`ScanKind.CHANNELS` o `RANGE`), la sorgente dei passi (`ScanSource`, letta per indice), il tempo di permanenza e la ripresa automatica; sorgente e parametri sono riletti a ogni passo. Sorgenti: `ListScanSource` (preferiti con `scanEnabled`) e `FrequencyRangeScanSource` (da inizio a fine con passo e modo, frequenze calcolate come `inizio + i × passo` arrotondate a 1 Hz, frequenze escluse saltate con tolleranza di mezzo passo; il controller la ricrea solo quando cambiano i parametri). Dopo ogni cambio frequenza attende un tempo di assestamento (i primi frame possono riferirsi ancora alla frequenza precedente) e azzera lo squelch, poi ascolta per il tempo di permanenza; se il gate RF dello squelch si apre resta sul passo e, con la ripresa automatica, riparte alla chiusura del gate (dopo l'hang time). Una sola scansione alla volta: il controller ferma quella in corso prima di avviarne un'altra. I segnali trovati dalla scansione dell'intervallo sono raccolti in memoria da `ScanHitLog` (nessuna persistenza). La sintonia manuale (`KiwiAppController.tune`, anche da waterfall, preferiti o segnali trovati) e la perdita della connessione fermano la scansione; il controller sintonizza per conto dello scanner con un percorso interno che non la interrompe. Funzione riservata alla licenza (controllata nel controller, anche per i setter).
 - Riutilizzabilità: livello di orchestrazione desktop; in un'architettura futura i coordinatori possono diventare `UseCase` o `ViewModel` separati.
 
 ### 4.7 `AppSettings` e `SecretCipher`
@@ -487,7 +509,7 @@ Il progetto è desktop-first, con un client Android di ascolto e con i principal
 
 - `shared` contiene la logica di protocollo e modelli chiave (`commonMain`), i servizi JVM condivisi (`jvmCommonMain`) e quelli specifici di desktop e Android
 - `composeApp` fornisce l'interfaccia grafica desktop
-- `KiwiAppController` è la facciata della UI; `WaterfallCoordinator`, `RecordingHistoryCoordinator`, `QsoAlertCoordinator` e `ChannelScanCoordinator` orchestrano rispettivamente waterfall, storico/trascrizioni, notifiche e scansione dei canali, sopra `KiwiClient`, `WaterfallClient`, `AudioRecorder` e `StationMonitor`
+- `KiwiAppController` è la facciata della UI; `WaterfallCoordinator`, `RecordingHistoryCoordinator`, `QsoAlertCoordinator` e `ScanCoordinator` orchestrano rispettivamente waterfall, storico/trascrizioni, notifiche e scansioni (canali e intervallo); `AudioPipeline` instrada i frame audio attraverso DSP e squelch, sopra `KiwiClient`, `WaterfallClient`, `AudioRecorder` e `StationMonitor`
 - `androidApp` + `MobileAppController` forniscono il client Android di ascolto, pubblicato dalla 1.2.0 come APK nelle GitHub Releases (§4.9, §4.10)
 - la documentazione storica sotto `docs/` è utile come riferimento, ma la struttura architetturale ufficiale del progetto deve essere mantenuta in questo documento
 

@@ -39,7 +39,7 @@ fun FavoritesTab(
     modifier: Modifier = Modifier
 ) {
     val settings by controller.settings.collectAsState()
-    val scanState by controller.channelScanState.collectAsState()
+    val scanState by controller.scanState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilterId by remember { mutableStateOf("CB") }
 
@@ -75,20 +75,15 @@ fun FavoritesTab(
             onResetDefaults = { showResetConfirm = true },
             modifier = Modifier.width(260.dp).fillMaxHeight()
         )
-        ChannelScanPanel(
+        ScanPanel(
+            controller = controller,
+            settings = settings,
             scanState = scanState,
-            selectedCount = favorites.count { it.scanEnabled },
-            dwellSeconds = settings.scanDwellSeconds,
-            autoResume = settings.scanAutoResume,
+            favorites = favorites,
+            visibleFavorites = filteredFavorites,
             isMachineLicensed = isMachineLicensed,
-            onStart = controller::startChannelScan,
-            onStop = controller::stopChannelScan,
-            onDwellChange = controller::setScanDwellSeconds,
-            onAutoResumeChange = controller::setScanAutoResume,
-            onSelectVisible = { controller.setFavoritesScanEnabled(filteredFavorites, true) },
-            onClearSelection = { controller.setFavoritesScanEnabled(favorites, false) },
             onActivate = onActivate,
-            modifier = Modifier.width(240.dp).fillMaxHeight()
+            modifier = Modifier.width(270.dp).fillMaxHeight()
         )
         FavoriteChannelsPanel(
             filterLabel = availableFilters.find { it.id.equals(selectedFilterId, ignoreCase = true) }?.label
@@ -185,7 +180,7 @@ fun FavoritesTab(
             },
             onDismiss = { showResetConfirm = false },
             accentColor = GrabberColors.Warning,
-            confirmContentColor = Color.Black
+            confirmContentColor = GrabberColors.OnAccent
         )
     }
 }

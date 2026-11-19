@@ -65,15 +65,15 @@ internal fun LicenseSettingsSection(
             Text("Machine ID Hardware:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = GrabberColors.TextPrimary)
             Surface(
                 shape = RoundedCornerShape(3.dp),
-                color = GrabberColors.LcdBackground,
-                border = BorderStroke(1.dp, GrabberColors.Border)
+                color = DisplayColors.LcdBackground,
+                border = BorderStroke(1.dp, DisplayColors.Border)
             ) {
                 Text(
                     text = machineId,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = GrabberColors.LcdPrimary,
+                    color = DisplayColors.LcdPrimary,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
@@ -121,7 +121,7 @@ internal fun LicenseSettingsSection(
                 icon = Icons.Default.Check,
                 size = ControlSize.Compact,
                 containerColor = GrabberColors.Success,
-                contentColor = Color.Black
+                contentColor = GrabberColors.OnAccent
             )
         }
 

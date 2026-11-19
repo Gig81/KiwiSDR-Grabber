@@ -26,6 +26,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.grabber.ui.designsystem.AppTooltip
+import com.grabber.ui.designsystem.DisplayColors
 import com.grabber.ui.designsystem.GrabberColors
 import java.util.Locale
 
@@ -40,8 +41,8 @@ internal fun VfoDisplayCard(
     onTune: (Double) -> Unit,
     onStepDelta: (Double) -> Unit,
     onStepChange: (FrequencyStep) -> Unit,
-    /** Etichetta e colore dell'indicatore di scansione; null se la scansione è ferma. */
-    scanIndicator: Pair<String, Color>? = null
+    /** Indicatori sul display (etichetta e colore), per esempio scansione e DSP attivi. */
+    indicators: List<Pair<String, Color>> = emptyList()
 ) {
     var inputBuffer by remember { mutableStateOf(String.format(Locale.US, "%.6f", frequencyKhz / 1000.0)) }
     var isEditing by remember { mutableStateOf(false) }
@@ -102,7 +103,7 @@ internal fun VfoDisplayCard(
                         .background(GrabberColors.LcdBackground)
                         .border(
                             1.dp,
-                            if (isEditing) GrabberColors.Warning else GrabberColors.Primary.copy(alpha = 0.3f),
+                            if (isEditing) DisplayColors.Warning else DisplayColors.Primary.copy(alpha = 0.3f),
                             RoundedCornerShape(4.dp)
                         )
                         .padding(horizontal = 6.dp),
@@ -123,7 +124,7 @@ internal fun VfoDisplayCard(
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             textStyle = TextStyle(
-                                color = if (isEditing) Color.White else GrabberColors.LcdPrimary,
+                                color = if (isEditing) DisplayColors.Text else DisplayColors.LcdPrimary,
                                 fontSize = 24.sp,
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.Bold
@@ -133,16 +134,16 @@ internal fun VfoDisplayCard(
                                 imeAction = ImeAction.Done
                             ),
                             keyboardActions = KeyboardActions(onDone = { commitTuning() }),
-                            cursorBrush = SolidColor(GrabberColors.Primary)
+                            cursorBrush = SolidColor(DisplayColors.Primary)
                         )
-                        scanIndicator?.let { (label, color) ->
+                        indicators.forEach { (label, color) ->
                             Text(text = label, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = color)
                         }
                         Text(
                             text = "MHz",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = GrabberColors.Primary
+                            color = DisplayColors.Primary
                         )
                         AppTooltip(
                             text = if (canTune) "Sintonizza la frequenza inserita"
@@ -156,7 +157,7 @@ internal fun VfoDisplayCard(
                                 Icon(
                                     Icons.Default.Check,
                                     contentDescription = "Sintonizza",
-                                    tint = if (canTune && parsedFrequencyKhz != null) GrabberColors.Primary else Color.Gray,
+                                    tint = if (canTune && parsedFrequencyKhz != null) DisplayColors.Primary else DisplayColors.TextMuted,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -214,7 +215,7 @@ internal fun VfoDisplayCard(
                             text = step.label,
                             fontSize = 8.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) Color.Black else Color.LightGray
+                            color = if (isSelected) GrabberColors.OnAccent else GrabberColors.TextSecondary
                         )
                     }
                 }
@@ -239,7 +240,7 @@ private fun StepButton(icon: ImageVector, description: String, enabled: Boolean,
             Icon(
                 icon,
                 contentDescription = description,
-                tint = if (enabled) GrabberColors.Primary else Color.Gray,
+                tint = if (enabled) GrabberColors.Primary else GrabberColors.TextDisabled,
                 modifier = Modifier.size(18.dp)
             )
         }

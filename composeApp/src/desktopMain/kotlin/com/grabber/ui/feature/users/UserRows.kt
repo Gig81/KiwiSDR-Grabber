@@ -65,7 +65,7 @@ internal fun LiveUserRow(
                         text = "${user.slot}",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isMy) Color.Black else GrabberColors.Success
+                        color = if (isMy) GrabberColors.OnAccent else GrabberColors.Success
                     )
                 }
 
@@ -164,7 +164,7 @@ internal fun UserLogRow(
                 colors = CheckboxDefaults.colors(
                     checkedColor = GrabberColors.Primary,
                     uncheckedColor = GrabberColors.Border,
-                    checkmarkColor = Color.White
+                    checkmarkColor = GrabberColors.OnStrongAccent
                 )
             )
 
@@ -260,7 +260,7 @@ private fun ModeBadge(mode: String) {
     val cleanMode = mode.trim().uppercase(Locale.US)
     val badgeColor = when (cleanMode) {
         "USB" -> GrabberColors.Primary
-        "LSB" -> Color(0xFF9C27B0)
+        "LSB" -> GrabberColors.ModeLsb
         "CW" -> GrabberColors.Warning
         "AM" -> GrabberColors.Secondary
         "NFM", "FM" -> GrabberColors.Success

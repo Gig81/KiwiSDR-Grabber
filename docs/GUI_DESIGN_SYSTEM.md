@@ -4,30 +4,41 @@ This document describes the visual tokens and reusable Compose components curren
 
 ## Theme and color palette
 
-`GrabberTheme` applies a dark Material 3 color scheme. Use `GrabberColors` for new shared UI instead of introducing component-specific colors.
+`GrabberTheme(mode)` applies the Material 3 color scheme of the selected theme: **Dark** (`UiThemeMode.DARK`, default), **Light** (`LIGHT`) or **System** (`SYSTEM`, follows the Windows light/dark app setting through `isSystemInDarkTheme()`). The user picks it in Settings → *Aspetto & tema dell'interfaccia*; `App.kt` reads `settings.uiTheme` and the change applies immediately.
 
-| Token | Value | Intended use |
-|---|---|---|
-| `Background` | `#0D1117` | App window background |
-| `Surface` | `#161B22` | Panels and cards |
-| `SurfaceVariant` | `#21262D` | Nested sections and controls |
-| `SurfaceElevated` | `#2B313A` | Elevated surfaces |
-| `Border` | `#30363D` | Outlines and dividers |
-| `Primary` | `#58A6FF` | Primary actions and selected controls |
-| `PrimaryVariant` | `#3B82F6` | Alternate primary accent |
-| `Secondary` | `#7DD3FC` | Secondary accent |
-| `Success` | `#3FB950` | Connected, enabled, or successful state |
-| `Warning` | `#D29922` | Waiting or caution state |
-| `Error` | `#F85149` | Error, stop, or destructive state |
-| `TextPrimary` | `#E6EDF3` | Main text |
-| `TextSecondary` | `#B3BECA` | Supporting text |
-| `TextDisabled` | `#7A8796` | Disabled or inactive text |
-| `SignalGreen` | `#34D399` | Signal indication |
-| `SignalAmber` | `#FBBF24` | Signal warning |
-| `LcdBackground` | `#050B14` | Radio frequency displays |
-| `LcdPrimary` | `#38D9A9` | Frequency and LCD emphasis |
+Each theme is a `GrabberPalette` (`DarkPalette`, `LightPalette`) provided through `LocalGrabberPalette`. UI code keeps using `GrabberColors.X`: every token is a `@Composable` getter that reads the active palette, so it must be read in a composable context. Inside drawing blocks (`Canvas`, `drawBehind`) or `remember { … }`, read the color first into a `val`. `GrabberTypography` styles work the same way (`LocalGrabberTextStyles`). Feature packages never define `Color(0x…)`, `Color.White`/`Black`/`Gray` constants: add a token instead.
+
+| Token | Dark | Light | Intended use |
+|---|---|---|---|
+| `Background` | `#0D1117` | `#F3F5F8` | App window background |
+| `Surface` | `#161B22` | `#FFFFFF` | Panels and cards |
+| `SurfaceVariant` | `#21262D` | `#EAEEF2` | Nested sections and controls |
+| `SurfaceElevated` | `#2B313A` | `#DDE3EA` | Elevated surfaces |
+| `Border` | `#30363D` | `#C4CCD5` | Outlines and dividers |
+| `Primary` | `#58A6FF` | `#0959C2` | Primary actions and selected controls |
+| `PrimaryVariant` | `#3B82F6` | `#1D4ED8` | Alternate primary accent |
+| `Secondary` | `#7DD3FC` | `#0E6A85` | Secondary accent |
+| `Success` | `#3FB950` | `#1A7535` | Connected, enabled, or successful state |
+| `Warning` | `#D29922` | `#8A5A00` | Waiting or caution state |
+| `Error` | `#F85149` | `#C0202B` | Error, stop, or destructive state |
+| `TextPrimary` | `#E6EDF3` | `#1F2328` | Main text |
+| `TextSecondary` | `#B3BECA` | `#4F5A66` | Supporting text |
+| `TextDisabled` | `#7A8796` | `#7D8793` | Disabled or inactive text |
+| `SignalGreen` | `#34D399` | `#13773F` | Signal indication |
+| `SignalAmber` | `#FBBF24` | `#9A5B00` | Signal warning |
+| `OnAccent` | `#000000` | `#FFFFFF` | Label and icon on bright fills (`Primary`, `Secondary`, `Success`, `Warning`) |
+| `OnStrongAccent` | `#FFFFFF` | `#FFFFFF` | Label and icon on saturated fills (`Error`, selected `Primary` items, checkmarks) |
+| `SelectedTab` | `#2E3D52` | `#D6E4F7` | Selected main tab |
+| `LockedOverlay` | `#E6101824` | `#E6F3F5F8` | Veil over license-locked panels |
+| `ModeAm` / `ModeUsb` / `ModeLsb` / `ModeCw` / `ModeNfm` | amber / blue / violet / red / green | darker variants | Demodulation mode badges |
+
+Light-theme accents are darker than the dark-theme ones so that, both as text on light surfaces and as fills under `OnAccent`, contrast stays at least 4.5:1 (WCAG AA). `composeApp/src/desktopTest/.../PaletteContrastTests.kt` checks these ratios for both palettes: run `.\gradlew.bat :composeApp:desktopTest` after changing a color.
+
+**Instrument displays stay dark in every theme.** The VFO LCD, S-meter bar, spectrum, waterfall, frequency ruler and LCD counters use the constant `DisplayColors` object (`LcdBackground`, `LcdPrimary`, `SpectrumBackground`, `SpectrumGrid`, `SpectrumScaleText`, `WaterfallBackground`, `RulerBackground`, `RulerText`, `RulerTick`, `LabelBackdrop`, `MeterTickHigh`/`Low` and dark-theme accents `Primary`, `Success`, `Warning`, `Error`, `Text`, `TextMuted`, `Border`). Because they are plain constants they can be used directly inside drawing code. `GrabberColors.LcdBackground`/`LcdPrimary` point to the same values. Waterfall palettes (`WaterfallPaletteType`) are independent of the UI theme.
 
 Use text or an icon/shape together with semantic color when a state must be unambiguous; do not communicate state through color alone.
+
+Not themed: the native Windows title bar (follows Windows) and the Swing dialogs (`--installer-complete` choices, `AppErrorReporter`).
 
 ## Typography
 
@@ -71,13 +82,13 @@ Colors always come from `GrabberColors`; feature packages do not define their ow
 The desktop radio console currently uses the shared theme and panel colors, with compact controls specialized for immediate operation:
 
 - A Power icon reflects disconnected, connecting/reconnecting, and connected states; the configured server address is displayed alongside it.
-- The editable frequency is displayed in MHz on a dark LCD surface. A confirmation/check action or Enter applies a valid frequency; minus and plus tune by the currently selected channel step.
+- The editable frequency is displayed in MHz on a dark LCD surface (dark in every theme). A confirmation/check action or Enter applies a valid frequency; minus and plus tune by the currently selected channel step. The LCD shows `SCAN` while a channel or range scan runs and `DSP` while the DSP chain is processing audio.
 - The compact waterfall reuses the full waterfall/spectrum component and renderer. Its scale summary is reserved for the dedicated spectrum/waterfall tab.
 - Audio controls reuse the existing S-Meter representation and controller state for volume, mute, Squelch, and VAD. Gate/confidence indicators use live VAD state.
 
-Some older or specialized controls still use local color constants in the Desktop UI. When modifying those controls, prefer migrating them to the shared tokens where practical; do not change functional behavior as part of a visual-token migration.
+All local color constants have been migrated to theme tokens or `DisplayColors`; keep it that way (a `grep "Color(0x" composeApp/src` outside `AppTheme.kt` must stay empty). Do not change functional behavior as part of a visual-token migration.
 
-Buttons using bright semantic fills (for example `Secondary`, `Success`, and `Primary`) must use an explicitly dark foreground for both label and icon. Outlined and neutral buttons retain the light foreground on dark surfaces.
+Buttons using bright semantic fills (for example `Secondary`, `Success`, `Warning`, and `Primary`) use `GrabberColors.OnAccent` for both label and icon (dark in the dark theme, white in the light theme); saturated fills such as `Error` use `OnStrongAccent`. Outlined and neutral buttons use `TextPrimary`.
 
 ## Desktop shell and tabs
 
@@ -90,9 +101,9 @@ The window opens maximized by default, uses 1100×740 dp when restored to a floa
 5. Users & Monitor
 6. Settings
 
-Each screen lives in its own feature package under `composeApp/src/desktopMain/kotlin/com/grabber/ui/feature/<name>/` (`console`, `favorites`, `audio`, `recordings`, `spectrum`, `users`, `settings`), split into one file per panel, section or dialog; `App.kt`, `Main.kt` and `InitialSetupDialog.kt` stay in `ui/`. The Settings tab includes an Information accordion with developer details and a contact form that sends to the dedicated developer Telegram bot; it does not attach the Machine ID or user credentials. Keep shared visual tokens/components in `ui/designsystem/`, use the existing controller and settings as the state source, and avoid duplicating controls or state across tabs. The compact console waterfall and full Spectrum & Waterfall view share the existing renderer and controller state.
+Each screen lives in its own feature package under `composeApp/src/desktopMain/kotlin/com/grabber/ui/feature/<name>/` (`console`, `favorites`, `audio`, `recordings`, `spectrum`, `users`, `settings`), split into one file per panel, section or dialog; `App.kt`, `Main.kt` and `InitialSetupDialog.kt` stay in `ui/`. The Favorites tab hosts the `SCANSIONE` panel with a *Canali / Intervallo* switch (channel scan and frequency-range scan). The Audio tab shows three panels: squelch timing (`SQUELCH: ANTI-POP E HANG TIME`), `DSP` (target, presets, filters, 7-band equalizer, A/B) and VAD. The Settings tab includes an *Aspetto* section for the theme, map links that open the KiwiSDR public map and the rx-tx.info SDR map in the browser (`ExternalLinks`/`openInBrowser`), and an Information accordion with developer details and a contact form that sends to the dedicated developer Telegram bot; it does not attach the Machine ID or user credentials. Keep shared visual tokens/components in `ui/designsystem/`, use the existing controller and settings as the state source, and avoid duplicating controls or state across tabs. The compact console waterfall and full Spectrum & Waterfall view share the existing renderer and controller state.
 
-The desktop UI and shared regression tests were verified with `:composeApp:compileKotlinDesktop` and `:shared:desktopTest`. Interactive behavior against a reachable KiwiSDR and layout checks across physical display scaling/resolutions require a separate manual workstation check.
+The desktop UI and shared regression tests are verified with `:composeApp:compileKotlinDesktop`, `:composeApp:desktopTest` (palette contrast) and `:shared:desktopTest`. Interactive behavior against a reachable KiwiSDR, both themes and layout checks across physical display scaling/resolutions require a separate manual workstation check.
 
 ## Scope and preview
 

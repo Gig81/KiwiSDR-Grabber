@@ -36,7 +36,7 @@ internal fun FeatureLockedOverlay(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xE6101824))
+            .background(GrabberColors.LockedOverlay)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -52,14 +52,14 @@ internal fun FeatureLockedOverlay(
             Icon(Icons.Default.Lock, contentDescription = null, tint = GrabberColors.Warning)
             Text(
                 text = message,
-                color = Color.White,
+                color = GrabberColors.TextPrimary,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center
             )
             Button(
                 onClick = onActivate,
-                colors = ButtonDefaults.buttonColors(containerColor = GrabberColors.Warning, contentColor = Color.Black),
+                colors = ButtonDefaults.buttonColors(containerColor = GrabberColors.Warning, contentColor = GrabberColors.OnAccent),
                 shape = RoundedCornerShape(4.dp),
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
             ) {

@@ -252,7 +252,7 @@ Se il problema persiste, apri una segnalazione nelle [GitHub Issues](https://git
 
 ### 12. Versione Android
 
-Dalla versione 1.2.0 è disponibile un'app Android per l'**ascolto**: con lo stesso ricevitore KiwiSDR offre radio, spettro e waterfall, preferiti, utenti connessi e registrazione WAV. Non include le funzioni di elaborazione e avviso del desktop (VAD, trascrizione, storico, scansione, Telegram, MP3).
+Dalla versione 1.2.0 è disponibile un'app Android per l'**ascolto**: con lo stesso ricevitore KiwiSDR offre radio, spettro e waterfall, preferiti, utenti connessi e registrazione WAV; dalla 1.3.0 anche tema chiaro, scansione di un intervallo di frequenze, equalizzatore e filtri DSP e collegamenti alle mappe dei ricevitori. Non include le altre funzioni di elaborazione e avviso del desktop (VAD, trascrizione, storico, scansione dei canali preferiti, Telegram, MP3).
 
 **Requisiti:** Android 10 o successivo e una connessione Internet. Il waterfall consuma più dati dell'audio: su rete a consumo l'app ne riduce automaticamente la velocità.
 
@@ -272,11 +272,11 @@ Per verificare il file scaricato, confronta il suo hash SHA-256 con la riga corr
 
 L'app è divisa in cinque schede nella barra in basso:
 
-- **Radio:** connessione, frequenza (tocca il valore per inserirla, oppure usa i pulsanti con il passo scelto), modo, volume, squelch RF con soglia regolabile e S-meter. La stella aggiunge il canale sintonizzato ai preferiti personali; **Registra** avvia una registrazione WAV.
+- **Radio:** connessione, frequenza (tocca il valore per inserirla, oppure usa i pulsanti con il passo scelto), modo, volume, squelch RF con soglia regolabile e S-meter. La stella aggiunge il canale sintonizzato ai preferiti personali; **Registra** avvia una registrazione WAV. Il pannello **Equalizzatore e filtri (DSP)** → **Configura** apre gli stessi controlli del desktop: destinazione (solo ascolto oppure ascolto e nuove registrazioni), preset, passa-alto, passa-basso, notch, riduzione rumore, equalizzatore a 7 bande e confronto A/B. Sul display compaiono `SCAN` e `DSP` quando sono attivi.
 - **Waterfall:** spettro e waterfall del ricevitore. Tocca per sintonizzare, trascina per spostarti, pizzica per lo zoom; palette e range dB sono regolabili. Il waterfall resta collegato solo mentre la scheda è visibile.
-- **Preferiti:** la sezione **Server** mostra in sola lettura i canali memorizzati sul ricevitore, caricati a ogni connessione; la sezione **Personali** contiene i tuoi canali. Entrambe hanno ricerca e filtro per banda; tocca un canale per sintonizzarlo.
+- **Preferiti:** la sezione **Server** mostra in sola lettura i canali memorizzati sul ricevitore, caricati a ogni connessione; la sezione **Personali** contiene i tuoi canali. Entrambe hanno ricerca e filtro per banda; tocca un canale per sintonizzarlo. La sezione **Scansione** scansiona un intervallo di frequenze (inizio, fine, passo, modo, tempo per passo), con frequenze escluse e segnali trovati, come sul desktop (vedi §4); con la versione attivata la scansione continua anche con l'app in background.
 - **Utenti:** gli ascoltatori collegati al ricevitore con frequenza, modo e località.
-- **Impostazioni:** indirizzo (`host:porta`) e password del ricevitore, nome mostrato agli altri utenti e sezione **Licenza**. La password è salvata cifrata sul telefono, ma il protocollo KiwiSDR la trasmette in chiaro: non riutilizzare password importanti.
+- **Impostazioni:** indirizzo (`host:porta`) e password del ricevitore, nome mostrato agli altri utenti, pulsanti **Mappa KiwiSDR** e **Mappa SDR (rx-tx.info)** che aprono le mappe dei ricevitori nel browser, sezione **Aspetto** (tema Scuro, Chiaro o Sistema) e sezione **Licenza**. Scansione e DSP richiedono l'attivazione, come registrazione, ascolto in background e preferiti personali. La password è salvata cifrata sul telefono, ma il protocollo KiwiSDR la trasmette in chiaro: non riutilizzare password importanti.
 
 Le registrazioni si trovano in **Registrazioni/KiwiGrabber** (Musica/KiwiGrabber su Android 10 e 11) e si aprono con l'app File o con un lettore musicale. Se l'app viene chiusa durante una registrazione, il file viene riparato al successivo avvio.
 
@@ -548,7 +548,7 @@ If the problem persists, report it through [GitHub Issues](https://github.com/Gi
 
 ### 12. Android version
 
-Starting with version 1.2.0 an Android **listening** app is available: with the same KiwiSDR receiver it offers radio, spectrum and waterfall, favorites, connected users, and WAV recording. It does not include the desktop processing and alert features (VAD, transcription, history, scanning, Telegram, MP3). The interface is in Italian; Italian labels are shown in parentheses.
+Starting with version 1.2.0 an Android **listening** app is available: with the same KiwiSDR receiver it offers radio, spectrum and waterfall, favorites, connected users, and WAV recording; since 1.3.0 also the light theme, frequency range scanning, the DSP equalizer and filters, and links to receiver maps. It does not include the other desktop processing and alert features (VAD, transcription, history, scanning of favorite channels, Telegram, MP3). The interface is in Italian; Italian labels are shown in parentheses.
 
 **Requirements:** Android 10 or later and an internet connection. The waterfall uses more data than audio: on metered networks the app automatically lowers its speed.
 
@@ -568,11 +568,11 @@ To verify the downloaded file, compare its SHA-256 hash with the matching line o
 
 The app has five tabs in the bottom bar:
 
-- **Radio:** connection, frequency (tap the value to type it, or use the buttons with the chosen step), mode, volume, RF squelch with adjustable threshold, and S-meter. The star adds the tuned channel to your personal favorites; **Record** (`Registra`) starts a WAV recording.
+- **Radio:** connection, frequency (tap the value to type it, or use the buttons with the chosen step), mode, volume, RF squelch with adjustable threshold, and S-meter. The star adds the tuned channel to your personal favorites; **Record** (`Registra`) starts a WAV recording. The **Equalizer and filters (DSP)** panel → **Configure** (`Configura`) opens the same controls as the desktop: target (listening only, or listening and new recordings), presets, high-pass, low-pass, notch, noise reduction, 7-band equalizer and A/B comparison. The display shows `SCAN` and `DSP` when they are active.
 - **Waterfall:** the receiver spectrum and waterfall. Tap to tune, drag to move, pinch to zoom; palette and dB range are adjustable. The waterfall stays connected only while its tab is visible.
-- **Favorites** (`Preferiti`): the **Server** section shows the channels stored on the receiver, read-only and loaded on every connection; the **Personal** section (`Personali`) holds your own channels. Both have search and a band filter; tap a channel to tune it.
+- **Favorites** (`Preferiti`): the **Server** section shows the channels stored on the receiver, read-only and loaded on every connection; the **Personal** section (`Personali`) holds your own channels. Both have search and a band filter; tap a channel to tune it. The **Scan** section (`Scansione`) scans a frequency range (start, end, step, mode, time per step), with excluded frequencies and found signals, as on the desktop (see §4); with the activated version, scanning continues while the app is in the background.
 - **Users** (`Utenti`): listeners connected to the receiver with frequency, mode, and location.
-- **Settings** (`Impostazioni`): receiver address (`host:port`) and password, the name shown to other users, and the **License** section (`Licenza`). The password is stored encrypted on the phone, but the KiwiSDR protocol sends it in clear text: do not reuse important passwords.
+- **Settings** (`Impostazioni`): receiver address (`host:port`) and password, the name shown to other users, **KiwiSDR map** and **SDR map (rx-tx.info)** buttons that open the receiver maps in the browser, the **Appearance** section (`Aspetto`: Dark, Light or System theme) and the **License** section (`Licenza`). Scanning and DSP require activation, like recording, background listening and personal favorites. The password is stored encrypted on the phone, but the KiwiSDR protocol sends it in clear text: do not reuse important passwords.
 
 Recordings are saved in **Recordings/KiwiGrabber** (Music/KiwiGrabber on Android 10 and 11) and open with the Files app or a music player. If the app is closed during a recording, the file is repaired on the next start.
 

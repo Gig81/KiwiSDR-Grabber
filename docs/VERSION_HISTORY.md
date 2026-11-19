@@ -4,7 +4,7 @@ Registro sintetico delle versioni (desktop e, dalla 1.2.0, Android) distribuite 
 
 | Versione | Stato | Tipo | Riepilogo | Note |
 |---|---|---|---|---|
-| `1.3.0` | In preparazione (in collaudo) | Minor | Tema chiaro, scansione di un intervallo di frequenze, equalizzatore e filtri DSP per ascolto e nuove registrazioni, collegamento alla mappa dei ricevitori di rx-tx.info (Windows). | [Note 1.3.0](./RELEASE_NOTES_1.3.0.md) |
+| `1.3.0` | In preparazione (in collaudo) | Minor | Tema chiaro, scansione di un intervallo di frequenze, equalizzatore e filtri DSP per ascolto e nuove registrazioni, collegamento alla mappa dei ricevitori di rx-tx.info, su Windows e Android. | [Note 1.3.0](./RELEASE_NOTES_1.3.0.md) |
 | `1.2.0` | Pubblicata (16/11/2026) | Minor | Prima versione Android (ascolto, waterfall, preferiti, utenti, registrazione WAV, attivazione `GRAB-A-…`), distribuita come APK; correzione di **Sincronizza** dei preferiti del server sul desktop. | [Note 1.2.0](./RELEASE_NOTES_1.2.0.md) |
 | `1.1.0` | Pubblicata (16/11/2026) | Minor | Scansione dei canali preferiti selezionati con arresto sui segnali sopra la soglia dello squelch e ripresa automatica (funzione avanzata). | [Archivio 1.1.0](./releases/RELEASE_NOTES_1.1.0.md) |
 | `1.0.1` | Pubblicata (12/11/2026) | Patch | Correzione del primo avvio e del logging degli errori; scelta di avviare l'app e/o aprire le note dopo l'installazione Windows; nessuna finestra di console. | [Archivio 1.0.1](./releases/RELEASE_NOTES_1.0.1.md) |

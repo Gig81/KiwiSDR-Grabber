@@ -63,11 +63,14 @@ import com.gig81.kiwisdrgrabber.ui.components.Panel
 import com.gig81.kiwisdrgrabber.ui.components.formatBytes
 import com.gig81.kiwisdrgrabber.ui.components.formatDuration
 import com.gig81.kiwisdrgrabber.ui.components.formatFrequencyKhz
+import com.gig81.kiwisdrgrabber.ui.theme.DisplayKiwiColors
 import com.gig81.kiwisdrgrabber.ui.theme.KiwiColors
 import com.gig81.kiwisdrgrabber.ui.theme.NumericStyle
 import com.grabber.audio.squelch.SMeterUtils
 import com.grabber.mobile.FREQUENCY_STEPS_KHZ
 import com.grabber.mobile.MobileAppController
+import androidx.compose.ui.graphics.Color
+import com.grabber.app.ScanState
 import com.grabber.model.ConnectionState
 import com.grabber.model.ModulationMode
 import kotlinx.coroutines.flow.StateFlow
@@ -79,8 +82,18 @@ fun RadioScreen(controller: MobileAppController, onConnect: () -> Unit) {
     val settings by controller.settings.collectAsStateWithLifecycle()
     val frequency by controller.currentFrequencyKhz.collectAsStateWithLifecycle()
     val mode by controller.currentMode.collectAsStateWithLifecycle()
+    val scanState by controller.scanState.collectAsStateWithLifecycle()
+    val dspActive by controller.isDspActive.collectAsStateWithLifecycle()
     var showFrequencyDialog by remember { mutableStateOf(false) }
     var showFavoriteDialog by remember { mutableStateOf(false) }
+    val indicators = listOfNotNull(
+        when (scanState) {
+            ScanState.Idle -> null
+            is ScanState.Scanning -> "SCAN" to DisplayKiwiColors.Primary
+            is ScanState.SignalFound -> "SCAN" to DisplayKiwiColors.SignalGreen
+        },
+        if (dspActive) "DSP" to DisplayKiwiColors.Warning else null
+    )
 
     Column(
         // Su tablet il contenuto resta centrato con una larghezza leggibile.
@@ -92,6 +105,7 @@ fun RadioScreen(controller: MobileAppController, onConnect: () -> Unit) {
             frequencyKhz = frequency,
             mode = mode,
             rssi = controller.rssi,
+            indicators = indicators,
             onEditFrequency = { showFrequencyDialog = true },
             onAddFavorite = { showFavoriteDialog = true }
         )
@@ -103,6 +117,7 @@ fun RadioScreen(controller: MobileAppController, onConnect: () -> Unit) {
             onMode = controller::setMode
         )
         AudioPanel(controller)
+        DspPanel(controller)
         RecordingPanel(controller)
     }
 
@@ -169,13 +184,14 @@ private fun FrequencyDisplay(
     frequencyKhz: Double,
     mode: ModulationMode,
     rssi: StateFlow<Double>,
+    indicators: List<Pair<String, Color>>,
     onEditFrequency: () -> Unit,
     onAddFavorite: () -> Unit
 ) {
     Column(
         Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(KiwiColors.LcdBackground)
+            .background(DisplayKiwiColors.LcdBackground)
             .padding(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -183,18 +199,25 @@ private fun FrequencyDisplay(
                 Modifier.weight(1f)
                     .clickable(onClickLabel = "Inserisci frequenza", onClick = onEditFrequency)
             ) {
-                Text("Frequenza (kHz) · tocca per inserirla", style = MaterialTheme.typography.labelSmall, color = KiwiColors.TextSecondary)
+                Text("Frequenza (kHz) · tocca per inserirla", style = MaterialTheme.typography.labelSmall, color = DisplayKiwiColors.TextMuted)
                 Text(
                     formatFrequencyKhz(frequencyKhz),
                     style = NumericStyle.copy(fontSize = 40.sp),
-                    color = KiwiColors.LcdPrimary,
+                    color = DisplayKiwiColors.LcdPrimary,
                     maxLines = 1
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text(mode.displayName, style = NumericStyle.copy(fontSize = 20.sp), color = KiwiColors.Secondary)
+                Text(mode.displayName, style = NumericStyle.copy(fontSize = 20.sp), color = DisplayKiwiColors.Secondary)
+                if (indicators.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        indicators.forEach { (label, color) ->
+                            Text(label, style = NumericStyle.copy(fontSize = 12.sp), color = color)
+                        }
+                    }
+                }
                 IconButton(onClick = onAddFavorite) {
-                    Icon(Icons.Filled.Star, contentDescription = "Aggiungi ai preferiti", tint = KiwiColors.SignalAmber)
+                    Icon(Icons.Filled.Star, contentDescription = "Aggiungi ai preferiti", tint = DisplayKiwiColors.SignalAmber)
                 }
             }
         }
@@ -213,14 +236,14 @@ private fun SMeter(rssi: StateFlow<Double>) {
         Box(
             Modifier.fillMaxWidth().height(10.dp)
                 .clip(RoundedCornerShape(5.dp))
-                .background(KiwiColors.SurfaceVariant)
+                .background(DisplayKiwiColors.Track)
         ) {
             Box(
                 Modifier.fillMaxHeight().fillMaxWidth(fraction)
-                    .background(if (rssiDbm > SMeterUtils.S9_DBM) KiwiColors.SignalAmber else KiwiColors.SignalGreen)
+                    .background(if (rssiDbm > SMeterUtils.S9_DBM) DisplayKiwiColors.SignalAmber else DisplayKiwiColors.SignalGreen)
             )
         }
-        Text(label, style = NumericStyle.copy(fontSize = 13.sp), color = KiwiColors.TextSecondary, modifier = Modifier.padding(top = 4.dp))
+        Text(label, style = NumericStyle.copy(fontSize = 13.sp), color = DisplayKiwiColors.TextMuted, modifier = Modifier.padding(top = 4.dp))
     }
 }
 

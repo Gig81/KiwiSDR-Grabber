@@ -22,8 +22,8 @@ tuning controls, mini spectrum/waterfall, and tabs. Hide credentials and private
 - **Visualizzazione dei segnali:** analizzatore di spettro in tempo reale e waterfall a scorrimento, con sintonia tramite clic e controlli di visualizzazione.
 - **Ascolto e registrazione:** volume e silenziamento; registrazioni MP3 o WAV, continue o suddivise a intervalli.
 - **Controllo del rumore e della voce:** squelch RF e rilevamento dell'attività vocale (VAD) per filtrare ascolto o registrazione. Pre-buffer e hang time aiutano a preservare l'inizio e la continuità delle trasmissioni.
-- **Equalizzatore e filtri DSP:** passa-alto, passa-basso, notch, riduzione del rumore ed equalizzatore a 7 bande con preset, applicabili all'ascolto e alle nuove registrazioni.
-- **Tema scuro o chiaro:** scelta del tema dell'interfaccia, anche in automatico secondo il tema di Windows.
+- **Equalizzatore e filtri DSP:** passa-alto, passa-basso, notch, riduzione del rumore ed equalizzatore a 7 bande con preset, applicabili all'ascolto e alle nuove registrazioni, su Windows e Android.
+- **Tema scuro o chiaro:** scelta del tema dell'interfaccia, anche in automatico secondo il tema del sistema (Windows o Android).
 - **Trascrizione e avvisi:** trascrizione locale con Vosk e notifiche Telegram configurabili per attività radio e parole chiave.
 - **Monitoraggio del ricevitore:** visualizzazione degli utenti collegati e delle informazioni della stazione; registrazione facoltativa dello storico utenti.
 
@@ -125,8 +125,8 @@ KiwiSDR Grabber is a desktop application for amateur radio enthusiasts and short
 - **See activity:** View a live spectrum analyzer and scrolling waterfall, with click-to-tune and display controls.
 - **Listen and record:** Adjust volume and mute audio. Save recordings as MP3 or WAV, continuously or in timed segments.
 - **Control noise and voice gates:** Use RF squelch and optional Voice Activity Detection (VAD) to gate live audio or recordings. Pre-buffering and hang time help preserve speech around transmissions.
-- **Equalizer and DSP filters:** high-pass, low-pass, notch, noise reduction and a 7-band equalizer with presets, applied to listening and new recordings.
-- **Dark or light theme:** choose the interface theme, or follow the Windows theme automatically.
+- **Equalizer and DSP filters:** high-pass, low-pass, notch, noise reduction and a 7-band equalizer with presets, applied to listening and new recordings, on Windows and Android.
+- **Dark or light theme:** choose the interface theme, or follow the system theme (Windows or Android) automatically.
 - **Transcribe and alert:** Transcribe recordings locally with Vosk and optionally send QSO and keyword alerts through a Telegram bot that you configure.
 - **Monitor the receiver:** View connected users and station information; optional user-history logging is available.
 

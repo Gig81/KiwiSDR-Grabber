@@ -1,16 +1,14 @@
 package com.grabber.ui.feature.settings
 
 import com.grabber.app.AppLogger
+import com.grabber.kiwi.ReceiverMaps
 import java.awt.Desktop
 import java.net.URI
 
-/** Pagine esterne aperte nel browser di sistema dalle Impostazioni. */
+/** Pagine esterne aperte nel browser di sistema dalle Impostazioni (URL condivisi con Android). */
 internal object ExternalLinks {
-    /** Elenco e mappa pubblica dei ricevitori KiwiSDR. */
-    const val KIWISDR_PUBLIC_MAP = "https://kiwisdr.com/public/"
-
-    /** Mappa dei ricevitori SDR (KiwiSDR, WebSDR, OpenWebRX) di rx-tx.info. */
-    const val RX_TX_SDR_MAP = "https://rx-tx.info/map-sdr-points"
+    const val KIWISDR_PUBLIC_MAP = ReceiverMaps.KIWISDR_PUBLIC_MAP
+    const val RX_TX_SDR_MAP = ReceiverMaps.RX_TX_SDR_MAP
 }
 
 /**

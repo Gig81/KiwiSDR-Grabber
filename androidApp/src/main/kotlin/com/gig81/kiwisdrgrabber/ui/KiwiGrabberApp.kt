@@ -71,7 +71,8 @@ enum class AppTab(val label: String, val icon: ImageVector) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KiwiGrabberApp(controller: MobileAppController) {
-    KiwiGrabberTheme {
+    val themeMode by controller.uiTheme.collectAsStateWithLifecycle()
+    KiwiGrabberTheme(mode = themeMode) {
         var tab by rememberSaveable { mutableStateOf(AppTab.RADIO) }
         var lockedFeature by remember { mutableStateOf<GatedFeature?>(null) }
         val snackbar = remember { SnackbarHostState() }

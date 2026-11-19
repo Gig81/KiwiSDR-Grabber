@@ -4,7 +4,9 @@ package com.grabber.license
 enum class GatedFeature(val description: String) {
     BACKGROUND_PLAYBACK("L'ascolto in background e a schermo spento"),
     MANUAL_RECORDING("La registrazione"),
-    PERSONAL_FAVORITES("La gestione dei preferiti personali");
+    PERSONAL_FAVORITES("La gestione dei preferiti personali"),
+    FREQUENCY_SCAN("La scansione di un intervallo di frequenze"),
+    AUDIO_DSP("L'equalizzatore e i filtri DSP");
 
     /** Messaggio mostrato quando la funzione viene richiesta senza attivazione. */
     val lockedMessage: String get() = "$description richiede l'attivazione della licenza (gratuita)."

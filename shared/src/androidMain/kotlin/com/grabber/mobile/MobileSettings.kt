@@ -5,8 +5,12 @@ import com.grabber.app.DEFAULT_SERVER_ADDRESS
 import com.grabber.app.FavoriteFrequency
 import com.grabber.app.SecretCipher
 import com.grabber.app.WaterfallPreferences
+import com.grabber.app.RangeScanLimits
+import com.grabber.app.RangeScanParams
 import com.grabber.app.parseServerAddress
+import com.grabber.audio.dsp.AudioDspConfig
 import com.grabber.model.ModulationMode
+import com.grabber.model.UiThemeMode
 import com.grabber.waterfall.WaterfallPaletteType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,9 +49,25 @@ data class MobileSettingsData(
     val waterfallZoom: Int = 3,
     val waterfallAutoFollow: Boolean = true,
     /** Registrazione MediaStore in corso: se resta valorizzata all'avvio, il file va riparato. */
-    val pendingRecordingUri: String? = null
+    val pendingRecordingUri: String? = null,
+    /** Tema dell'interfaccia (`UiThemeMode`): scuro predefinito, come sul desktop. */
+    val uiThemeName: String = UiThemeMode.DARK.name,
+    // Scansione di un intervallo di frequenze: stessi valori predefiniti del desktop (banda CB).
+    val rangeScanStartKhz: Double = 26965.0,
+    val rangeScanEndKhz: Double = 27405.0,
+    val rangeScanStepKhz: Double = 10.0,
+    val rangeScanModeCode: String = "am",
+    val rangeScanDwellMs: Int = RangeScanLimits.DEFAULT_DWELL_MS,
+    val rangeScanAutoResume: Boolean = true,
+    val rangeScanExcludedKhz: List<Double> = emptyList(),
+    /** Equalizzatore e filtri DSP, spenti finché l'utente non li configura. */
+    val audioDsp: AudioDspConfig = AudioDspConfig()
 ) {
     val lastMode: ModulationMode get() = ModulationMode.entries.find { it.code == lastModeCode } ?: ModulationMode.AM
+    val uiTheme: UiThemeMode get() = UiThemeMode.fromName(uiThemeName)
+    val rangeScanMode: ModulationMode get() = ModulationMode.entries.find { it.code == rangeScanModeCode } ?: ModulationMode.AM
+    val rangeScanParams: RangeScanParams
+        get() = RangeScanParams(rangeScanStartKhz, rangeScanEndKhz, rangeScanStepKhz, rangeScanMode, rangeScanExcludedKhz)
     val serverHost: String get() = parseServerAddress(serverAddress).first
     val serverPort: Int get() = parseServerAddress(serverAddress).second
     val waterfallPalette: WaterfallPaletteType

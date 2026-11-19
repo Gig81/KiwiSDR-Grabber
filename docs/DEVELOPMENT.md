@@ -91,6 +91,14 @@ Verifiche manuali delle novità 1.3.0, con un KiwiSDR raggiungibile e una licenz
 - Impostazioni → Server: *Mappa ricevitori SDR (rx-tx.info)* apre `https://rx-tx.info/map-sdr-points` nel browser e mostra la conferma; *Mappa pubblica KiwiSDR* funziona come prima.
 - Pulsanti leggibili e non tagliati alla larghezza minima della finestra.
 
+**Android (dispositivo fisico, APK di debug)**
+
+- Impostazioni → *Aspetto*: Scuro, Chiaro, Sistema; tutte le schermate leggibili, icone della barra di stato e di navigazione coerenti con il tema; display della frequenza e waterfall restano scuri. Con *Sistema* cambiare il tema di Android con l'app aperta.
+- Impostazioni → Ricevitore: *Mappa KiwiSDR* e *Mappa SDR (rx-tx.info)* aprono il browser.
+- Preferiti → *Scansione*: stessi controlli del desktop (valori non validi, sosta e ripresa, *Escludi*, segnali trovati, aggiunta ai preferiti personali, stop con sintonia manuale, waterfall o disconnessione). Con la versione attivata la scansione continua con l'app in background e lo schermo spento; senza attivazione il comando mostra la richiesta di attivazione.
+- Radio → *Equalizzatore e filtri (DSP)* → *Configura*: preset, filtri, equalizzatore e A/B udibili senza clic; con *Ascolto e registrazione* il WAV registrato è filtrato, con *Solo ascolto* no; indicazioni `SCAN`/`DSP` sul display. Senza attivazione: richiesta di attivazione e audio non filtrato.
+- Consumo: con DSP attivo e scansione in corso per 15 minuti a schermo spento, nessun calo evidente di batteria rispetto al solo ascolto e nessun audio a scatti.
+
 ### Diagnostica UI Windows
 
 Se su Windows compaiono ritardi di input insieme a errori di selezione del renderer DirectX e stack trace in OpenGL, verificare prima il renderer Skiko configurato in `Main.kt` e i relativi override. Non disabilitare VSync: il precedente tentativo ha aumentato il carico e peggiorato la consegna degli input. Per le regole sulle ricomposizioni e sul rendering per frame, consultare [GUI_DESIGN_SYSTEM.md](./GUI_DESIGN_SYSTEM.md).

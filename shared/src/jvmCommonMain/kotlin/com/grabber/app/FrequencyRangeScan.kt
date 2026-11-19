@@ -133,3 +133,21 @@ class ScanHitLog(private val maxEntries: Int = 200) {
         return emptyList()
     }
 }
+
+/** Aggiunge una frequenza esclusa (arrotondata a 1 Hz), senza duplicati, mantenendo l'elenco ordinato. */
+fun List<Double>.withRangeScanExclusion(frequencyKhz: Double): List<Double> {
+    val rounded = roundToHz(frequencyKhz)
+    return if (any { abs(it - rounded) < 0.0005 }) this else (this + rounded).sorted()
+}
+
+fun List<Double>.withoutRangeScanExclusion(frequencyKhz: Double): List<Double> =
+    filterNot { abs(it - frequencyKhz) < 0.0005 }
+
+/** Valori inseriti dall'utente arrotondati a 1 Hz; vanno poi controllati con [validateRangeScan]. */
+fun rangeScanInput(
+    startKhz: Double,
+    endKhz: Double,
+    stepKhz: Double,
+    mode: ModulationMode,
+    excludedKhz: List<Double> = emptyList()
+): RangeScanParams = RangeScanParams(roundToHz(startKhz), roundToHz(endKhz), roundToHz(stepKhz), mode, excludedKhz)

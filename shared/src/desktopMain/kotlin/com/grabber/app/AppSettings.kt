@@ -526,15 +526,11 @@ class AppSettings(
     }
 
     fun addRangeScanExclusion(frequencyKhz: Double) {
-        val rounded = roundToHz(frequencyKhz)
-        updateAndSave {
-            if (it.rangeScanExcludedKhz.any { e -> kotlin.math.abs(e - rounded) < 0.0005 }) it
-            else it.copy(rangeScanExcludedKhz = (it.rangeScanExcludedKhz + rounded).sorted())
-        }
+        updateAndSave { it.copy(rangeScanExcludedKhz = it.rangeScanExcludedKhz.withRangeScanExclusion(frequencyKhz)) }
     }
 
     fun removeRangeScanExclusion(frequencyKhz: Double) {
-        updateAndSave { it.copy(rangeScanExcludedKhz = it.rangeScanExcludedKhz.filterNot { e -> kotlin.math.abs(e - frequencyKhz) < 0.0005 }) }
+        updateAndSave { it.copy(rangeScanExcludedKhz = it.rangeScanExcludedKhz.withoutRangeScanExclusion(frequencyKhz)) }
     }
 
     fun clearRangeScanExclusions() {

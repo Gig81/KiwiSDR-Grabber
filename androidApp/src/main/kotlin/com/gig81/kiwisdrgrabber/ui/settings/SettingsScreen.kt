@@ -1,5 +1,13 @@
 package com.gig81.kiwisdrgrabber.ui.settings
 
+import android.content.ActivityNotFoundException
+import androidx.core.net.toUri
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material3.FilterChip
+import com.grabber.app.AppLogger
+import com.grabber.kiwi.ReceiverMaps
+import com.grabber.model.UiThemeMode
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -60,6 +68,7 @@ fun SettingsScreen(controller: MobileAppController) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         ServerSection(controller)
+        AppearanceSection(controller)
         LicenseSection(controller)
         AboutSection()
     }
@@ -130,6 +139,64 @@ private fun ServerSection(controller: MobileAppController) {
             style = MaterialTheme.typography.bodySmall,
             color = KiwiColors.TextSecondary
         )
+        ReceiverMapLinks()
+    }
+}
+
+/** Mappe dei ricevitori, aperte nel browser di sistema (come sul desktop). */
+@Composable
+private fun ReceiverMapLinks() {
+    val context = LocalContext.current
+    var feedback by remember { mutableStateOf<String?>(null) }
+    Text("Trova un ricevitore", style = MaterialTheme.typography.labelMedium, color = KiwiColors.TextSecondary)
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = { feedback = openInBrowser(context, ReceiverMaps.KIWISDR_PUBLIC_MAP) }) {
+            Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null)
+            Spacer(Modifier.width(6.dp))
+            Text("Mappa KiwiSDR")
+        }
+        OutlinedButton(onClick = { feedback = openInBrowser(context, ReceiverMaps.RX_TX_SDR_MAP) }) {
+            Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null)
+            Spacer(Modifier.width(6.dp))
+            Text("Mappa SDR (rx-tx.info)")
+        }
+    }
+    Text(
+        "La mappa di rx-tx.info elenca anche ricevitori WebSDR e OpenWebRX: l'app si collega solo ai KiwiSDR. " +
+            "Copia l'indirizzo host:porta del ricevitore scelto nel campo Indirizzo.",
+        style = MaterialTheme.typography.bodySmall,
+        color = KiwiColors.TextSecondary
+    )
+    feedback?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = KiwiColors.Error) }
+}
+
+/** Apre [url] con l'app predefinita; restituisce un messaggio d'errore oppure null. */
+private fun openInBrowser(context: Context, url: String): String? = try {
+    context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+    null
+} catch (e: ActivityNotFoundException) {
+    AppLogger.warn("Settings", "Nessuna app per aprire $url", e)
+    "Nessun browser disponibile per aprire la mappa."
+}
+
+@Composable
+private fun AppearanceSection(controller: MobileAppController) {
+    val settings by controller.settings.collectAsStateWithLifecycle()
+    Panel(title = "Aspetto") {
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            UiThemeMode.entries.forEach { mode ->
+                FilterChip(
+                    selected = settings.uiTheme == mode,
+                    onClick = { controller.setUiTheme(mode) },
+                    label = { Text(mode.displayName) }
+                )
+            }
+        }
+        Text(
+            "\"Sistema\" segue il tema chiaro/scuro di Android. Il display della frequenza e il waterfall restano scuri.",
+            style = MaterialTheme.typography.bodySmall,
+            color = KiwiColors.TextSecondary
+        )
     }
 }
 
@@ -162,12 +229,12 @@ private fun LicenseSection(controller: MobileAppController) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = KiwiColors.Success)
                 Spacer(Modifier.width(8.dp))
-                Text("Versione attivata: registrazione, ascolto in background e preferiti personali disponibili.")
+                Text("Versione attivata: registrazione, ascolto in background, preferiti personali, scansione e DSP disponibili.")
             }
         } else {
             Text(
                 "L'attivazione è gratuita e offline. Invia l'ID dispositivo allo sviluppatore (ad esempio su Telegram) " +
-                    "e inserisci qui il codice ricevuto. Sblocca registrazione, ascolto in background e preferiti personali.",
+                    "e inserisci qui il codice ricevuto. Sblocca registrazione, ascolto in background, preferiti personali, scansione delle frequenze ed equalizzatore/filtri DSP.",
                 style = MaterialTheme.typography.bodyMedium
             )
         }

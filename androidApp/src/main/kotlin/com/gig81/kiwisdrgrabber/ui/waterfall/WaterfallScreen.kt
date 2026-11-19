@@ -55,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gig81.kiwisdrgrabber.ui.components.EmptyState
 import com.gig81.kiwisdrgrabber.ui.components.Panel
 import com.gig81.kiwisdrgrabber.ui.components.formatFrequencyKhz
+import com.gig81.kiwisdrgrabber.ui.theme.DisplayKiwiColors
 import com.gig81.kiwisdrgrabber.ui.theme.KiwiColors
 import com.grabber.mobile.MobileAppController
 import com.grabber.model.ConnectionState
@@ -81,7 +82,7 @@ fun WaterfallScreen(controller: MobileAppController, onConnect: () -> Unit) {
     val wfState by controller.waterfallState.collectAsStateWithLifecycle()
 
     val display: @Composable (Modifier) -> Unit = { modifier ->
-        Box(modifier.background(KiwiColors.LcdBackground)) {
+        Box(modifier.background(DisplayKiwiColors.LcdBackground)) {
             SpectrumAndWaterfall(controller, frame, frequency)
             if (frame == null) {
                 Text(
@@ -90,7 +91,7 @@ fun WaterfallScreen(controller: MobileAppController, onConnect: () -> Unit) {
                         else -> "In attesa dei dati dello spettro…"
                     },
                     modifier = Modifier.padding(16.dp),
-                    color = KiwiColors.TextSecondary
+                    color = DisplayKiwiColors.TextMuted
                 )
             }
         }
@@ -168,7 +169,7 @@ private fun SpectrumAndWaterfall(controller: MobileAppController, frame: Waterfa
         drawSpectrum(f, spectrumHeight, controller.waterfallMinDb.value, controller.waterfallMaxDb.value)
         if (tunedKhz in f.startFreqKhz..f.stopFreqKhz) {
             val x = f.fractionAtFrequency(tunedKhz) * size.width
-            drawLine(KiwiColors.Error, Offset(x, 0f), Offset(x, size.height), strokeWidth = 2.dp.toPx())
+            drawLine(DisplayKiwiColors.Error, Offset(x, 0f), Offset(x, size.height), strokeWidth = 2.dp.toPx())
         }
     }
 }
@@ -179,7 +180,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSpectrum(
     minDb: Int,
     maxDb: Int
 ) {
-    drawRect(Color(0xFF0A1220), size = Size(size.width, height))
+    drawRect(DisplayKiwiColors.SpectrumBackground, size = Size(size.width, height))
     val bins = frame.binCount
     if (bins < 2) return
     val range = (maxDb - minDb).coerceAtLeast(1).toFloat()
@@ -190,8 +191,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSpectrum(
         val y = height - level * height
         if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
     }
-    drawPath(path, KiwiColors.LcdPrimary, style = Stroke(width = 1.5f))
-    drawLine(KiwiColors.Border, Offset(0f, height), Offset(size.width, height))
+    drawPath(path, DisplayKiwiColors.LcdPrimary, style = Stroke(width = 1.5f))
+    drawLine(DisplayKiwiColors.Border, Offset(0f, height), Offset(size.width, height))
 }
 
 @Composable

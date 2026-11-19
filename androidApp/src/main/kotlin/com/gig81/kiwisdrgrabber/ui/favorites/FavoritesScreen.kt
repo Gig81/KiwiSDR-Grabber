@@ -68,6 +68,11 @@ fun FavoritesScreen(controller: MobileAppController) {
         SecondaryTabRow(selectedTabIndex = sourceIndex, containerColor = KiwiColors.Surface) {
             Tab(selected = sourceIndex == 0, onClick = { sourceIndex = 0; group = null }, text = { Text("Server") })
             Tab(selected = sourceIndex == 1, onClick = { sourceIndex = 1; group = null }, text = { Text("Personali") })
+            Tab(selected = sourceIndex == 2, onClick = { sourceIndex = 2 }, text = { Text("Scansione") })
+        }
+        if (sourceIndex == 2) {
+            RangeScanTab(controller)
+            return@Column
         }
         OutlinedTextField(
             value = query,

@@ -4,8 +4,23 @@ import android.content.Context
 import com.grabber.app.AppLogger
 import com.grabber.app.FavoriteFrequency
 import com.grabber.app.LogLevel
+import com.grabber.app.RangeScanLimits
+import com.grabber.app.RangeScanSession
+import com.grabber.app.ScanCoordinator
+import com.grabber.app.ScanHit
+import com.grabber.app.ScanKind
+import com.grabber.app.ScanState
 import com.grabber.app.WaterfallCoordinator
 import com.grabber.app.bandGroupFor
+import com.grabber.app.rangeScanInput
+import com.grabber.app.validateRangeScan
+import com.grabber.app.withRangeScanExclusion
+import com.grabber.app.withoutRangeScanExclusion
+import com.grabber.audio.AudioDspControl
+import com.grabber.audio.AudioPipeline
+import com.grabber.audio.dsp.AudioDspConfig
+import com.grabber.audio.dsp.DspPreset
+import com.grabber.audio.dsp.DspTarget
 import com.grabber.audio.squelch.SquelchController
 import com.grabber.kiwi.KiwiClient
 import com.grabber.kiwi.KiwiUser
@@ -18,6 +33,7 @@ import com.grabber.license.LicenseChecker
 import com.grabber.model.ConnectionState
 import com.grabber.model.KiwiDxLabel
 import com.grabber.model.ModulationMode
+import com.grabber.model.UiThemeMode
 import com.grabber.waterfall.WaterfallBuffer
 import com.grabber.waterfall.WaterfallClient
 import com.grabber.waterfall.WaterfallFrame
@@ -90,6 +106,45 @@ class MobileAppController(
         onStoppedForLowSpace = { notify("Registrazione interrotta: spazio di archiviazione quasi esaurito.") }
     )
 
+    // ── Pipeline audio, DSP e scansione (logica condivisa con il desktop) ──
+    private val audioPipeline = AudioPipeline(
+        squelch = squelch,
+        playbackSink = { pcm -> audioOutput.submit(pcm, lastSampleRate) },
+        recordSink = { frame -> recorder.submit(frame.pcmBytes) }
+    )
+    private val dsp = AudioDspControl(
+        scope = scope,
+        pipeline = audioPipeline,
+        initialConfig = settingsStore.value.audioDsp,
+        isLicensed = { featureGate.isEnabled(GatedFeature.AUDIO_DSP) },
+        persist = { config -> settingsStore.update { it.copy(audioDsp = config) } }
+    )
+    private val rangeScan = RangeScanSession(
+        params = { settingsStore.value.rangeScanParams },
+        dwellMillis = { settingsStore.value.rangeScanDwellMs.toLong() },
+        autoResume = { settingsStore.value.rangeScanAutoResume }
+    )
+    private val scanner = ScanCoordinator(
+        scope = scope,
+        signalGateOpen = squelch.isGateOpen,
+        tuneTo = { applyTuning(it.frequencyKhz, it.mode) },
+        resetSignalDetection = squelch::reset,
+        onSignalFound = { kind, target -> if (kind == ScanKind.RANGE) rangeScan.recordHit(target, client.rssi.value) },
+        onStoppedOnSignal = { _, target -> notify("Scansione fermata: segnale su ${target.label}") }
+    )
+
+    /** Configurazione DSP corrente; l'effetto audio è immediato, il salvataggio è differito. */
+    val dspConfig: StateFlow<AudioDspConfig> = dsp.config
+
+    /** Vero se il DSP sta elaborando l'audio (indicatore `DSP` sulla schermata Radio). */
+    val isDspActive: StateFlow<Boolean> = dsp.isActive
+
+    /** Stato della scansione dell'intervallo. */
+    val scanState: StateFlow<ScanState> = scanner.state
+
+    /** Segnali trovati dalla scansione in questa sessione, dal più recente. */
+    val rangeScanHits: StateFlow<List<ScanHit>> = rangeScan.hits
+
     private val _notifications = MutableSharedFlow<String>(extraBufferCapacity = 8)
     /** Messaggi brevi per la UI (snackbar): errori di connessione, rifiuti del gate, avvisi. */
     val notifications: SharedFlow<String> = _notifications.asSharedFlow()
@@ -104,6 +159,10 @@ class MobileAppController(
     val machineId: String get() = licenseChecker.machineId
 
     val settings: StateFlow<MobileSettingsData> = settingsStore.settings
+
+    /** Tema scelto, separato da [settings] per non ricomporre la radice dell'app a ogni impostazione. */
+    val uiTheme: StateFlow<UiThemeMode> = settingsStore.settings.map { it.uiTheme }.distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, settingsStore.value.uiTheme)
     val connectionState: StateFlow<ConnectionState> = client.connectionState
     val currentFrequencyKhz: StateFlow<Double> = client.currentFrequencyKhz
     val currentMode: StateFlow<ModulationMode> = client.currentMode
@@ -183,9 +242,8 @@ class MobileAppController(
         client.audioFlow
             .onEach { frame ->
                 lastSampleRate = frame.sampleRate
-                val result = squelch.processFrame(frame)
-                audioOutput.submit(result.processedPcmBytes, frame.sampleRate)
-                recorder.submit(frame.pcmBytes)
+                // DSP e squelch come sul desktop: vedi `AudioPipeline`.
+                audioPipeline.process(frame)
             }
             .launchIn(scope)
     }
@@ -193,6 +251,7 @@ class MobileAppController(
     private fun observeConnection() {
         client.connectionState
             .onEach { state ->
+                if (state !is ConnectionState.Connected) scanner.stop()
                 if (state !is ConnectionState.Connected && recorder.isRecording.value) {
                     recorder.stop()
                     notify("Registrazione interrotta: connessione al ricevitore persa. Il file è stato salvato.")
@@ -246,15 +305,24 @@ class MobileAppController(
     }
 
     fun disconnect() {
+        scanner.stop()
         if (recorder.isRecording.value) recorder.stop()
         waterfall.stopStream()
         client.disconnect()
     }
 
+    /** Sintonia richiesta dall'utente: interrompe un'eventuale scansione. */
     fun tune(freqKhz: Double, mode: ModulationMode? = null) {
+        scanner.stop()
+        applyTuning(freqKhz, mode)
+    }
+
+    /** Sintonia effettiva, usata anche dalla scansione (che non deve fermare sé stessa). */
+    private fun applyTuning(freqKhz: Double, mode: ModulationMode?) {
         val bounded = freqKhz.coerceIn(0.0, MAX_FREQUENCY_KHZ)
         val targetMode = mode ?: currentMode.value
         squelch.reset()
+        audioPipeline.resetFilters()
         client.tune(bounded, targetMode)
         settingsStore.update { it.copy(lastFrequencyKhz = bounded, lastModeCode = targetMode.code) }
         waterfall.followTuning(bounded)
@@ -404,6 +472,127 @@ class MobileAppController(
 
     private fun refreshActivation() {
         _isActivated.value = featureGate.isActivated
+        dsp.refreshLicense()
+    }
+
+    /** Tema dell'interfaccia: funzione libera, applicata subito dalla UI tramite [uiTheme]. */
+    fun setUiTheme(mode: UiThemeMode) = settingsStore.update { it.copy(uiThemeName = mode.name) }
+
+    // ── Scansione di un intervallo (funzione riservata) ──────────
+
+    /**
+     * Salva inizio, fine, passo e modo. Restituisce il messaggio d'errore se i valori non sono validi
+     * (nulla viene salvato) o se la funzione non è attivata, altrimenti null.
+     */
+    fun setRangeScanParameters(startKhz: Double, endKhz: Double, stepKhz: Double, mode: ModulationMode): String? {
+        if (!requireFeature(GatedFeature.FREQUENCY_SCAN)) return GatedFeature.FREQUENCY_SCAN.lockedMessage
+        val candidate = rangeScanInput(startKhz, endKhz, stepKhz, mode)
+        validateRangeScan(candidate)?.let { return it }
+        settingsStore.update {
+            it.copy(
+                rangeScanStartKhz = candidate.startKhz,
+                rangeScanEndKhz = candidate.endKhz,
+                rangeScanStepKhz = candidate.stepKhz,
+                rangeScanModeCode = mode.code
+            )
+        }
+        return null
+    }
+
+    fun setRangeScanDwellMs(ms: Int) {
+        if (!requireFeature(GatedFeature.FREQUENCY_SCAN)) return
+        settingsStore.update { it.copy(rangeScanDwellMs = ms.coerceIn(RangeScanLimits.MIN_DWELL_MS, RangeScanLimits.MAX_DWELL_MS)) }
+    }
+
+    fun setRangeScanAutoResume(enabled: Boolean) {
+        if (!requireFeature(GatedFeature.FREQUENCY_SCAN)) return
+        settingsStore.update { it.copy(rangeScanAutoResume = enabled) }
+    }
+
+    fun startRangeScan() {
+        if (!requireFeature(GatedFeature.FREQUENCY_SCAN)) return
+        val problem = if (client.connectionState.value !is ConnectionState.Connected) {
+            "Connettiti al ricevitore per avviare la scansione."
+        } else {
+            rangeScan.validationError()
+        }
+        if (problem != null) {
+            notify(problem)
+            return
+        }
+        scanner.stop()
+        scanner.start(rangeScan.plan)
+    }
+
+    fun stopScan() = scanner.stop()
+
+    /** Esclude la frequenza su cui la scansione è ferma (o quella sintonizzata). */
+    fun excludeCurrentFromRangeScan() {
+        val frequency = when (val state = scanner.state.value) {
+            is ScanState.SignalFound -> state.target.frequencyKhz
+            is ScanState.Scanning -> state.target.frequencyKhz
+            ScanState.Idle -> currentFrequencyKhz.value
+        }
+        excludeFromRangeScan(frequency)
+    }
+
+    fun excludeFromRangeScan(frequencyKhz: Double) {
+        if (!requireFeature(GatedFeature.FREQUENCY_SCAN)) return
+        settingsStore.update { it.copy(rangeScanExcludedKhz = it.rangeScanExcludedKhz.withRangeScanExclusion(frequencyKhz)) }
+        rangeScan.removeHit(frequencyKhz)
+        notify("Frequenza ${formatKhz(frequencyKhz)} kHz esclusa dalla scansione.")
+    }
+
+    fun removeRangeScanExclusion(frequencyKhz: Double) {
+        if (!requireFeature(GatedFeature.FREQUENCY_SCAN)) return
+        settingsStore.update { it.copy(rangeScanExcludedKhz = it.rangeScanExcludedKhz.withoutRangeScanExclusion(frequencyKhz)) }
+    }
+
+    fun clearRangeScanExclusions() {
+        if (!requireFeature(GatedFeature.FREQUENCY_SCAN)) return
+        settingsStore.update { it.copy(rangeScanExcludedKhz = emptyList()) }
+    }
+
+    fun clearRangeScanHits() = rangeScan.clearHits()
+
+    /** Aggiunge un segnale trovato ai preferiti personali (gruppo "SCAN"). */
+    fun addScanHitToFavorites(hit: ScanHit): Boolean {
+        val name = "Scan ${formatKhz(hit.frequencyKhz)}"
+        val added = addFavorite(FavoriteFrequency(name, hit.frequencyKhz, hit.mode.code, "SCAN"))
+        if (added) notify("$name aggiunto ai preferiti personali.")
+        return added
+    }
+
+    // ── DSP: equalizzatore e filtri (funzione riservata) ─────────
+
+    fun setDspTarget(target: DspTarget) = dspCommand { dsp.setTarget(target) }
+
+    fun setDspEqGain(band: Int, gainDb: Double) = dspCommand { dsp.setEqGain(band, gainDb) }
+
+    /** Frequenze dei filtri in Hz; 0 disattiva il filtro. */
+    fun setDspHighPass(hz: Int) = dspCommand { dsp.setHighPass(hz) }
+
+    fun setDspLowPass(hz: Int) = dspCommand { dsp.setLowPass(hz) }
+
+    fun setDspNotch(hz: Int, q: Double = dsp.config.value.notchQ) = dspCommand { dsp.setNotch(hz, q) }
+
+    fun setDspNoiseReduction(percent: Int) = dspCommand { dsp.setNoiseReduction(percent) }
+
+    fun applyDspPreset(preset: DspPreset) = dspCommand { dsp.applyPreset(preset) }
+
+    fun resetDsp() = dspCommand { dsp.reset() }
+
+    /** Confronto A/B momentaneo, non salvato. */
+    fun setDspBypass(bypassed: Boolean) = dsp.setBypass(bypassed)
+
+    /** Vero se il DSP è disponibile; altrimenti la UI riceve la richiesta di attivazione. */
+    fun canUseDsp(): Boolean = requireFeature(GatedFeature.AUDIO_DSP)
+
+    /** Vero se la scansione è disponibile; altrimenti la UI riceve la richiesta di attivazione. */
+    fun canUseScan(): Boolean = requireFeature(GatedFeature.FREQUENCY_SCAN)
+
+    private fun dspCommand(command: () -> Boolean) {
+        if (!command()) _lockedFeatureRequests.tryEmit(GatedFeature.AUDIO_DSP)
     }
 
     private fun requireFeature(feature: GatedFeature): Boolean {

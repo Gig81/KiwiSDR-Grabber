@@ -11,16 +11,16 @@ Ogni step è **autonomo**: si può sviluppare, verificare e documentare da solo,
 
 **Rilascio:** le quattro funzionalità escono insieme in un **rilascio unico** (versione attuale `1.2.0`, prossima proposta `1.3.0`). Ogni step aggiunge la propria voce alle note di rilascio in preparazione; il rilascio si fa solo a step completati e collaudati tutti (vedi [§5](#5-ordine-di-sviluppo-e-rilascio)).
 
-### Stato dell'implementazione (17 novembre 2026)
+### Stato dell'implementazione (19 novembre 2026)
 
-Sviluppo dei quattro step completato; manca il **collaudo funzionale** (criteri in `docs/DEVELOPMENT.md`, sezione "Collaudo funzionale della 1.3.0"). Verifiche automatiche eseguite con esito positivo: `:composeApp:compileKotlinDesktop :composeApp:desktopTest :shared:desktopTest` e controllo Android (`:shared:testAndroidHostTest :androidApp:lintDebug :androidApp:assembleDebug`).
+Sviluppo dei quattro step completato su **Windows e Android** (decisione del 19/11/2026: tutte le nuove funzioni su entrambe le piattaforme, superando le esclusioni Android indicate in questo piano); manca il **collaudo funzionale** (criteri in `docs/DEVELOPMENT.md`, sezione "Collaudo funzionale della 1.3.0"). Verifiche automatiche eseguite con esito positivo: `:composeApp:compileKotlinDesktop :composeApp:desktopTest :shared:desktopTest` e controllo Android (`:shared:testAndroidHostTest :androidApp:lintDebug :androidApp:assembleDebug`).
 
 | Step | Stato | Scostamenti dal piano |
 |---|---|---|
-| 1 Tema chiaro | Sviluppato | Oltre al display LCD restano scuri anche spettro, waterfall, righello, barra dell'S-meter e contatori LCD del registratore (oggetto `DisplayColors`). Sotto-step 1.C (Android) non realizzato: era facoltativo e Android resta escluso. Test di contrasto in un nuovo source set `composeApp/desktopTest`, aggiunto al controllo standard e alla CI. |
-| 2 Scansione intervallo | Sviluppato | `ChannelScanCoordinator` → `ScanCoordinator` con `ScanPlan`; stato `ScanState` (era `ChannelScanState`). Nessun avviso se lo squelch d'ascolto è spento: il gate dipende solo dalla soglia RSSI, quindi la scansione funziona comunque; il pannello mostra la soglia in uso. Evidenziazione dell'intervallo sul righello (facoltativa) non realizzata. |
-| 3 DSP | Sviluppato | Come da piano; il confronto A/B è un pulsante a due stati. |
-| 4 Mappa | Sviluppato | Come da piano. |
+| 1 Tema chiaro | Sviluppato (Windows, Android) | Oltre al display LCD restano scuri anche spettro, waterfall, righello, barra dell'S-meter e contatori LCD del registratore (`DisplayColors`, su Android `DisplayKiwiColors`). Sotto-step 1.C realizzato: Impostazioni → *Aspetto*, barre di sistema coerenti con il tema. Test di contrasto in un nuovo source set `composeApp/desktopTest`, aggiunto al controllo standard e alla CI. |
+| 2 Scansione intervallo | Sviluppato (Windows, Android) | `ChannelScanCoordinator` → `ScanCoordinator` con `ScanPlan`; stato `ScanState`. Motore e sessione (`RangeScanSession`) in `jvmCommonMain`, usati da entrambi i controller. Su Android: Preferiti → *Scansione*, riservata (`GatedFeature.FREQUENCY_SCAN`); la scansione dei canali preferiti resta solo desktop. Nessun avviso se lo squelch d'ascolto è spento (il gate dipende solo dalla soglia RSSI). Evidenziazione dell'intervallo sul righello (facoltativa) non realizzata. |
+| 3 DSP | Sviluppato (Windows, Android) | `AudioPipeline` e `AudioDspControl` in `jvmCommonMain`, usati da entrambi i controller. Su Android: Radio → *Equalizzatore e filtri (DSP)* → *Configura* (pannello a scomparsa), riservato (`GatedFeature.AUDIO_DSP`). Il confronto A/B è un pulsante a due stati. |
+| 4 Mappa | Sviluppato (Windows, Android) | URL condivisi in `ReceiverMaps` (`commonMain`); su Android i pulsanti sono in Impostazioni → Ricevitore e aprono il browser con un intent. |
 
 La versione (`appVersion` 1.3.0), il tag e la pubblicazione restano da fare dopo il collaudo; le note di rilascio sono in bozza in `docs/RELEASE_NOTES_1.3.0.md`.
 

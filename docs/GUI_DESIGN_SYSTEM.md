@@ -39,6 +39,7 @@ Light-theme accents are darker than the dark-theme ones so that, both as text on
 Use text or an icon/shape together with semantic color when a state must be unambiguous; do not communicate state through color alone.
 
 Not themed: the native Windows title bar (follows Windows) and the Swing dialogs (`--installer-complete` choices, `AppErrorReporter`).
+**Android.** `androidApp/.../ui/theme/Theme.kt` mirrors the same values: `KiwiPalette` (`DarkKiwiPalette`, `LightKiwiPalette`) provided through `LocalKiwiPalette`, read via the `KiwiColors.X` composable getters, and the constant `DisplayKiwiColors` for the frequency display, S-meter, spectrum and waterfall. `KiwiGrabberTheme(mode)` also switches the status and navigation bar icons (light icons on the dark theme). When a token changes, update both files.
 
 ## Typography
 

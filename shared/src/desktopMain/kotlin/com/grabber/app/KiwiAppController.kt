@@ -2,6 +2,7 @@ package com.grabber.app
 
 import com.grabber.alerting.TelegramAlertService
 import com.grabber.audio.DesktopAudioPlayer
+import com.grabber.audio.AudioDspControl
 import com.grabber.audio.AudioPipeline
 import com.grabber.audio.FileAudioPlayer
 import com.grabber.audio.dsp.AudioDspConfig
@@ -35,7 +36,6 @@ private const val TAG = "KiwiAppController"
 private const val MAX_FREQUENCY_KHZ = 30000.0
 private const val DEFAULT_MAX_USERS = 4
 private const val RECORDING_RESUME_DELAY_MS = 600L
-private const val DSP_SAVE_DEBOUNCE_MS = 300L
 
 /**
  * Registra e segnala le eccezioni non gestite delle coroutine del controller
@@ -93,46 +93,29 @@ class KiwiAppController(
         onTranscriptionFinished = alerts::onTranscriptionFinished
     )
 
-    private val rangeScanHitLog = ScanHitLog()
-    private val _rangeScanHits = MutableStateFlow<List<ScanHit>>(emptyList())
+    private val rangeScan = RangeScanSession(
+        params = { appSettings.settings.value.rangeScanParams },
+        dwellMillis = { appSettings.settings.value.rangeScanDwellMs.toLong() },
+        autoResume = { appSettings.settings.value.rangeScanAutoResume }
+    )
 
     /** Segnali trovati dalla scansione dell'intervallo in questa sessione, dal più recente. */
-    val rangeScanHits: StateFlow<List<ScanHit>> = _rangeScanHits.asStateFlow()
+    val rangeScanHits: StateFlow<List<ScanHit>> = rangeScan.hits
 
     private val scanner = ScanCoordinator(
         scope = scope,
         signalGateOpen = squelch.isGateOpen,
         tuneTo = { applyTuning(it.frequencyKhz, it.mode) },
         resetSignalDetection = squelch::reset,
-        onSignalFound = { kind, target ->
-            if (kind == ScanKind.RANGE) {
-                _rangeScanHits.value = rangeScanHitLog.record(target, client.rssi.value, System.currentTimeMillis())
-            }
-        },
+        onSignalFound = { kind, target -> if (kind == ScanKind.RANGE) rangeScan.recordHit(target, client.rssi.value) },
         onStoppedOnSignal = { _, target -> _connectionNotifications.tryEmit("Scansione fermata: segnale su ${target.label}") }
     )
-
-    /** La sorgente dell'intervallo viene ricreata solo quando cambiano i parametri, non a ogni passo. */
-    @Volatile private var cachedRangeSource: Pair<RangeScanParams, FrequencyRangeScanSource>? = null
-
-    private fun rangeScanSource(): ScanSource {
-        val params = appSettings.settings.value.rangeScanParams
-        cachedRangeSource?.let { (cachedParams, source) -> if (cachedParams == params) return source }
-        return FrequencyRangeScanSource(params).also { cachedRangeSource = params to it }
-    }
 
     private val channelScanPlan = ScanPlan(
         kind = ScanKind.CHANNELS,
         source = { ListScanSource(appSettings.settings.value.favorites.filter { it.scanEnabled }.map { it.toScanTarget() }) },
         dwellMillis = { appSettings.settings.value.scanDwellSeconds * 1000L },
         autoResume = { appSettings.settings.value.scanAutoResume }
-    )
-
-    private val rangeScanPlan = ScanPlan(
-        kind = ScanKind.RANGE,
-        source = ::rangeScanSource,
-        dwellMillis = { appSettings.settings.value.rangeScanDwellMs.toLong() },
-        autoResume = { appSettings.settings.value.rangeScanAutoResume }
     )
 
     val settings: StateFlow<SettingsData> = appSettings.settings
@@ -201,19 +184,19 @@ class KiwiAppController(
         playbackSink = player::submitPcm,
         recordSink = recorder::submitAudio
     )
-    private val _dspConfig = MutableStateFlow(appSettings.settings.value.audioDsp.normalized())
+    private val dsp = AudioDspControl(
+        scope = scope,
+        pipeline = audioPipeline,
+        initialConfig = appSettings.settings.value.audioDsp,
+        isLicensed = ::hasAdvancedFeatures,
+        persist = appSettings::setAudioDsp
+    )
 
     /** Configurazione DSP corrente; l'effetto audio è immediato, il salvataggio su disco è differito. */
-    val dspConfig: StateFlow<AudioDspConfig> = _dspConfig.asStateFlow()
-    private var dspSaveJob: Job? = null
+    val dspConfig: StateFlow<AudioDspConfig> = dsp.config
 
     /** Vero se la catena DSP sta elaborando l'audio (destinazione attiva, almeno un filtro, licenza valida). */
-    val isDspActive: StateFlow<Boolean> = combine(
-        _dspConfig,
-        appSettings.settings.map { it.licenseKey }.distinctUntilChanged()
-    ) { config, licenseKey ->
-        config.target != DspTarget.OFF && !config.isNeutral && isLicenseValid(licenseKey)
-    }.stateIn(scope, SharingStarted.Eagerly, false)
+    val isDspActive: StateFlow<Boolean> = dsp.isActive
 
     @Volatile private var wasRecordingBeforeDisconnect = false
     private var savedRecordingInterval = RecordingInterval.CONTINUOUS
@@ -275,7 +258,6 @@ class KiwiAppController(
         recorder.onSegmentCompleted = ::archiveCompletedSegment
 
         player.start()
-        applyDspConfiguration()
         client.audioFlow
             .onEach(audioPipeline::process)
             .launchIn(scope)
@@ -283,12 +265,8 @@ class KiwiAppController(
         appSettings.settings
             .map { it.licenseKey }
             .distinctUntilChanged()
-            .onEach { applyDspConfiguration() }
+            .onEach { dsp.refreshLicense() }
             .launchIn(scope)
-    }
-
-    private fun applyDspConfiguration() {
-        audioPipeline.configure(_dspConfig.value, licensed = hasAdvancedFeatures())
     }
 
     private fun archiveCompletedSegment(filePath: String, durationSec: Long) {
@@ -589,14 +567,14 @@ class KiwiAppController(
         val problem = when {
             !hasAdvancedFeatures() -> "La scansione dell'intervallo richiede l'attivazione della licenza."
             client.connectionState.value !is ConnectionState.Connected -> "Connettiti al ricevitore per avviare la scansione."
-            else -> validateRangeScan(appSettings.settings.value.rangeScanParams)
+            else -> rangeScan.validationError()
         }
         if (problem != null) {
             _connectionNotifications.tryEmit(problem)
             return
         }
         scanner.stop()
-        scanner.start(rangeScanPlan)
+        scanner.start(rangeScan.plan)
     }
 
     /** Esclude dalla scansione dell'intervallo la frequenza su cui la scansione è ferma (o quella sintonizzata). */
@@ -613,7 +591,7 @@ class KiwiAppController(
     fun excludeFromRangeScan(frequencyKhz: Double) {
         if (!hasAdvancedFeatures()) return
         appSettings.addRangeScanExclusion(frequencyKhz)
-        _rangeScanHits.value = rangeScanHitLog.remove(frequencyKhz)
+        rangeScan.removeHit(frequencyKhz)
         _connectionNotifications.tryEmit("Frequenza ${"%.3f".format(java.util.Locale.US, frequencyKhz)} kHz esclusa dalla scansione.")
     }
 
@@ -628,7 +606,7 @@ class KiwiAppController(
     }
 
     fun clearRangeScanHits() {
-        _rangeScanHits.value = rangeScanHitLog.clear()
+        rangeScan.clearHits()
     }
 
     /** Aggiunge ai preferiti un segnale trovato (gruppo "SCAN"). */
@@ -640,50 +618,28 @@ class KiwiAppController(
 
     // ── DSP: equalizzatore e filtri (funzione avanzata) ──────────
 
-    fun setDspTarget(target: DspTarget) = updateDsp { it.copy(targetName = target.name) }
+    // La logica è in `AudioDspControl`, condivisa con Android; senza licenza i comandi non hanno effetto.
 
-    fun setDspEqGain(band: Int, gainDb: Double) = updateDsp { config ->
-        if (band !in config.eqGainsDb.indices) return@updateDsp config
-        config.copy(eqGainsDb = config.eqGainsDb.toMutableList().also { it[band] = gainDb }).markCustom()
-    }
+    fun setDspTarget(target: DspTarget) { dsp.setTarget(target) }
+
+    fun setDspEqGain(band: Int, gainDb: Double) { dsp.setEqGain(band, gainDb) }
 
     /** Frequenze dei filtri in Hz; 0 disattiva il filtro. */
-    fun setDspHighPass(hz: Int) = updateDsp { it.copy(highPassHz = hz).markCustom() }
+    fun setDspHighPass(hz: Int) { dsp.setHighPass(hz) }
 
-    fun setDspLowPass(hz: Int) = updateDsp { it.copy(lowPassHz = hz).markCustom() }
+    fun setDspLowPass(hz: Int) { dsp.setLowPass(hz) }
 
-    fun setDspNotch(hz: Int, q: Double = _dspConfig.value.notchQ) = updateDsp { it.copy(notchHz = hz, notchQ = q).markCustom() }
+    fun setDspNotch(hz: Int, q: Double = dsp.config.value.notchQ) { dsp.setNotch(hz, q) }
 
-    fun setDspNoiseReduction(percent: Int) = updateDsp { it.copy(noiseReductionPercent = percent).markCustom() }
+    fun setDspNoiseReduction(percent: Int) { dsp.setNoiseReduction(percent) }
 
-    fun applyDspPreset(preset: DspPreset) = updateDsp { it.withPreset(preset) }
+    fun applyDspPreset(preset: DspPreset) { dsp.applyPreset(preset) }
 
     /** Toglie tutti i filtri mantenendo la destinazione. */
-    fun resetDsp() = updateDsp { it.withPreset(DspPreset.NEUTRAL) }
+    fun resetDsp() { dsp.reset() }
 
     /** Bypass momentaneo per il confronto A/B: non viene salvato. */
-    fun setDspBypass(bypassed: Boolean) {
-        if (!hasAdvancedFeatures()) return
-        if (bypassed) {
-            audioPipeline.configure(_dspConfig.value.copy(targetName = DspTarget.OFF.name), licensed = true)
-        } else {
-            applyDspConfiguration()
-        }
-    }
-
-    private fun AudioDspConfig.markCustom(): AudioDspConfig = copy(presetName = DspPreset.CUSTOM.name)
-
-    /** Applica subito la modifica all'audio e la salva su disco dopo una breve pausa (cursori). */
-    private fun updateDsp(transform: (AudioDspConfig) -> AudioDspConfig) {
-        if (!hasAdvancedFeatures()) return
-        val updated = _dspConfig.updateAndGet { transform(it).normalized() }
-        applyDspConfiguration()
-        dspSaveJob?.cancel()
-        dspSaveJob = scope.launch {
-            delay(DSP_SAVE_DEBOUNCE_MS)
-            appSettings.setAudioDsp(updated)
-        }
-    }
+    fun setDspBypass(bypassed: Boolean) = dsp.setBypass(bypassed)
 
     // ── Squelch e VAD ────────────────────────────────────────────
 
@@ -870,11 +826,7 @@ class KiwiAppController(
 
     fun shutdown() {
         scanner.stop()
-        // Salvataggio immediato di una modifica DSP ancora in attesa del debounce.
-        if (dspSaveJob?.isActive == true) {
-            dspSaveJob?.cancel()
-            appSettings.setAudioDsp(_dspConfig.value)
-        }
+        dsp.flush() // salva subito una modifica DSP ancora in attesa del debounce
         appSettings.setLastTuned(currentFrequencyKhz.value, currentMode.value)
         if (isRecording.value) stopRecording()
         waterfall.stopStream()

@@ -6,7 +6,9 @@ Questa pagina raccoglie le richieste ricevute dagli utenti. Sono proposte per sv
 
 ### Da valutare
 
-Nessuna richiesta aperta.
+- col tema chiaro la scroll bar si nota poco, farla scura.
+- nella schermata "Utenti & monitor" ridurre il pannello "Informazioni server kiwisdr" in modo che non ci sia la scrollbar e magari ci sia più spazio per gli utenti.
+
 
 ## English
 

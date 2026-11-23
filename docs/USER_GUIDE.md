@@ -74,6 +74,10 @@ server address beside the power icon and connected status. Hide private addresse
 3. L'icona è rossa quando il ricevitore è disconnesso, gialla durante il collegamento o la riconnessione e verde quando è collegato. In basso nella finestra può comparire anche una notifica sullo stato.
 4. Per modificare indirizzo o password, apri **Impostazioni avanzate**, espandi **SERVER KIWISDR / RICEVITORE REMOTO**, salva la modifica e, se necessario, ricollegati.
 
+Se chiudi l'applicazione mentre è collegata, al prossimo avvio si ricollega da sola all'ultimo ricevitore usato; se ti eri disconnesso, resta disconnessa. Se la connessione cade per un problema di rete, l'applicazione riprova ogni 10 secondi e, una volta ricollegata, riprende la registrazione (in un nuovo file) e la scansione da dove si erano interrotte.
+
+All'avvio compare una schermata con il logo e la versione in uso. L'applicazione controlla su GitHub se esiste una versione più recente: in quel caso la schermata resta aperta con il pulsante **Scarica l'aggiornamento**, che apre la pagina della nuova versione, e il pulsante **Continua**. Un clic sulla schermata o il tasto Esc la chiudono subito.
+
 Per trovare un ricevitore, nella stessa sezione usa **Mappa pubblica KiwiSDR** oppure **Mappa ricevitori SDR (rx-tx.info)**: entrambi aprono la mappa nel browser. La mappa di rx-tx.info elenca anche ricevitori WebSDR e OpenWebRX, ma l'app si collega solo ai **KiwiSDR**: copia l'indirizzo `host:porta` del ricevitore scelto nel campo **Indirizzo Server** e salva.
 
 Se il collegamento non riesce, verifica nome host e porta, che il ricevitore sia online e raggiungibile e che la password sia corretta. Potrebbero anche essere esauriti i canali utente del ricevitore. In particolare, un rifiuto `badp=1` può indicare una password errata oppure l'esaurimento dei canali: l'applicazione non può distinguere le due cause.
@@ -369,6 +373,10 @@ server address beside the power icon and connected status. Hide private addresse
 2. Select the power icon to connect. Select it again to disconnect.
 3. The icon is red when disconnected, yellow while connecting or reconnecting, and green when connected. A connection notification may also appear at the bottom of the window.
 4. If you need to change the address or password, open **Settings** (`Impostazioni avanzate`), expand **KiwiSDR Server / Remote Receiver** (`SERVER KIWISDR / RICEVITORE REMOTO`), save the change, then reconnect if needed.
+
+If you close the application while connected, it reconnects to the last receiver used the next time it starts; if you had disconnected, it stays disconnected. If the connection drops because of a network problem, the application retries every 10 seconds and, once reconnected, resumes recording (in a new file) and scanning where they stopped.
+
+At startup a screen shows the logo and the installed version. The application checks GitHub for a newer version: if there is one, the screen stays open with a **Download the update** button (`Scarica l'aggiornamento`), which opens the new version's page, and a **Continue** button (`Continua`). Clicking the screen or pressing Esc closes it immediately.
 
 To find a receiver, use **KiwiSDR public map** (`Mappa pubblica KiwiSDR`) or **SDR receiver map (rx-tx.info)** (`Mappa ricevitori SDR (rx-tx.info)`) in the same section: both open the map in your browser. The rx-tx.info map also lists WebSDR and OpenWebRX receivers, but the app only connects to **KiwiSDR** receivers: copy the chosen receiver's `host:port` into **Server address** (`Indirizzo Server`) and save.
 

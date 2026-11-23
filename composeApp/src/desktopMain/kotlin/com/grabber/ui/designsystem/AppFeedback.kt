@@ -91,7 +91,7 @@ fun AppVerticalScrollbar(adapter: ScrollbarAdapter, modifier: Modifier = Modifie
         adapter = adapter,
         modifier = modifier,
         style = defaultScrollbarStyle().copy(
-            unhoverColor = GrabberColors.TextPrimary.copy(alpha = 0.2f),
+            unhoverColor = GrabberColors.ScrollbarThumb,
             hoverColor = GrabberColors.Primary,
             shape = RoundedCornerShape(4.dp),
             thickness = 6.dp

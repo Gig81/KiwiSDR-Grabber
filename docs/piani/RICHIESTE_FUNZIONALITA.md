@@ -12,6 +12,7 @@ Con il tema chiaro la scrollbar si nota poco: renderla più scura.
 
 - Tutte le scrollbar passano da `AppVerticalScrollbar` (`ui/designsystem/AppFeedback.kt`): a riposo usano `TextPrimary` con alpha 0.2, troppo tenue su sfondo chiaro.
 - Proposta: un token dedicato nella palette (es. `ScrollbarThumb`) con alpha più alta nel tema chiaro (0.45–0.5), coperto dal test di contrasto di `:composeApp:desktopTest`. Intervento piccolo, solo desktop.
+- **Implementata:** token `ScrollbarThumb` (`#8C1F2328` nel tema chiaro, scuro invariato), contrasto ≥ 3:1 su tutte le superfici verificato da `PaletteContrastTests`.
 
 #### 2. Pannello "Informazioni server KiwiSDR" più compatto
 
@@ -19,6 +20,7 @@ Nella scheda "Utenti & monitor" ridurre il pannello "Informazioni server KiwiSDR
 
 - Oggi la colonna sinistra divide l'altezza con pesi 1.3 (utenti) e 1 (server), ma il pannello server mostra 8 righe fisse: lo spazio assegnato è spesso troppo o troppo poco.
 - Proposta: altezza del pannello server pari al suo contenuto (niente `weight`), righe su due colonne (coppie etichetta/valore affiancate) o layout compatto; tutto lo spazio restante va alla lista degli utenti.
+- **Implementata:** pannello alto quanto il contenuto (5 righe invece di 8: stazione e antenna su riga intera, le altre voci affiancate a coppie); la lista degli utenti occupa lo spazio restante.
 
 #### 3. Registrazioni brevi con la sola parola "uso"
 
@@ -123,6 +125,7 @@ In the light theme the scrollbar is hard to see: make it darker.
 
 - All scrollbars go through `AppVerticalScrollbar` (`ui/designsystem/AppFeedback.kt`): when idle they use `TextPrimary` at alpha 0.2, too faint on a light background.
 - Proposal: a dedicated palette token (e.g. `ScrollbarThumb`) with a higher alpha in the light theme (0.45–0.5), covered by the contrast test in `:composeApp:desktopTest`. Small, desktop-only change.
+- **Implemented:** `ScrollbarThumb` token (`#8C1F2328` in the light theme, dark theme unchanged), contrast of at least 3:1 on every surface checked by `PaletteContrastTests`.
 
 #### 2. More compact "KiwiSDR server info" panel
 
@@ -130,6 +133,7 @@ In the "Users & monitor" tab, shrink the "KiwiSDR server info" panel so it shows
 
 - The left column currently splits its height with weights 1.3 (users) and 1 (server), but the server panel shows 8 fixed rows: the allotted space is often too much or too little.
 - Proposal: size the server panel to its content (no `weight`), with rows in two columns (label/value pairs side by side) or a compact layout; all remaining space goes to the user list.
+- **Implemented:** the panel is as tall as its content (5 rows instead of 8: station and antenna on full rows, the other items side by side in pairs); the user list takes the remaining space.
 
 #### 3. Short recordings containing only the word "uso"
 

@@ -54,6 +54,8 @@ data class GrabberPalette(
     val selectedTab: Color,
     /** Velo dei pannelli bloccati dalla licenza. */
     val lockedOverlay: Color,
+    /** Cursore delle scrollbar a riposo: nel tema chiaro abbastanza scuro da distinguersi dallo sfondo (contrasto ≥ 3:1). */
+    val scrollbarThumb: Color,
     /** Colori per modo di demodulazione (badge dei preferiti e degli utenti). */
     val modeAm: Color,
     val modeUsb: Color,
@@ -84,6 +86,7 @@ val DarkPalette = GrabberPalette(
     onStrongAccent = Color(0xFFFFFFFF),
     selectedTab = Color(0xFF2E3D52),
     lockedOverlay = Color(0xE6101824),
+    scrollbarThumb = Color(0x33E6EDF3),
     modeAm = Color(0xFFFBBF24),
     modeUsb = Color(0xFF58A6FF),
     modeLsb = Color(0xFFBC8CFF),
@@ -117,6 +120,7 @@ val LightPalette = GrabberPalette(
     onStrongAccent = Color(0xFFFFFFFF),
     selectedTab = Color(0xFFD6E4F7),
     lockedOverlay = Color(0xE6F3F5F8),
+    scrollbarThumb = Color(0x8C1F2328),
     modeAm = Color(0xFF9A5B00),
     modeUsb = Color(0xFF0959C2),
     modeLsb = Color(0xFF7B3FC4),
@@ -152,6 +156,7 @@ object GrabberColors {
     val OnStrongAccent: Color @Composable @ReadOnlyComposable get() = LocalGrabberPalette.current.onStrongAccent
     val SelectedTab: Color @Composable @ReadOnlyComposable get() = LocalGrabberPalette.current.selectedTab
     val LockedOverlay: Color @Composable @ReadOnlyComposable get() = LocalGrabberPalette.current.lockedOverlay
+    val ScrollbarThumb: Color @Composable @ReadOnlyComposable get() = LocalGrabberPalette.current.scrollbarThumb
     val ModeAm: Color @Composable @ReadOnlyComposable get() = LocalGrabberPalette.current.modeAm
     val ModeUsb: Color @Composable @ReadOnlyComposable get() = LocalGrabberPalette.current.modeUsb
     val ModeLsb: Color @Composable @ReadOnlyComposable get() = LocalGrabberPalette.current.modeLsb
@@ -188,6 +193,17 @@ object DisplayColors {
     val LabelBackdrop = Color(0xB3000000)
     val MeterTickHigh = Color(0xFF552222)
     val MeterTickLow = Color(0xFF223322)
+}
+
+/**
+ * Colori del logo ufficiale (`docs/images/logo.jfif`), usati dallo splash screen in entrambi i temi:
+ * lo sfondo coincide con quello dell'immagine del logo, così logo e finestra si fondono.
+ */
+object BrandColors {
+    val LogoBackground = Color(0xFF09182B)
+    val LogoGreen = Color(0xFF33C15D)
+    val OnLogoBackground = Color(0xFFF0F6FC)
+    val OnLogoBackgroundMuted = Color(0xFF9DB0C6)
 }
 
 /** Stili di testo con il colore della palette indicata. */

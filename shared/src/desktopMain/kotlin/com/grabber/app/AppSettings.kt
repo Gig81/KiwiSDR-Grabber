@@ -54,6 +54,8 @@ data class SettingsData(
     val telegramSendTranscription: Boolean = true,
     val sttModelPath: String = "",
     val setupCompleted: Boolean = false,
+    // Connessione attiva alla chiusura: all'avvio l'app si riconnette all'ultimo server usato
+    val resumeConnectionOnStartup: Boolean = false,
     // Persistenza dello storico degli utenti connessi
     val recordConnectedUsers: Boolean = false,
     // Licenza di attivazione firmata e vincolata al Machine ID
@@ -319,6 +321,11 @@ class AppSettings(
 
     fun setSetupCompleted(completed: Boolean) {
         updateAndSave { it.copy(setupCompleted = completed) }
+    }
+
+    fun setResumeConnectionOnStartup(enabled: Boolean) {
+        if (_settings.value.resumeConnectionOnStartup == enabled) return
+        updateAndSave { it.copy(resumeConnectionOnStartup = enabled) }
     }
 
     fun setLastTuned(freqKhz: Double, mode: ModulationMode) {

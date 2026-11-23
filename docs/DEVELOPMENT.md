@@ -140,7 +140,8 @@ Sul PC di sviluppo non c'è l'SDK Android: la build gira in un container Docker 
 
 Docker Desktop non espone KVM, quindi l'emulatore non è utilizzabile: il collaudo si fa su un dispositivo fisico con l'APK `build\android-out\apk\debug\androidApp-debug.apk` (oppure con la release firmata, che ha un ID dispositivo diverso). Criteri di collaudo:
 
-- **Connessione:** con e senza password; rifiuti `badp` mostrati senza ritentativi; riconnessione dopo un cambio Wi-Fi ↔ rete mobile.
+- **Connessione:** con e senza password; rifiuti `badp` mostrati senza ritentativi; riconnessione dopo un cambio Wi-Fi ↔ rete mobile. Chiudendo l'app connessa (rimozione dai recenti) al riavvio si ricollega all'ultimo server, dopo *Disconnetti* no; registrazione e scansione dell'intervallo attive durante una caduta di rete riprendono alla riconnessione.
+- **Avvio e icone:** splash con logo e versione; con una release più recente su GitHub resta aperto con *Scarica l'aggiornamento* (apre il browser) e *Continua*; icona del launcher, icona a tema (Android 13+) e icona della notifica dal logo ufficiale.
 - **Audio:** nessun underrun percepibile in 30 minuti; squelch e volume reattivi; pausa su chiamata in arrivo, mute allo scollegamento delle cuffie.
 - **Background:** con attivazione, audio continuo per 30 minuti a schermo spento con notifica visibile; senza attivazione, connessione chiusa e avviso al ritorno.
 - **Waterfall:** sintonia al tocco entro la risoluzione del bin; socket W/F chiuso fuori dalla schermata e in background, riaperto senza `badp=5`.

@@ -1,7 +1,11 @@
 package com.grabber.ui
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
@@ -47,37 +51,43 @@ fun main(args: Array<String>) {
         }
 
         application {
+            // Il controller nasce subito: durante lo splash parte il controllo aggiornamenti e,
+            // se l'app era stata chiusa connessa, la riconnessione all'ultimo server.
             val controller = remember { KiwiAppController() }
-            val appVersion = System.getProperty("app.version")?.takeIf { it.isNotBlank() } ?: "dev"
+            var showSplash by remember { mutableStateOf(true) }
 
-            Window(
-                onCloseRequest = {
+            if (showSplash) {
+                SplashWindow(controller, onFinished = { showSplash = false })
+            } else {
+                MainWindow(controller, onExit = {
                     controller.shutdown()
                     exitApplication()
-                },
-                title = "KiwiSDR Grabber & Station Recorder v$appVersion",
-                state = rememberWindowState(
-                    width = 1100.dp,
-                    height = 740.dp,
-                    placement = WindowPlacement.Maximized
-                )
-            ) {
-                SideEffect {
-                    window.minimumSize = Dimension(960, 640)
-                }
-                App(
-                    controller = controller,
-                    onExitApplication = {
-                        controller.shutdown()
-                        exitApplication()
-                    }
-                )
+                })
             }
         }
     } catch (error: Throwable) {
         AppErrorReporter.report("avvio dell'applicazione", error)
     } finally {
         AppLogger.shutdown()
+    }
+}
+
+@Composable
+private fun MainWindow(controller: KiwiAppController, onExit: () -> Unit) {
+    Window(
+        onCloseRequest = onExit,
+        title = "KiwiSDR Grabber & Station Recorder v${controller.appVersion}",
+        icon = BrandImages.appIcon,
+        state = rememberWindowState(
+            width = 1100.dp,
+            height = 740.dp,
+            placement = WindowPlacement.Maximized
+        )
+    ) {
+        SideEffect {
+            window.minimumSize = Dimension(960, 640)
+        }
+        App(controller = controller, onExitApplication = onExit)
     }
 }
 

@@ -2,10 +2,12 @@ package com.grabber.ui.feature.users
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
@@ -96,12 +98,13 @@ fun UsersTab(
                 isConnected = connectionState is ConnectionState.Connected,
                 activeUsers = activeUsers,
                 onTuneToUser = ::tuneTo,
-                modifier = Modifier.weight(1.3f).fillMaxWidth()
+                modifier = Modifier.weight(1f).fillMaxWidth()
             )
+            // Alto quanto il contenuto: tutto lo spazio restante va alla lista degli utenti.
             ServerInfoPanel(
                 stationInfo = stationInfo,
                 serverEndpoint = controller.serverEndpoint,
-                modifier = Modifier.weight(1f).fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)
             )
         }
 

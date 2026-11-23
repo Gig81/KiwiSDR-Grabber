@@ -142,6 +142,17 @@ object DisplayKiwiColors {
     val Primary = DarkKiwiPalette.primary
 }
 
+/**
+ * Colori del logo ufficiale (`docs/images/logo.jfif`), usati dallo splash screen in entrambi i temi:
+ * lo sfondo coincide con quello dell'immagine del logo e con `@color/ic_launcher_background`.
+ */
+object BrandKiwiColors {
+    val LogoBackground = Color(0xFF09182B)
+    val LogoGreen = Color(0xFF33C15D)
+    val OnLogoBackground = Color(0xFFF0F6FC)
+    val OnLogoBackgroundMuted = Color(0xFF9DB0C6)
+}
+
 private fun KiwiPalette.toColorScheme(): ColorScheme {
     val base = if (isDark) darkColorScheme() else lightColorScheme()
     return base.copy(

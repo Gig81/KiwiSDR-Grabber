@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="background">#FF0D1117</color>
+    <!-- Colore di sfondo del logo ufficiale: icona adattiva e splash screen. -->
+    <color name="ic_launcher_background">#FF09182B</color>
 </resources>

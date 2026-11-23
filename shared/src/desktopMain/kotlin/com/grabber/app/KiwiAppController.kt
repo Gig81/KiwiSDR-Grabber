@@ -25,6 +25,8 @@ import com.grabber.monitor.UserLogEntry
 import com.grabber.recording.AudioRecorder
 import com.grabber.recording.AudioRecordingFormat
 import com.grabber.recording.RecordingInterval
+import com.grabber.update.UpdateCheckState
+import com.grabber.update.UpdateChecker
 import com.grabber.waterfall.WaterfallBuffer
 import com.grabber.waterfall.WaterfallClient
 import com.grabber.waterfall.WaterfallPaletteType
@@ -35,7 +37,6 @@ import java.io.File
 private const val TAG = "KiwiAppController"
 private const val MAX_FREQUENCY_KHZ = 30000.0
 private const val DEFAULT_MAX_USERS = 4
-private const val RECORDING_RESUME_DELAY_MS = 600L
 
 /**
  * Registra e segnala le eccezioni non gestite delle coroutine del controller
@@ -198,9 +199,31 @@ class KiwiAppController(
     /** Vero se la catena DSP sta elaborando l'audio (destinazione attiva, almeno un filtro, licenza valida). */
     val isDspActive: StateFlow<Boolean> = dsp.isActive
 
-    @Volatile private var wasRecordingBeforeDisconnect = false
-    private var savedRecordingInterval = RecordingInterval.CONTINUOUS
-    private var savedRecordingFormat = AudioRecordingFormat.MP3
+    @Volatile private var savedRecordingInterval = RecordingInterval.CONTINUOUS
+    @Volatile private var savedRecordingFormat = AudioRecordingFormat.MP3
+
+    /** Ripresa di registrazione e scansione dopo una caduta di rete (logica condivisa con Android). */
+    private val connectionResume = ConnectionResumeCoordinator(
+        scope = scope,
+        isAuthenticated = client.isAuthenticated,
+        scanState = scanner.state,
+        isRecording = { recorder.isRecording.value },
+        suspendRecording = {
+            savedRecordingInterval = recorder.currentInterval
+            savedRecordingFormat = recorder.format.value
+            recorder.stopRecording()
+        },
+        resumeRecording = { startRecording(savedRecordingInterval, savedRecordingFormat) },
+        resumeScan = ::resumeScan
+    )
+
+    /** Versione in uso: proprietà `app.version` impostata dal launcher, "dev" se assente. */
+    val appVersion: String = System.getProperty("app.version")?.takeIf { it.isNotBlank() } ?: "dev"
+
+    private val updateChecker = UpdateChecker(appVersion)
+
+    /** Esito del controllo degli aggiornamenti su GitHub, eseguito all'avvio (mostrato dallo splash screen). */
+    val updateCheck: StateFlow<UpdateCheckState> = updateChecker.state
 
     init {
         initializePersistedSettings(appSettings.settings.value)
@@ -212,6 +235,16 @@ class KiwiAppController(
         observeConnectionErrors()
         history.resumePendingTranscriptions()
         history.refresh()
+        updateChecker.start(scope)
+        restoreConnectionOnStartup()
+    }
+
+    /** Se l'app è stata chiusa con la connessione attiva, si riconnette all'ultimo server usato. */
+    private fun restoreConnectionOnStartup() {
+        val settings = appSettings.settings.value
+        if (!settings.resumeConnectionOnStartup || !settings.setupCompleted) return
+        AppLogger.info(TAG, "Connessione attiva alla chiusura: riconnessione a ${settings.serverAddress}")
+        connect()
     }
 
     // ── Inizializzazione ─────────────────────────────────────────
@@ -320,38 +353,25 @@ class KiwiAppController(
     private fun observeConnectionLifecycle() {
         client.connectionState
             .onEach { state ->
+                // Caduta di rete: registrazione e scansione vanno ricordate prima di fermarle.
+                if (state is ConnectionState.Reconnecting) connectionResume.onConnectionLost()
                 if (state !is ConnectionState.Connected) scanner.stop()
                 when (state) {
-                    is ConnectionState.Connected -> resumeRecordingAfterReconnect()
-                    is ConnectionState.Reconnecting -> {
-                        waterfall.closeSocket()
-                        suspendRecordingForReconnect()
-                    }
+                    is ConnectionState.Connected -> connectionResume.onConnected()
+                    is ConnectionState.Reconnecting -> waterfall.closeSocket()
                     is ConnectionState.Disconnected -> {
                         waterfall.closeSocket()
-                        if (client.isManualDisconnected()) wasRecordingBeforeDisconnect = false
+                        if (client.isManualDisconnected()) connectionResume.clear()
                     }
-                    else -> Unit
+                    // Rifiuto del server (es. password errata): niente riconnessione al prossimo avvio.
+                    is ConnectionState.Error -> {
+                        connectionResume.clear()
+                        appSettings.setResumeConnectionOnStartup(false)
+                    }
+                    is ConnectionState.Connecting -> Unit
                 }
             }
             .launchIn(scope)
-    }
-
-    private suspend fun resumeRecordingAfterReconnect() {
-        if (!wasRecordingBeforeDisconnect) return
-        AppLogger.info(TAG, "Riconnessione riuscita: ripristino automatico registrazione...")
-        wasRecordingBeforeDisconnect = false
-        delay(RECORDING_RESUME_DELAY_MS)
-        startRecording(savedRecordingInterval, savedRecordingFormat)
-    }
-
-    private fun suspendRecordingForReconnect() {
-        if (!recorder.isRecording.value) return
-        AppLogger.info(TAG, "Disconnessione non voluta durante la registrazione. Stato memorizzato per ripresa automatica.")
-        wasRecordingBeforeDisconnect = true
-        savedRecordingInterval = recorder.currentInterval
-        savedRecordingFormat = recorder.format.value
-        recorder.stopRecording()
     }
 
     private fun observeConnectionErrors() {
@@ -385,14 +405,17 @@ class KiwiAppController(
     }
 
     fun connect() {
+        appSettings.setResumeConnectionOnStartup(true)
         applyServerConfiguration()
         waterfall.requestStream()
         client.connect(scope)
         waterfall.connectIfSessionReady()
     }
 
+    /** Disconnessione voluta dall'utente: al prossimo avvio l'app non si riconnette. */
     fun disconnect() {
-        wasRecordingBeforeDisconnect = false
+        appSettings.setResumeConnectionOnStartup(false)
+        connectionResume.clear()
         scanner.stop()
         waterfall.stopStream()
         if (isRecording.value) stopRecording()
@@ -401,6 +424,7 @@ class KiwiAppController(
 
     /** Sintonia richiesta dall'utente: interrompe un'eventuale scansione (canali o intervallo). */
     fun tune(freqKhz: Double, mode: ModulationMode? = null) {
+        connectionResume.forgetScan()
         scanner.stop()
         applyTuning(freqKhz, mode)
     }
@@ -523,7 +547,9 @@ class KiwiAppController(
     }
 
     /** Avvia la scansione dei canali selezionati; ferma un'eventuale scansione dell'intervallo. */
-    fun startChannelScan() {
+    fun startChannelScan() = startChannelScanFrom(0)
+
+    private fun startChannelScanFrom(stepIndex: Int) {
         val problem = when {
             !hasAdvancedFeatures() -> "La scansione dei canali richiede l'attivazione della licenza."
             client.connectionState.value !is ConnectionState.Connected -> "Connettiti al ricevitore per avviare la scansione."
@@ -534,12 +560,22 @@ class KiwiAppController(
             _connectionNotifications.tryEmit(problem)
             return
         }
+        connectionResume.forgetScan()
         scanner.stop()
-        scanner.start(channelScanPlan)
+        scanner.start(channelScanPlan, stepIndex)
     }
 
-    /** Ferma la scansione in corso, di qualsiasi tipo. */
-    fun stopScan() = scanner.stop()
+    /** Ferma la scansione in corso, di qualsiasi tipo (anche quella in attesa di ripresa dopo la riconnessione). */
+    fun stopScan() {
+        connectionResume.forgetScan()
+        scanner.stop()
+    }
+
+    /** Ripresa dopo la riconnessione dal passo su cui la scansione si trovava; i controlli restano quelli dell'avvio manuale. */
+    private fun resumeScan(point: ScanResumePoint) = when (point.kind) {
+        ScanKind.CHANNELS -> startChannelScanFrom(point.stepIndex)
+        ScanKind.RANGE -> startRangeScanFrom(point.stepIndex)
+    }
 
     // ── Scansione di un intervallo di frequenze (funzione avanzata) ──
 
@@ -563,7 +599,9 @@ class KiwiAppController(
     }
 
     /** Avvia la scansione dell'intervallo salvato; ferma un'eventuale scansione dei canali. */
-    fun startRangeScan() {
+    fun startRangeScan() = startRangeScanFrom(0)
+
+    private fun startRangeScanFrom(stepIndex: Int) {
         val problem = when {
             !hasAdvancedFeatures() -> "La scansione dell'intervallo richiede l'attivazione della licenza."
             client.connectionState.value !is ConnectionState.Connected -> "Connettiti al ricevitore per avviare la scansione."
@@ -573,8 +611,9 @@ class KiwiAppController(
             _connectionNotifications.tryEmit(problem)
             return
         }
+        connectionResume.forgetScan()
         scanner.stop()
-        scanner.start(rangeScan.plan)
+        scanner.start(rangeScan.plan, stepIndex)
     }
 
     /** Esclude dalla scansione dell'intervallo la frequenza su cui la scansione è ferma (o quella sintonizzata). */
@@ -715,7 +754,7 @@ class KiwiAppController(
     }
 
     fun stopRecording() {
-        wasRecordingBeforeDisconnect = false
+        connectionResume.forgetRecording()
         recorder.stopRecording()
     }
 

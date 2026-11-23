@@ -81,7 +81,11 @@ internal fun LiveUsersPanel(
     }
 }
 
-/** Dati di stato del server KiwiSDR letti da `/status`. */
+/**
+ * Dati di stato del server KiwiSDR letti da `/status`, in forma compatta: le voci brevi sono
+ * affiancate a coppie e il pannello è alto quanto il contenuto (vedi [UsersTab]), così lo spazio
+ * restante va alla lista degli utenti.
+ */
 @Composable
 internal fun ServerInfoPanel(
     stationInfo: StationInfo,
@@ -96,16 +100,22 @@ internal fun ServerInfoPanel(
         size = ControlSize.Compact,
         contentSpacing = 6.dp
     ) {
-        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             ServerInfoRow("Stazione", stationInfo.name)
-            ServerInfoRow("Server / Host", serverEndpoint)
-            ServerInfoRow("Slot Ricevitore", "${stationInfo.activeUsers} / ${stationInfo.maxUsers}")
             ServerInfoRow("Antenna", stationInfo.antenna)
-            ServerInfoRow("GPS", stationInfo.gps)
-            ServerInfoRow("SNR Segnale", stationInfo.snr)
-            ServerInfoRow("Uptime Server", stationInfo.uptime)
-            ServerInfoRow("Software Kiwi", stationInfo.version)
+            ServerInfoPair("Server / Host" to serverEndpoint, "Slot" to "${stationInfo.activeUsers} / ${stationInfo.maxUsers}")
+            ServerInfoPair("GPS" to stationInfo.gps, "SNR" to stationInfo.snr)
+            ServerInfoPair("Uptime" to stationInfo.uptime, "Software" to stationInfo.version)
         }
+    }
+}
+
+/** Due voci del pannello server affiancate, ciascuna su metà larghezza. */
+@Composable
+private fun ServerInfoPair(left: Pair<String, String>, right: Pair<String, String>) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        ServerInfoRow(left.first, left.second, modifier = Modifier.weight(1f))
+        ServerInfoRow(right.first, right.second, modifier = Modifier.weight(1f))
     }
 }
 

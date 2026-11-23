@@ -11,6 +11,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val controller = (application as KiwiGrabberApplication).controller
-        setContent { KiwiGrabberApp(controller) }
+        // Avvio dell'app (non una ricreazione dopo rotazione): ripristina la connessione attiva alla chiusura.
+        val isLaunch = savedInstanceState == null
+        if (isLaunch) controller.restoreSessionOnLaunch()
+        setContent { KiwiGrabberApp(controller, showSplash = isLaunch) }
     }
 }

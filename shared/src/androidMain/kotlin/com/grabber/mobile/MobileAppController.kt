@@ -2,6 +2,7 @@ package com.grabber.mobile
 
 import android.content.Context
 import com.grabber.app.AppLogger
+import com.grabber.app.ConnectionResumeCoordinator
 import com.grabber.app.FavoriteFrequency
 import com.grabber.app.LogLevel
 import com.grabber.app.RangeScanLimits
@@ -9,6 +10,7 @@ import com.grabber.app.RangeScanSession
 import com.grabber.app.ScanCoordinator
 import com.grabber.app.ScanHit
 import com.grabber.app.ScanKind
+import com.grabber.app.ScanResumePoint
 import com.grabber.app.ScanState
 import com.grabber.app.WaterfallCoordinator
 import com.grabber.app.bandGroupFor
@@ -34,6 +36,8 @@ import com.grabber.model.ConnectionState
 import com.grabber.model.KiwiDxLabel
 import com.grabber.model.ModulationMode
 import com.grabber.model.UiThemeMode
+import com.grabber.update.UpdateCheckState
+import com.grabber.update.UpdateChecker
 import com.grabber.waterfall.WaterfallBuffer
 import com.grabber.waterfall.WaterfallClient
 import com.grabber.waterfall.WaterfallFrame
@@ -72,7 +76,8 @@ private const val MAX_FREQUENCY_KHZ = 30000.0
  */
 class MobileAppController(
     context: Context,
-    appVersion: String
+    /** Versione in uso (`versionName`), mostrata dallo splash screen e usata per il controllo aggiornamenti. */
+    val appVersion: String
 ) {
     private val appContext = context.applicationContext
     private val scope = CoroutineScope(
@@ -132,6 +137,28 @@ class MobileAppController(
         onSignalFound = { kind, target -> if (kind == ScanKind.RANGE) rangeScan.recordHit(target, client.rssi.value) },
         onStoppedOnSignal = { _, target -> notify("Scansione fermata: segnale su ${target.label}") }
     )
+
+    /** Ripresa di registrazione e scansione dopo una caduta di rete (logica condivisa con il desktop). */
+    private val connectionResume = ConnectionResumeCoordinator(
+        scope = scope,
+        isAuthenticated = client.isAuthenticated,
+        scanState = scanner.state,
+        isRecording = { recorder.isRecording.value },
+        suspendRecording = {
+            recorder.stop()
+            notify("Connessione persa: registrazione salvata, riprenderà alla riconnessione.")
+        },
+        resumeRecording = {
+            startRecording()
+            if (recorder.isRecording.value) notify("Riconnesso: registrazione ripresa in un nuovo file.")
+        },
+        resumeScan = ::resumeScan
+    )
+
+    private val updateChecker = UpdateChecker(appVersion)
+
+    /** Esito del controllo degli aggiornamenti su GitHub, eseguito all'avvio (mostrato dallo splash screen). */
+    val updateCheck: StateFlow<UpdateCheckState> = updateChecker.state
 
     /** Configurazione DSP corrente; l'effetto audio è immediato, il salvataggio è differito. */
     val dspConfig: StateFlow<AudioDspConfig> = dsp.config
@@ -212,6 +239,7 @@ class MobileAppController(
         observeConnection()
         observeErrors()
         observeMeteredNetwork()
+        updateChecker.start(scope)
     }
 
     // ── Inizializzazione ─────────────────────────────────────────
@@ -251,14 +279,22 @@ class MobileAppController(
     private fun observeConnection() {
         client.connectionState
             .onEach { state ->
+                // Caduta di rete: registrazione e scansione vanno ricordate prima di fermarle.
+                if (state is ConnectionState.Reconnecting) connectionResume.onConnectionLost()
                 if (state !is ConnectionState.Connected) scanner.stop()
                 if (state !is ConnectionState.Connected && recorder.isRecording.value) {
                     recorder.stop()
                     notify("Registrazione interrotta: connessione al ricevitore persa. Il file è stato salvato.")
                 }
                 when (state) {
-                    is ConnectionState.Connected -> updateWaterfallStream()
+                    is ConnectionState.Connected -> {
+                        updateWaterfallStream()
+                        connectionResume.onConnected()
+                    }
                     is ConnectionState.Disconnected, is ConnectionState.Error -> {
+                        // Disconnessione voluta o rifiuto del server: nulla da riprendere.
+                        connectionResume.clear()
+                        if (state is ConnectionState.Error) settingsStore.update { it.copy(resumeConnectionOnStartup = false) }
                         waterfall.closeSocket()
                         audioOutput.flush()
                         audioPolicy.deactivate()
@@ -295,6 +331,7 @@ class MobileAppController(
 
     fun connect() {
         stoppedInBackground = false
+        if (!settingsStore.value.resumeConnectionOnStartup) settingsStore.update { it.copy(resumeConnectionOnStartup = true) }
         val data = settingsStore.value
         client.updateServer(data.serverHost, data.serverPort)
         waterfall.updateServer(data.serverHost, data.serverPort)
@@ -304,15 +341,34 @@ class MobileAppController(
         updateWaterfallStream()
     }
 
+    /** Disconnessione voluta dall'utente: al prossimo avvio l'app non si riconnette. */
     fun disconnect() {
+        if (settingsStore.value.resumeConnectionOnStartup) settingsStore.update { it.copy(resumeConnectionOnStartup = false) }
+        endSession()
+    }
+
+    /** Chiude la sessione senza cambiare la riconnessione al prossimo avvio. */
+    private fun endSession() {
+        connectionResume.clear()
         scanner.stop()
         if (recorder.isRecording.value) recorder.stop()
         waterfall.stopStream()
         client.disconnect()
     }
 
+    /**
+     * Avvio dell'app (nuova Activity, non ricreata dopo una rotazione): se era stata chiusa con la
+     * connessione attiva, si riconnette all'ultimo server usato.
+     */
+    fun restoreSessionOnLaunch() {
+        if (!settingsStore.value.resumeConnectionOnStartup || client.connectionState.value.isSessionActive()) return
+        AppLogger.info(TAG, "Connessione attiva alla chiusura: riconnessione a ${settingsStore.value.serverAddress}")
+        connect()
+    }
+
     /** Sintonia richiesta dall'utente: interrompe un'eventuale scansione. */
     fun tune(freqKhz: Double, mode: ModulationMode? = null) {
+        connectionResume.forgetScan()
         scanner.stop()
         applyTuning(freqKhz, mode)
     }
@@ -437,7 +493,10 @@ class MobileAppController(
         recorder.start(lastSampleRate, currentFrequencyKhz.value, currentMode.value)?.let(::notify)
     }
 
-    fun stopRecording() = recorder.stop()
+    fun stopRecording() {
+        connectionResume.forgetRecording()
+        recorder.stop()
+    }
 
     // ── Impostazioni e licenza ───────────────────────────────────
 
@@ -509,7 +568,9 @@ class MobileAppController(
         settingsStore.update { it.copy(rangeScanAutoResume = enabled) }
     }
 
-    fun startRangeScan() {
+    fun startRangeScan() = startRangeScanFrom(0)
+
+    private fun startRangeScanFrom(stepIndex: Int) {
         if (!requireFeature(GatedFeature.FREQUENCY_SCAN)) return
         val problem = if (client.connectionState.value !is ConnectionState.Connected) {
             "Connettiti al ricevitore per avviare la scansione."
@@ -520,11 +581,21 @@ class MobileAppController(
             notify(problem)
             return
         }
+        connectionResume.forgetScan()
         scanner.stop()
-        scanner.start(rangeScan.plan)
+        scanner.start(rangeScan.plan, stepIndex)
     }
 
-    fun stopScan() = scanner.stop()
+    /** Ferma la scansione (anche quella in attesa di ripresa dopo la riconnessione). */
+    fun stopScan() {
+        connectionResume.forgetScan()
+        scanner.stop()
+    }
+
+    /** Su Android esiste solo la scansione dell'intervallo: riparte dal passo su cui si trovava. */
+    private fun resumeScan(point: ScanResumePoint) {
+        if (point.kind == ScanKind.RANGE) startRangeScanFrom(point.stepIndex)
+    }
 
     /** Esclude la frequenza su cui la scansione è ferma (o quella sintonizzata). */
     fun excludeCurrentFromRangeScan() {
@@ -614,7 +685,7 @@ class MobileAppController(
             !featureGate.isEnabled(GatedFeature.BACKGROUND_PLAYBACK)
         ) {
             AppLogger.info(TAG, "App in background senza attivazione: ascolto interrotto")
-            disconnect()
+            endSession()
             stoppedInBackground = true
         }
         if (visible && stoppedInBackground) {
@@ -624,8 +695,14 @@ class MobileAppController(
         updateWaterfallStream()
     }
 
-    /** Task rimosso dai recenti o "Disconnetti" dalla notifica: chiusura pulita della sessione. */
+    /** "Disconnetti" dalla notifica: come il pulsante dell'app, al prossimo avvio non si riconnette. */
     fun stopSession() = disconnect()
+
+    /**
+     * App rimossa dai recenti: chiusura pulita della sessione (libera lo slot del ricevitore), ma la
+     * connessione verrà ripristinata al prossimo avvio come alla chiusura dell'app sul desktop.
+     */
+    fun closeSessionOnAppExit() = endSession()
 
     private fun notify(message: String) {
         _notifications.tryEmit(message)

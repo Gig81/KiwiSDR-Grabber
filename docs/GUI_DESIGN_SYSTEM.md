@@ -30,6 +30,7 @@ Each theme is a `GrabberPalette` (`DarkPalette`, `LightPalette`) provided throug
 | `OnStrongAccent` | `#FFFFFF` | `#FFFFFF` | Label and icon on saturated fills (`Error`, selected `Primary` items, checkmarks) |
 | `SelectedTab` | `#2E3D52` | `#D6E4F7` | Selected main tab |
 | `LockedOverlay` | `#E6101824` | `#E6F3F5F8` | Veil over license-locked panels |
+| `ScrollbarThumb` | `#33E6EDF3` | `#8C1F2328` | Idle scrollbar thumb (`AppVerticalScrollbar`); light value keeps at least 3:1 against every surface |
 | `ModeAm` / `ModeUsb` / `ModeLsb` / `ModeCw` / `ModeNfm` | amber / blue / violet / red / green | darker variants | Demodulation mode badges |
 
 Light-theme accents are darker than the dark-theme ones so that, both as text on light surfaces and as fills under `OnAccent`, contrast stays at least 4.5:1 (WCAG AA). `composeApp/src/desktopTest/.../PaletteContrastTests.kt` checks these ratios for both palettes: run `.\gradlew.bat :composeApp:desktopTest` after changing a color.

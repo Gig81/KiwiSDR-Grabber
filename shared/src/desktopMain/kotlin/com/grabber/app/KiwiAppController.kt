@@ -8,6 +8,7 @@ import com.grabber.audio.FileAudioPlayer
 import com.grabber.audio.dsp.AudioDspConfig
 import com.grabber.audio.dsp.DspPreset
 import com.grabber.audio.dsp.DspTarget
+import com.grabber.audio.squelch.GateMode
 import com.grabber.audio.squelch.SquelchController
 import com.grabber.kiwi.JdkWebSocketConnector
 import com.grabber.kiwi.KiwiClient
@@ -25,6 +26,8 @@ import com.grabber.monitor.UserLogEntry
 import com.grabber.recording.AudioRecorder
 import com.grabber.recording.AudioRecordingFormat
 import com.grabber.recording.RecordingInterval
+import com.grabber.recording.RecordingNoiseFilter
+import com.grabber.recording.RecordingNoiseFilterConfig
 import com.grabber.update.UpdateCheckState
 import com.grabber.update.UpdateChecker
 import com.grabber.waterfall.WaterfallBuffer
@@ -91,7 +94,11 @@ class KiwiAppController(
         database = database,
         appSettings = appSettings,
         hasAdvancedFeatures = ::hasAdvancedFeatures,
-        onTranscriptionFinished = alerts::onTranscriptionFinished
+        onTranscriptionFinished = alerts::onTranscriptionFinished,
+        onRecordingDiscarded = { id, filePath, _ ->
+            alerts.forgetRecording(id)
+            if (filePlayer.currentlyPlayingPath.value == filePath) filePlayer.stop()
+        }
     )
 
     private val rangeScan = RangeScanSession(
@@ -147,14 +154,14 @@ class KiwiAppController(
     val squelchGateOpen = squelch.isGateOpen
     val squelchHangTimeRemaining = squelch.hangTimeRemaining
     val squelchThresholdDbm = squelch.thresholdDbm
-    val squelchListenEnabled = squelch.listenSquelchEnabled
-    val squelchRecordEnabled = squelch.recordSquelchEnabled
+    /** Modalità del gate di ascolto (libero, solo RF, solo voce, RF e voce). */
+    val listenGateMode: StateFlow<GateMode> = squelch.listenMode
+    /** Modalità del gate di registrazione (continua, solo RF, solo voce, RF e voce). */
+    val recordGateMode: StateFlow<GateMode> = squelch.recordMode
 
     val vadConfidence = squelch.vadConfidence
     val isVoiceDetected = squelch.isVoiceDetected
     val isQrnDetected = squelch.isQrnDetected
-    val vadListenEnabled = squelch.vadListenEnabled
-    val vadRecordEnabled = squelch.vadRecordEnabled
     val lastVadResult = squelch.lastVadResult
 
     val currentlyPlayingFile = filePlayer.currentlyPlayingPath
@@ -271,14 +278,14 @@ class KiwiAppController(
 
     private fun applySquelchSettings(settings: SettingsData) {
         squelch.setThresholdDbm(settings.squelchThresholdDbm)
-        squelch.setListenSquelchEnabled(settings.squelchListenEnabled)
-        squelch.setRecordSquelchEnabled(settings.squelchRecordEnabled)
         squelch.softMuteMs = settings.softMuteMs
         squelch.preBufferMs = settings.preBufferMs
         squelch.hangTimeSeconds = settings.hangTimeSeconds
+        squelch.voiceSilenceCloseSeconds = settings.effectiveVoiceSilenceCloseSeconds
+        // Senza licenza il VAD resta spento: le modalità con voce perdono la componente vocale.
         val advancedFeaturesEnabled = hasAdvancedFeatures()
-        squelch.setVadListenEnabled(advancedFeaturesEnabled && settings.vadListenEnabled)
-        squelch.setVadRecordEnabled(advancedFeaturesEnabled && settings.vadRecordEnabled)
+        squelch.setListenMode(settings.listenGateMode.restrictedTo(voiceAllowed = advancedFeaturesEnabled))
+        squelch.setRecordMode(settings.recordGateMode.restrictedTo(voiceAllowed = advancedFeaturesEnabled))
         squelch.setVadSensitivity(settings.vadSensitivity)
         squelch.setVadHangoverMs(settings.vadHangoverMs)
     }
@@ -302,21 +309,41 @@ class KiwiAppController(
             .launchIn(scope)
     }
 
-    private fun archiveCompletedSegment(filePath: String, durationSec: Long) {
+    /**
+     * Archivia un segmento completato. I segmenti QSO (con `activeMillis`, chiusi da squelch o VAD)
+     * troppo brevi vengono cancellati subito; gli altri passano dal filtro anti-rumore dopo la trascrizione.
+     */
+    private fun archiveCompletedSegment(filePath: String, durationSec: Long, activeMillis: Long?) {
         val frequency = currentFrequencyKhz.value
         val mode = currentMode.value.displayName
         val qsoContext = alerts.activeContext
         scope.launch(Dispatchers.IO) {
             try {
                 if (!hasAdvancedFeatures()) return@launch
+                val noiseFilter = appSettings.settings.value.recordingNoiseFilter
+                if (activeMillis != null && RecordingNoiseFilter.isTooShort(noiseFilter, activeMillis)) {
+                    discardShortSegment(filePath, activeMillis)
+                    return@launch
+                }
                 val transcriptionRequested = history.isTranscriptionConfigured
                 val id = history.archiveRecording(filePath, durationSec, frequency, mode, transcriptionRequested)
                 alerts.trackRecording(id, qsoContext, filePath, transcriptionRequested)
-                if (transcriptionRequested) history.enqueueTranscription(id, filePath)
+                if (transcriptionRequested) {
+                    history.enqueueTranscription(id, filePath, applyNoiseFilter = activeMillis != null)
+                }
                 history.refresh()
             } catch (e: Exception) {
                 AppLogger.error(TAG, "Impossibile archiviare la registrazione $filePath", e)
             }
+        }
+    }
+
+    private fun discardShortSegment(filePath: String, activeMillis: Long) {
+        val file = File(filePath)
+        if (file.delete() || !file.exists()) {
+            AppLogger.info(TAG, "Segmento QSO scartato dal filtro anti-rumore (attivo $activeMillis ms): $filePath")
+        } else {
+            AppLogger.warn(TAG, "Impossibile cancellare il segmento QSO troppo breve $filePath")
         }
     }
 
@@ -687,15 +714,34 @@ class KiwiAppController(
         appSettings.setSquelchThreshold(dbm)
     }
 
-    fun setSquelchListenEnabled(enabled: Boolean) {
-        squelch.setListenSquelchEnabled(enabled)
-        appSettings.setSquelchListenEnabled(enabled)
+    /** Modalità del gate di ascolto; senza licenza sono ammesse solo "libero" e "solo RF". */
+    fun setListenGateMode(mode: GateMode) {
+        val allowed = mode.restrictedTo(voiceAllowed = hasAdvancedFeatures())
+        squelch.setListenMode(allowed)
+        appSettings.setListenGateMode(allowed)
     }
 
-    fun setSquelchRecordEnabled(enabled: Boolean) {
+    /**
+     * Modalità del gate di registrazione (funzione con licenza). Bloccata durante la registrazione:
+     * il registratore decide all'avvio se lavorare a segmenti QSO o in continuo.
+     */
+    fun setRecordGateMode(mode: GateMode) {
+        if (!hasAdvancedFeatures() || recorder.isRecording.value) return
+        squelch.setRecordMode(mode)
+        appSettings.setRecordGateMode(mode)
+    }
+
+    /** Chiusura del segmento "RF e voce" dopo [seconds] senza voce, anche con il gate RF aperto. */
+    fun setVoiceSilenceClose(enabled: Boolean, seconds: Double) {
         if (!hasAdvancedFeatures()) return
-        squelch.setRecordSquelchEnabled(enabled)
-        appSettings.setSquelchRecordEnabled(enabled)
+        appSettings.setVoiceSilenceClose(enabled, seconds)
+        squelch.voiceSilenceCloseSeconds = appSettings.settings.value.effectiveVoiceSilenceCloseSeconds
+    }
+
+    /** Filtro dei segmenti QSO brevi o trascritti come rumore (cancellati dal disco). */
+    fun setRecordingNoiseFilter(config: RecordingNoiseFilterConfig) {
+        if (!hasAdvancedFeatures()) return
+        appSettings.setRecordingNoiseFilter(config)
     }
 
     fun setSoftMuteMs(ms: Int) {
@@ -711,18 +757,6 @@ class KiwiAppController(
     fun setHangTimeSeconds(seconds: Double) {
         squelch.hangTimeSeconds = seconds
         appSettings.setHangTimeSeconds(seconds)
-    }
-
-    fun setVadListenEnabled(enabled: Boolean) {
-        val allowed = enabled && hasAdvancedFeatures()
-        squelch.setVadListenEnabled(allowed)
-        appSettings.setVadListenEnabled(allowed)
-    }
-
-    fun setVadRecordEnabled(enabled: Boolean) {
-        val allowed = enabled && hasAdvancedFeatures()
-        squelch.setVadRecordEnabled(allowed)
-        appSettings.setVadRecordEnabled(allowed)
     }
 
     fun setVadSensitivity(sensitivity: Float) {
@@ -749,8 +783,7 @@ class KiwiAppController(
             _connectionNotifications.tryEmit("Le funzioni avanzate richiedono l'attivazione della licenza.")
             return
         }
-        val squelchMode = squelch.recordSquelchEnabled.value || squelch.vadRecordEnabled.value
-        recorder.startRecording(interval, format, squelchMode = squelchMode)
+        recorder.startRecording(interval, format, squelchMode = squelch.recordMode.value != GateMode.OFF)
     }
 
     fun stopRecording() {

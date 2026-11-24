@@ -979,7 +979,10 @@ private fun SliderBoundLabel(text: String) {
     Text(text = text, fontSize = 8.sp, color = GrabberColors.TextDisabled)
 }
 
-/** Gruppo di chip a scelta singola; un indice fuori intervallo non seleziona nessuna opzione. */
+/**
+ * Gruppo di chip a scelta singola; un indice fuori intervallo non seleziona nessuna opzione.
+ * Le opzioni per cui [isOptionEnabled] è falso sono visibili ma non selezionabili.
+ */
 @Composable
 fun AppSegmentedControl(
     options: List<String>,
@@ -989,7 +992,8 @@ fun AppSegmentedControl(
     size: ControlSize = ControlSize.Regular,
     accentColor: Color = GrabberColors.Secondary,
     selectedContentColor: Color = GrabberColors.OnAccent,
-    fillWidth: Boolean = false
+    fillWidth: Boolean = false,
+    isOptionEnabled: (Int) -> Boolean = { true }
 ) {
     val isDense = size == ControlSize.Dense || size == ControlSize.Mini
     Row(
@@ -999,11 +1003,13 @@ fun AppSegmentedControl(
     ) {
         options.forEachIndexed { index, option ->
             val selected = index == selectedIndex
+            val enabled = isOptionEnabled(index)
             Surface(
                 shape = RoundedCornerShape(3.dp),
                 color = if (selected) accentColor else GrabberColors.SurfaceElevated,
                 border = BorderStroke(1.dp, if (selected) accentColor else GrabberColors.Border),
-                modifier = (if (fillWidth) Modifier.weight(1f) else Modifier).clickable { onSelectionChange(index) }
+                modifier = (if (fillWidth) Modifier.weight(1f) else Modifier)
+                    .clickable(enabled = enabled) { onSelectionChange(index) }
             ) {
                 Text(
                     text = option,
@@ -1013,7 +1019,11 @@ fun AppSegmentedControl(
                         ControlSize.Regular -> 12.sp
                     },
                     fontWeight = FontWeight.Bold,
-                    color = if (selected) selectedContentColor else GrabberColors.TextSecondary,
+                    color = when {
+                        selected -> selectedContentColor
+                        !enabled -> GrabberColors.TextDisabled
+                        else -> GrabberColors.TextSecondary
+                    },
                     textAlign = TextAlign.Center,
                     modifier = when {
                         isDense -> Modifier.padding(horizontal = 5.dp, vertical = 3.dp)

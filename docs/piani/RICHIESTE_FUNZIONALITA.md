@@ -33,6 +33,7 @@ Vengono spesso registrati segmenti brevi (3–5 s) la cui trascrizione è solo "
   - scarto dopo la trascrizione se il testo è vuoto o composto solo da parole di una lista "rumore" configurabile (es. "uso"), oppure se la confidenza Vosk è bassa (dato presente nel risultato JSON);
   - registrazione con Voice Gate (VAD) attivo, così i segmenti senza voce non partono (vedi punto 4).
 - Da decidere: cancellare il file o solo nasconderlo/marcarlo nell'archivio.
+- **Implementata:** filtro anti-rumore nel pannello di registrazione, solo per i segmenti di un gate; i segmenti scartati vengono cancellati dal disco e non entrano nell'archivio (nessun avviso Telegram di trascrizione). Controlli: durata minima al netto dell'hang time (attivo, 1,5 s), parole rumore dopo la trascrizione con testo vuoto incluso (attivo, "uso"), confidenza media Vosk minima (spento, 50%). Le trascrizioni avviate a mano non sono filtrate.
 
 #### 4. Squelch e VAD: relazioni e funzionamento combinato
 
@@ -49,6 +50,8 @@ Da valutare:
 - modalità esplicite (solo RF / solo voce / RF e voce) al posto di due interruttori indipendenti;
 - chiusura anticipata del segmento quando il VAD non rileva voce per N secondi, anche con RF ancora aperto;
 - documentare il comportamento nella guida utente e nei tooltip.
+
+**Implementata:** modalità esplicite per ascolto e registrazione (Libero/Continua, Solo RF, Solo voce, RF e voce) con selettori nella scheda Audio e nel Registratore; in console SQL e VAD sono le due componenti della modalità di ascolto, con tooltip. In registrazione "Solo voce" non dipende dalla soglia RF e chiude dopo l'hang time senza voce; "RF e voce" chiude anche dopo N secondi senza voce con RF aperto (attivo, 5 s, configurabile). Le impostazioni precedenti vengono convertite mantenendo il comportamento di allora. Comportamento descritto nella guida utente.
 
 #### 5. Controllo della radio tramite cavo CAT
 
@@ -146,6 +149,7 @@ Short segments (3–5 s) whose transcription is just "uso" are often recorded: g
   - discard after transcription when the text is empty or made only of words from a configurable "noise" list (e.g. "uso"), or when the Vosk confidence is low (available in the JSON result);
   - record with the Voice Gate (VAD) enabled, so segments without speech are not started (see item 4).
 - To decide: delete the file, or only hide/flag it in the archive.
+- **Implemented:** noise filter in the recorder panel, only for gate segments; discarded segments are deleted from disk and never enter the archive (no Telegram transcription alert). Controls: minimum length excluding the hang time (on, 1.5 s), noise words after transcription including empty text (on, "uso"), minimum average Vosk confidence (off, 50%). Manually started transcriptions are never filtered.
 
 #### 4. Squelch and VAD: how they interact
 
@@ -162,6 +166,8 @@ To evaluate:
 - explicit modes (RF only / voice only / RF and voice) instead of two independent switches;
 - closing the segment early when the VAD detects no speech for N seconds, even while RF is still open;
 - documenting the behaviour in the user guide and tooltips.
+
+**Implemented:** explicit modes for listening and recording (Open/Continuous, RF only, Voice only, RF and voice) with selectors in the Audio tab and the Recorder; in the console SQL and VAD are the two parts of the listening mode, with tooltips. In recording, "Voice only" does not depend on the RF threshold and closes after the hang time without speech; "RF and voice" also closes after N seconds without speech while RF is open (on, 5 s, configurable). Previous settings are converted keeping their old behaviour. Behaviour described in the user guide.
 
 #### 5. Radio control over a CAT cable
 

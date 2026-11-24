@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.grabber.app.KiwiAppController
+import com.grabber.audio.squelch.GateMode
 import com.grabber.model.ConnectionState
 import com.grabber.recording.AudioRecordingFormat
 import com.grabber.recording.RecordingInterval
@@ -52,6 +53,8 @@ import com.grabber.ui.designsystem.GrabberColors
 import com.grabber.ui.designsystem.GrabberShapes
 import com.grabber.ui.designsystem.OutlinedButton
 import com.grabber.ui.designsystem.PrimaryButton
+import com.grabber.ui.feature.audio.GateModeSelector
+import com.grabber.ui.feature.audio.GateTarget
 import java.io.File
 import java.util.Locale
 
@@ -76,8 +79,8 @@ internal fun RecordingControlPanel(
 ) {
     val isRecording by controller.isRecording.collectAsState()
     val isRecordingSquelchArmed by controller.isRecordingSquelchArmed.collectAsState()
-    val recordSquelchEnabled by controller.squelchRecordEnabled.collectAsState()
-    val vadRecordEnabled by controller.vadRecordEnabled.collectAsState()
+    val recordGateMode by controller.recordGateMode.collectAsState()
+    val settings by controller.settings.collectAsState()
     val recordingElapsed by controller.recordingElapsed.collectAsState()
     val currentFilePath by controller.currentFilePath.collectAsState()
     val recordedSegments by controller.recordedSegments.collectAsState()
@@ -103,8 +106,7 @@ internal fun RecordingControlPanel(
                 RecordButton(
                     isRecording = isRecording,
                     enabled = connectionState is ConnectionState.Connected,
-                    vadRecordEnabled = vadRecordEnabled,
-                    recordSquelchEnabled = recordSquelchEnabled,
+                    recordGateMode = recordGateMode,
                     onStart = { controller.startRecording(selectedInterval, recordingFormat) },
                     onStop = controller::stopRecording
                 )
@@ -143,24 +145,28 @@ internal fun RecordingControlPanel(
                 modifier = Modifier.fillMaxWidth()
             )
             AppSubtleDivider()
-            Text(
-                text = "ATTIVAZIONE GATE IN REGISTRAZIONE",
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold,
-                color = GrabberColors.TextSecondary
+            GateModeSelector(
+                title = "GATE DI REGISTRAZIONE",
+                target = GateTarget.RECORD,
+                selected = recordGateMode,
+                voiceAllowed = true,
+                enabled = !isRecording,
+                note = if (isRecording) "(bloccato in rec)" else null,
+                onSelect = controller::setRecordGateMode
             )
-            RecorderSwitchSetting(
-                title = "Squelch in Registrazione",
-                description = "Pausa la registrazione durante i silenzi RF",
-                checked = recordSquelchEnabled,
-                onCheckedChange = controller::setSquelchRecordEnabled
-            )
+            if (recordGateMode == GateMode.RF_AND_VOICE) {
+                VoiceSilenceCloseSetting(
+                    enabled = settings.voiceSilenceCloseEnabled,
+                    seconds = settings.voiceSilenceCloseSeconds,
+                    onChange = controller::setVoiceSilenceClose
+                )
+            }
             AppSubtleDivider()
-            RecorderSwitchSetting(
-                title = "Voice-Gate in Registrazione",
-                description = "Salva solo segmenti con voce convalidata (VAD)",
-                checked = vadRecordEnabled,
-                onCheckedChange = controller::setVadRecordEnabled
+            RecordingNoiseFilterSection(
+                config = settings.recordingNoiseFilter,
+                isTranscriptionConfigured = settings.sttModelPath.isNotBlank(),
+                gateActive = recordGateMode != GateMode.OFF,
+                onChange = controller::setRecordingNoiseFilter
             )
         }
     }
@@ -174,8 +180,7 @@ private fun formatElapsed(elapsedSeconds: Long): String =
 private fun RowScope.RecordButton(
     isRecording: Boolean,
     enabled: Boolean,
-    vadRecordEnabled: Boolean,
-    recordSquelchEnabled: Boolean,
+    recordGateMode: GateMode,
     onStart: () -> Unit,
     onStop: () -> Unit
 ) {
@@ -191,18 +196,19 @@ private fun RowScope.RecordButton(
         return
     }
     PrimaryButton(
-        text = when {
-            vadRecordEnabled -> "AVVIA REC (VAD)"
-            recordSquelchEnabled -> "AVVIA REC (SQL)"
-            else -> "AVVIA REC"
+        text = when (recordGateMode) {
+            GateMode.OFF -> "AVVIA REC"
+            GateMode.RF -> "AVVIA REC (SQL)"
+            GateMode.VOICE -> "AVVIA REC (VAD)"
+            GateMode.RF_AND_VOICE -> "AVVIA REC (SQL+VAD)"
         },
         onClick = onStart,
         enabled = enabled,
         icon = Icons.Default.FiberManualRecord,
         size = ControlSize.Compact,
         containerColor = when {
-            vadRecordEnabled -> GrabberColors.Warning
-            recordSquelchEnabled -> GrabberColors.Primary
+            recordGateMode.usesVoice -> GrabberColors.Warning
+            recordGateMode.usesRf -> GrabberColors.Primary
             else -> GrabberColors.Success
         },
         contentColor = GrabberColors.OnAccent,
@@ -383,7 +389,7 @@ private fun RowScope.IntervalOption(label: String, isSelected: Boolean, enabled:
 }
 
 @Composable
-private fun RecorderSwitchSetting(
+internal fun RecorderSwitchSetting(
     title: String,
     description: String,
     checked: Boolean,

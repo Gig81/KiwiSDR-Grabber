@@ -1,6 +1,9 @@
 package com.grabber.app
 
 import com.grabber.audio.dsp.AudioDspConfig
+import com.grabber.audio.squelch.GateMode
+import com.grabber.audio.squelch.SquelchController
+import com.grabber.recording.RecordingNoiseFilterConfig
 import com.grabber.kiwi.KiwiServerDefaults
 import com.grabber.model.ModulationMode
 import com.grabber.model.UiThemeMode
@@ -19,6 +22,7 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
 const val DEFAULT_SCAN_DWELL_SECONDS = 3
+const val DEFAULT_VOICE_SILENCE_CLOSE_SECONDS = 5.0
 val SCAN_DWELL_SECONDS_RANGE = 1..30
 
 @Serializable
@@ -32,15 +36,25 @@ data class SettingsData(
     val favorites: List<FavoriteFrequency> = defaultFavorites(),
     val favoritesCustomized: Boolean = false,
     val squelchThresholdDbm: Double = -103.0,     // Default S4 (-103 dBm)
-    val squelchListenEnabled: Boolean = false,    // Mute automatico altoparlante sotto soglia
-    val squelchRecordEnabled: Boolean = false,    // Registrazione solo in presenza di segnale
+    // Interruttori delle versioni precedenti: letti solo per ricavare le modalità dei gate
+    // quando listenGateModeName/recordGateModeName mancano (vedi listenGateMode/recordGateMode).
+    val squelchListenEnabled: Boolean = false,
+    val squelchRecordEnabled: Boolean = false,
     val softMuteMs: Int = 10,                     // Durata rampa fade-in/fade-out anti-pop (ms)
     val preBufferMs: Int = 400,                   // Durata ring buffer circolare anti-troncamento (ms)
     val hangTimeSeconds: Double = 3.5,            // Cooldown FSM per unire passaggi QSO consecutivi (secondi)
-    val vadListenEnabled: Boolean = false,        // Voice-Gate su ascolto live
-    val vadRecordEnabled: Boolean = false,        // Voice-Gate su registrazione intelligente
+    val vadListenEnabled: Boolean = false,
+    val vadRecordEnabled: Boolean = false,
     val vadSensitivity: Float = 0.45f,            // Soglia sensibilità VAD (0.1 - 0.9)
     val vadHangoverMs: Int = 250,                 // Hangover VAD anti-troncamento sillabe (ms)
+    // Modalità dei gate di ascolto e registrazione (nomi di GateMode)
+    val listenGateModeName: String? = null,
+    val recordGateModeName: String? = null,
+    // Registrazione "RF e voce": chiusura del segmento dopo N secondi senza voce anche con RF aperto
+    val voiceSilenceCloseEnabled: Boolean = true,
+    val voiceSilenceCloseSeconds: Double = DEFAULT_VOICE_SILENCE_CLOSE_SECONDS,
+    // Scarto dei segmenti QSO brevi o trascritti come rumore
+    val recordingNoiseFilter: RecordingNoiseFilterConfig = RecordingNoiseFilterConfig(),
     // Configurazione Bot Telegram Allerte Personale
     val telegramBotToken: String = "",
     val telegramChatId: String = "",
@@ -83,6 +97,26 @@ data class SettingsData(
     // Equalizzatore e filtri DSP (spenti finché l'utente non li configura)
     val audioDsp: AudioDspConfig = AudioDspConfig()
 ) {
+    /** Modalità del gate di ascolto; nelle versioni precedenti, con squelch e VAD attivi, decideva solo lo squelch RF. */
+    val listenGateMode: GateMode
+        get() = GateMode.fromName(listenGateModeName) ?: when {
+            squelchListenEnabled -> GateMode.RF
+            vadListenEnabled -> GateMode.VOICE
+            else -> GateMode.OFF
+        }
+
+    /** Modalità del gate di registrazione; il vecchio VAD da solo attendeva la voce con il gate RF aperto. */
+    val recordGateMode: GateMode
+        get() = GateMode.fromName(recordGateModeName) ?: when {
+            squelchRecordEnabled -> GateMode.RF
+            vadRecordEnabled -> GateMode.RF_AND_VOICE
+            else -> GateMode.OFF
+        }
+
+    /** Secondi senza voce dopo cui chiudere un segmento "RF e voce"; 0 se la chiusura anticipata è spenta. */
+    val effectiveVoiceSilenceCloseSeconds: Double
+        get() = if (voiceSilenceCloseEnabled) voiceSilenceCloseSeconds else 0.0
+
     val uiTheme: UiThemeMode get() = UiThemeMode.fromName(uiThemeName)
     val rangeScanMode: ModulationMode get() = ModulationMode.entries.find { it.code == rangeScanModeCode } ?: ModulationMode.AM
     val rangeScanParams: RangeScanParams
@@ -390,12 +424,24 @@ class AppSettings(
         updateAndSave { it.copy(squelchThresholdDbm = dbm) }
     }
 
-    fun setSquelchListenEnabled(enabled: Boolean) {
-        updateAndSave { it.copy(squelchListenEnabled = enabled) }
+    fun setListenGateMode(mode: GateMode) {
+        updateAndSave { it.copy(listenGateModeName = mode.name) }
     }
 
-    fun setSquelchRecordEnabled(enabled: Boolean) {
-        updateAndSave { it.copy(squelchRecordEnabled = enabled) }
+    fun setRecordGateMode(mode: GateMode) {
+        updateAndSave { it.copy(recordGateModeName = mode.name) }
+    }
+
+    fun setVoiceSilenceClose(enabled: Boolean, seconds: Double) {
+        val clamped = seconds.coerceIn(
+            SquelchController.MIN_VOICE_SILENCE_CLOSE_SECONDS,
+            SquelchController.MAX_VOICE_SILENCE_CLOSE_SECONDS
+        )
+        updateAndSave { it.copy(voiceSilenceCloseEnabled = enabled, voiceSilenceCloseSeconds = clamped) }
+    }
+
+    fun setRecordingNoiseFilter(config: RecordingNoiseFilterConfig) {
+        updateAndSave { it.copy(recordingNoiseFilter = config.normalized()) }
     }
 
     fun setRecordConnectedUsers(enabled: Boolean) {
@@ -412,14 +458,6 @@ class AppSettings(
 
     fun setHangTimeSeconds(seconds: Double) {
         updateAndSave { it.copy(hangTimeSeconds = seconds.coerceIn(0.5, 10.0)) }
-    }
-
-    fun setVadListenEnabled(enabled: Boolean) {
-        updateAndSave { it.copy(vadListenEnabled = enabled) }
-    }
-
-    fun setVadRecordEnabled(enabled: Boolean) {
-        updateAndSave { it.copy(vadRecordEnabled = enabled) }
     }
 
     fun setVadSensitivity(sensitivity: Float) {

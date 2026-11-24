@@ -23,7 +23,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.grabber.app.KiwiAppController
 import com.grabber.audio.squelch.SMeterUtils
+import com.grabber.ui.designsystem.AppTooltip
 import com.grabber.ui.designsystem.GrabberColors
+import com.grabber.ui.feature.audio.GateTarget
+import com.grabber.ui.feature.audio.explanation
+import com.grabber.ui.feature.audio.label
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.StateFlow
 
@@ -38,8 +42,11 @@ internal fun ConsoleAudioPanel(
     val volume by controller.volume.collectAsState()
     val isMuted by controller.isMuted.collectAsState()
     val thresholdDbm by controller.squelchThresholdDbm.collectAsState()
-    val squelchEnabled by controller.squelchListenEnabled.collectAsState()
-    val vadEnabled by controller.vadListenEnabled.collectAsState()
+    // SQL e VAD sono le due componenti della modalità del gate di ascolto (con entrambi: "RF e voce").
+    val listenGateMode by controller.listenGateMode.collectAsState()
+    val squelchEnabled = listenGateMode.usesRf
+    val vadEnabled = listenGateMode.usesVoice
+    val gateTooltip = "Ascolto: ${listenGateMode.label(GateTarget.LISTEN)}. ${listenGateMode.explanation(GateTarget.LISTEN)}"
     val isVoiceDetected by controller.isVoiceDetected.collectAsState()
     val isQrnDetected by controller.isQrnDetected.collectAsState()
     val settings by controller.settings.collectAsState()
@@ -73,7 +80,8 @@ internal fun ConsoleAudioPanel(
                 label = "SQL",
                 icon = Icons.Default.GraphicEq,
                 labelColor = if (squelchEnabled) GrabberColors.Primary else GrabberColors.TextDisabled,
-                onLabelClick = { controller.setSquelchListenEnabled(!squelchEnabled) },
+                onLabelClick = { controller.setListenGateMode(listenGateMode.withRf(!squelchEnabled)) },
+                labelTooltip = "$gateTooltip Clic: squelch RF ${if (squelchEnabled) "off" else "on"}.",
                 value = SMeterUtils.dbmToNormalized(thresholdDbm),
                 onValueChange = { controller.setSquelchThreshold(SMeterUtils.normalizedToDbm(it)) },
                 accentColor = GrabberColors.Warning,
@@ -83,7 +91,8 @@ internal fun ConsoleAudioPanel(
                 label = "VAD",
                 icon = if (vadEnabled) Icons.Default.GraphicEq else Icons.Default.MicOff,
                 labelColor = if (vadEnabled) GrabberColors.Success else GrabberColors.TextDisabled,
-                onLabelClick = { controller.setVadListenEnabled(!vadEnabled) },
+                onLabelClick = { controller.setListenGateMode(listenGateMode.withVoice(!vadEnabled)) },
+                labelTooltip = "$gateTooltip Clic: voice gate ${if (vadEnabled) "off" else "on"}.",
                 value = settings.vadSensitivity,
                 onValueChange = controller::setVadSensitivity,
                 valueRange = 0.1f..0.9f,
@@ -118,25 +127,29 @@ private fun ConsoleSliderRow(
     iconTint: Color = labelColor,
     iconDescription: String? = null,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
-    valueColor: Color = GrabberColors.TextSecondary
+    valueColor: Color = GrabberColors.TextSecondary,
+    labelTooltip: String? = null
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .width(56.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .clickable(onClick = onLabelClick)
-                .padding(horizontal = 2.dp, vertical = 3.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Icon(icon, contentDescription = iconDescription, tint = iconTint, modifier = Modifier.size(16.dp))
-            Text(label, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = labelColor)
+        val labelContent: @Composable () -> Unit = {
+            Row(
+                modifier = Modifier
+                    .width(56.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .clickable(onClick = onLabelClick)
+                    .padding(horizontal = 2.dp, vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(icon, contentDescription = iconDescription, tint = iconTint, modifier = Modifier.size(16.dp))
+                Text(label, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = labelColor)
+            }
         }
+        if (labelTooltip != null) AppTooltip(text = labelTooltip, content = labelContent) else labelContent()
         Slider(
             value = value,
             onValueChange = onValueChange,

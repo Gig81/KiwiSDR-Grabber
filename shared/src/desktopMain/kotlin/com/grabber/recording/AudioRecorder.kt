@@ -60,8 +60,12 @@ class AudioRecorder(
     private var currentFile: File? = null
     @Volatile private var isSegmentFileOpen = false
 
-    // Callback quando un segmento (o file QSO) viene salvato e finalizzato con successo
-    var onSegmentCompleted: ((filePath: String, durationSec: Long) -> Unit)? = null
+    /**
+     * Callback quando un segmento (o file QSO) viene salvato e finalizzato con successo.
+     * `activeMillis` è la durata attiva indicata dallo squelch alla chiusura del QSO (senza la coda
+     * di hang time o di silenzio); `null` per la registrazione continua o i tagli a intervallo.
+     */
+    var onSegmentCompleted: ((filePath: String, durationSec: Long, activeMillis: Long?) -> Unit)? = null
 
     // For WAV format
     private var currentWav: WavWriter? = null
@@ -170,15 +174,15 @@ class AudioRecorder(
     }
 
     /**
-     * Chiamato quando lo Squelch si chiude (Hang Time scaduto).
+     * Chiamato quando il segmento dello squelch si chiude (hang time scaduto o voce assente).
      * Finalizza il file del QSO e ritorna in attesa della prossima trasmissione.
      */
-    fun onSquelchGateClosed() {
+    fun onSquelchGateClosed(activeMillis: Long) {
         if (!isRecordingInternal.get() || !_isSquelchArmed.value) return
 
         synchronized(this) {
             if (isSegmentFileOpen) {
-                closeCurrentSegment()
+                closeCurrentSegment(activeMillis)
                 isSegmentFileOpen = false
                 _currentFilePath.value = null
             }
@@ -249,7 +253,7 @@ class AudioRecorder(
         _recordedSegments.value = _recordedSegments.value + 1
     }
 
-    private fun closeCurrentSegment() {
+    private fun closeCurrentSegment(activeMillis: Long? = null) {
         val completedFile = currentFile
         val durationSec = maxOf(1L, (System.currentTimeMillis() - segmentStartTimeMs) / 1000)
 
@@ -289,7 +293,7 @@ class AudioRecorder(
         }
 
         if (completedFile != null && completedFile.exists() && completedFile.length() > 44) {
-            onSegmentCompleted?.invoke(completedFile.absolutePath, durationSec)
+            onSegmentCompleted?.invoke(completedFile.absolutePath, durationSec, activeMillis)
         }
     }
 

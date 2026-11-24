@@ -74,7 +74,7 @@ The design system lives in `ui/designsystem/` and every screen uses it instead o
 - **Containers (`AppComponents.kt`):** `AppPanel` (title, icon, `titleAccessory`, `actions`, `overlay` for locked features), `AppDivider`, `AppSubtleDivider`, `AppSection`, `AppCard`.
 - **Actions:** `PrimaryButton` (filled accent), `SecondaryButton` (tonal with border), `OutlinedButton`, `DangerButton`, `AppToggleButton` (two-state), `AppMenuButton` (drop-down choice), `CompactButton`, `IconButton`. Buttons take `icon`, `iconTint` and `size`.
 - **Status:** `StatusBadge` (optional icon, monospace, compact size), `StatusIndicator`, `LedIndicator`.
-- **Inputs:** `AppCheckbox`, `AppSwitch`, `AppSlider` (compact two-line variant with value and range labels), `AppSegmentedControl` (chips, optional full width), `SelectableListItem`, `CompactTextField`, `AppSearchField`, `AppTextField`.
+- **Inputs:** `AppCheckbox`, `AppSwitch`, `AppSlider` (compact two-line variant with value and range labels), `AppSegmentedControl` (chips, optional full width, single options can be disabled with `isOptionEnabled`), `SelectableListItem`, `CompactTextField`, `AppSearchField`, `AppTextField`.
 - **Feedback (`AppFeedback.kt`, `AppDialogs.kt`):** `AppEmptyState`, `AppNotice`, `AppVerticalScrollbar`, `AppScrollableColumn`, `AppConfirmDialog`, `FeatureLockedOverlay`.
 
 Colors always come from `GrabberColors`; feature packages do not define their own color constants. Radio-specific visuals (VFO LCD input, step and band preset grids, S-meter, spectrum, waterfall, frequency ruler) remain feature components drawn on top of these tokens.

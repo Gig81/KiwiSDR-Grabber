@@ -23,6 +23,7 @@ import com.grabber.audio.AudioPipeline
 import com.grabber.audio.dsp.AudioDspConfig
 import com.grabber.audio.dsp.DspPreset
 import com.grabber.audio.dsp.DspTarget
+import com.grabber.audio.squelch.GateMode
 import com.grabber.audio.squelch.SquelchController
 import com.grabber.kiwi.KiwiClient
 import com.grabber.kiwi.KiwiUser
@@ -200,7 +201,9 @@ class MobileAppController(
     val volume: StateFlow<Float> = audioOutput.volume
     val isMuted: StateFlow<Boolean> = audioOutput.isMuted
     val squelchGateOpen: StateFlow<Boolean> = squelch.isGateOpen
-    val squelchEnabled: StateFlow<Boolean> = squelch.listenSquelchEnabled
+    val squelchEnabled: StateFlow<Boolean> = squelch.listenMode
+        .map { it.usesRf }
+        .stateIn(scope, SharingStarted.Eagerly, squelch.listenMode.value.usesRf)
     val squelchThresholdDbm: StateFlow<Double> = squelch.thresholdDbm
 
     val isRecording: StateFlow<Boolean> = recorder.isRecording
@@ -252,7 +255,7 @@ class MobileAppController(
         client.clientName = data.callsign
         audioOutput.setVolume(data.volume)
         squelch.setThresholdDbm(data.squelchThresholdDbm)
-        squelch.setListenSquelchEnabled(data.squelchEnabled)
+        squelch.setListenMode(GateMode.of(rf = data.squelchEnabled, voice = false))
         val frequency = data.lastFrequencyKhz.coerceIn(0.0, MAX_FREQUENCY_KHZ)
         client.tune(frequency, data.lastMode)
         waterfall.applyPersistedSettings(
@@ -403,7 +406,7 @@ class MobileAppController(
     fun toggleMute() = audioOutput.setMuted(!audioOutput.isMuted.value)
 
     fun setSquelchEnabled(enabled: Boolean) {
-        squelch.setListenSquelchEnabled(enabled)
+        squelch.setListenMode(GateMode.of(rf = enabled, voice = false))
         settingsStore.update { it.copy(squelchEnabled = enabled) }
     }
 

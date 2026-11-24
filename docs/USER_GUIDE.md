@@ -141,7 +141,22 @@ Recorder tab showing start/stop, format and intervals, folder button, and archiv
 5. Per trovare i file, seleziona **Apri Cartella Registrazioni**. La cartella predefinita è `C:\Users\<nome-utente>\KiwiGrabberRecordings`.
 6. L'archivio mostra le registrazioni recenti e permette di riprodurle, vedere le trascrizioni, aprire i file e cercare nell'archivio.
 
-Se è attivo lo squelch di registrazione o il gate VAD, l'avvio può armare il registratore senza iniziare subito a scrivere l'audio. Lo squelch attende un segnale sopra la soglia; il VAD attende il rilevamento della voce. Il pannello indica se la registrazione è in attesa o sta scrivendo.
+Il **GATE DI REGISTRAZIONE** decide quando scrivere l'audio (si cambia solo a registrazione ferma; il pulsante di avvio indica la modalità, per esempio **AVVIA REC (SQL)**):
+
+- **Continua:** nessun gate; vale l'intervallo di segmentazione scelto.
+- **Solo RF:** un file per ogni QSO. Parte quando il segnale supera la soglia SQL e si chiude allo scadere dell'hang time.
+- **Solo voce:** parte alla prima voce rilevata dal VAD, anche con segnale sotto la soglia, e si chiude dopo l'hang time senza voce.
+- **RF e voce:** parte quando c'è voce con il segnale sopra la soglia; si chiude con lo squelch oppure, con **Chiudi senza voce** attivo, dopo il tempo indicato senza voce (5 s predefiniti) anche se una portante o il rumore tengono aperto lo squelch.
+
+Con un gate attivo l'avvio arma il registratore senza scrivere subito: il pannello indica se è in attesa o sta scrivendo. Le modalità con voce richiedono l'attivazione.
+
+**Filtro anti-rumore.** Una scarica o un disturbo breve può aprire lo squelch e produrre file di pochi secondi, che Vosk trascrive spesso come una parola corta (per esempio "uso"). Nel pannello di registrazione, **FILTRO ANTI-RUMORE (SEGMENTI QSO)** scarta questi segmenti: il file viene **cancellato dal disco** e non entra nell'archivio, e non parte la notifica Telegram della trascrizione. I controlli:
+
+- **Durata minima** (attivo, 1,5 s): scarta i QSO la cui parte attiva, senza contare l'hang time, è più breve.
+- **Parole rumore** (attivo, "uso"): dopo la trascrizione scarta i QSO con testo vuoto o fatto solo delle parole indicate, separate da virgole. Scrivi l'elenco e premi **Applica**.
+- **Confidenza minima** (spento, 50%): dopo la trascrizione scarta i QSO in cui la confidenza media delle parole riconosciute da Vosk è sotto la soglia. Sui segnali deboli anche il parlato reale può avere confidenza bassa: attivalo con cautela.
+
+Il filtro vale solo per i segmenti di un gate (non per la registrazione continua o a intervalli) e non tocca le trascrizioni avviate a mano con **Trascrivi**. I controlli sul testo funzionano solo con la trascrizione Vosk configurata.
 
 ### 6. Elaborazione audio
 
@@ -150,17 +165,26 @@ VAD e gate SQL/VAD della console. / Audio tab showing squelch/DSP controls, VAD
 sensitivity and status, and the console gates. -->
 ![Squelch e rilevamento dell'attività vocale](images/guide-audio-processing.png)
 
-*Lo squelch RF e il VAD sono gate distinti per l'ascolto e la registrazione.*
+*Lo squelch RF e il VAD si combinano in un gate di ascolto e in un gate di registrazione indipendenti.*
 
-**Squelch RF** silenzia o mette in pausa l'audio quando il segnale ricevuto scende sotto una soglia di intensità configurabile. Seleziona **SQL** nella console per attivare o disattivare lo squelch durante l'ascolto; regola il cursore per cambiare la soglia. Nella scheda Registratore, **Squelch in Registrazione** applica un gate indipendente alle registrazioni durante i periodi di segnale debole.
+**Squelch RF** reagisce all'intensità del segnale: il gate RF si apre sopra la soglia regolata con il cursore **SQL** della console. **Voice Activity Detection (VAD)** analizza l'audio per distinguere la voce dal silenzio, dalle portanti e dal rumore impulsivo; nel pannello **VOICE ACTIVITY DETECTION (VAD)** della scheda Audio regoli sensibilità e hangover vocale. Il VAD richiede l'attivazione.
 
-**Voice Activity Detection (VAD)** analizza l'audio per distinguere la voce dal silenzio o dal rumore impulsivo. Seleziona **VAD** nella console per filtrare l'ascolto in base alla voce rilevata. Nella scheda **Audio**, regola la sensibilità e l'hangover vocale; nella scheda Registratore, **Voice-Gate in Registrazione** limita la registrazione ai segmenti con voce rilevata. Queste funzioni VAD richiedono l'attivazione.
+Ascolto e registrazione hanno ciascuno una **modalità** con quattro scelte:
+
+| Modalità | Ascolto | Registrazione |
+| --- | --- | --- |
+| **Libero / Continua** | audio sempre udibile | nessun gate |
+| **Solo RF** | si sente con segnale sopra la soglia | un file per QSO, guidato dallo squelch |
+| **Solo voce** | si sente quando c'è voce, qualunque sia il segnale | un file per QSO, guidato dalla voce |
+| **RF e voce** | servono segnale sopra soglia **e** voce | parte con voce e segnale; si chiude con lo squelch o dopo il tempo senza voce |
+
+La modalità di ascolto si sceglie in **GATE DI ASCOLTO** (pannello Squelch della scheda Audio) oppure dalla console: **SQL** e **VAD** sono le due componenti della modalità, e con entrambe accese vale **RF e voce**. Passa il mouse su **SQL** o **VAD** per vedere la modalità attiva. La modalità di registrazione si sceglie nel **Registratore** (vedi sopra).
 
 Nel pannello **SQUELCH: ANTI-POP E HANG TIME** della scheda Audio trovi inoltre:
 
 - **Soft Mute (Anti-Pop):** rende graduale l'apertura e la chiusura del gate per ridurre i clic.
 - **Pre-Buffer:** conserva in un buffer circolare un breve tratto audio per ridurre il rischio di tagliare l'inizio delle trasmissioni nelle registrazioni filtrate.
-- **Hang Time:** mantiene aperto per qualche istante il gate RF dopo un calo del segnale, aiutando a unire le pause all'interno di una trasmissione.
+- **Hang Time:** mantiene aperto per qualche istante il gate RF dopo un calo del segnale, aiutando a unire le pause all'interno di una trasmissione. In registrazione **Solo voce** è l'attesa dopo l'ultima voce rilevata.
 
 Quando abilitati, squelch e VAD cambiano l'audio inviato alla riproduzione o alla registrazione. Non migliorano la ricezione del segnale radio.
 
@@ -202,7 +226,7 @@ notification options, keywords, interval, and test button. Hide token and chat I
 
 *Le notifiche Telegram utilizzano un bot e una destinazione configurati dall'utente.*
 
-In questa applicazione, **QSO** indica un segmento di attività rilevato dalla logica dello squelch RF e dell'hang time, eventualmente combinata con il VAD. Non è un collegamento radio decodificato: l'app non identifica le stazioni e non verifica il contenuto della conversazione.
+In questa applicazione, **QSO** indica un segmento di attività rilevato dal gate di registrazione (squelch RF e hang time, VAD o entrambi, secondo la modalità scelta; con la registrazione continua, lo squelch RF). Non è un collegamento radio decodificato: l'app non identifica le stazioni e non verifica il contenuto della conversazione.
 
 Per configurare Telegram:
 
@@ -441,7 +465,22 @@ Recorder tab showing start/stop, format and intervals, folder button, and archiv
 5. To locate files, select **Open Recordings Folder** (`Apri Cartella Registrazioni`). By default, recordings are saved in `C:\Users\<your-name>\KiwiGrabberRecordings`.
 6. The archive lists recent recordings and provides playback, transcript viewing, file opening, and search controls.
 
-If recording squelch or the VAD recording gate is enabled, starting a recording may arm the recorder without immediately writing audio. Squelch waits for a signal above its threshold; VAD waits for detected speech. The recorder panel shows whether it is armed or writing.
+The **Recording gate** (`GATE DI REGISTRAZIONE`) decides when audio is written (it can only be changed while recording is stopped; the start button shows the mode, for example **AVVIA REC (SQL)**):
+
+- **Continuous** (`Continua`): no gate; the chosen segment interval applies.
+- **RF only** (`Solo RF`): one file per QSO. It starts when the signal exceeds the SQL threshold and closes when the hang time expires.
+- **Voice only** (`Solo voce`): starts at the first speech detected by the VAD, even with the signal below the threshold, and closes after the hang time without speech.
+- **RF and voice** (`RF e voce`): starts when there is speech with the signal above the threshold; closes with the squelch or, with **Close without voice** (`Chiudi senza voce`) enabled, after the set time without speech (5 s by default), even if a carrier or noise keeps the squelch open.
+
+With a gate active, starting a recording arms the recorder without writing immediately; the panel shows whether it is waiting or writing. The voice modes require activation.
+
+**Noise filter.** A short static crash or burst of interference can open the squelch and produce files of a few seconds, which Vosk often transcribes as a short word (for example "uso"). In the recorder panel, **Noise filter (QSO segments)** (`FILTRO ANTI-RUMORE (SEGMENTI QSO)`) discards these segments: the file is **deleted from disk**, it is not added to the archive, and no Telegram transcription alert is sent. The controls:
+
+- **Minimum length** (`Durata minima`, on, 1.5 s): discards QSOs whose active part, excluding the hang time, is shorter.
+- **Noise words** (`Parole rumore`, on, "uso"): after transcription, discards QSOs whose text is empty or made only of the listed words, separated by commas. Type the list and select **Apply** (`Applica`).
+- **Minimum confidence** (`Confidenza minima`, off, 50%): after transcription, discards QSOs whose average Vosk word confidence is below the threshold. On weak signals real speech can also have low confidence: enable it with care.
+
+The filter only applies to segments produced by a gate (not to continuous or interval recording) and never affects transcriptions started manually with **Transcribe** (`Trascrivi`). The text checks only work when Vosk transcription is configured.
 
 ### 6. Audio processing
 
@@ -450,17 +489,26 @@ VAD e gate SQL/VAD della console. / Audio tab showing squelch/DSP controls, VAD
 sensitivity and status, and the console gates. -->
 ![Squelch and voice activity controls](images/guide-audio-processing.png)
 
-*RF squelch and VAD are separate gates for listening and recording.*
+*RF squelch and VAD combine into independent listening and recording gates.*
 
-**RF squelch** mutes or pauses audio when the received signal falls below a chosen signal-strength threshold. Select **SQL** in the console to enable or disable squelch for live listening; adjust its slider to set the threshold. In the Recorder tab, **Squelch in Recording** (`Squelch in Registrazione`) independently gates recording during weak-signal periods.
+**RF squelch** reacts to signal strength: the RF gate opens above the threshold set with the **SQL** slider in the console. **Voice Activity Detection (VAD)** analyzes audio to tell speech from silence, carriers, and impulsive noise; adjust sensitivity and vocal hangover in the **Voice Activity Detection (VAD)** panel of the Audio tab. VAD requires activation.
 
-**Voice Activity Detection (VAD)** analyzes audio to distinguish speech from silence or impulsive noise. Select **VAD** in the console to gate live listening by detected voice. In the Audio tab (`Audio`), adjust sensitivity and vocal hangover; in the Recorder tab, **Voice-Gate in Recording** (`Voice-Gate in Registrazione`) gates recordings based on detected speech. These VAD features require activation.
+Listening and recording each have a **mode** with four choices:
+
+| Mode | Listening | Recording |
+| --- | --- | --- |
+| **Open / Continuous** (`Libero` / `Continua`) | audio always audible | no gate |
+| **RF only** (`Solo RF`) | audible with the signal above the threshold | one file per QSO, driven by the squelch |
+| **Voice only** (`Solo voce`) | audible when there is speech, whatever the signal | one file per QSO, driven by speech |
+| **RF and voice** (`RF e voce`) | needs signal above the threshold **and** speech | starts with speech and signal; closes with the squelch or after the time without speech |
+
+Choose the listening mode in **Listening gate** (`GATE DI ASCOLTO`, Squelch panel of the Audio tab) or from the console: **SQL** and **VAD** are the two parts of the mode, and with both on the mode is **RF and voice**. Hover over **SQL** or **VAD** to see the active mode. Choose the recording mode in the **Recorder** (see above).
 
 The **Squelch: anti-pop and hang time** panel (`SQUELCH: ANTI-POP E HANG TIME`) in the Audio tab also provides:
 
 - **Soft Mute (Anti-Pop):** smooths the opening and closing of a gate to reduce clicks.
 - **Pre-Buffer:** keeps a short rolling audio buffer so the beginning of a transmission is less likely to be cut off in gated recordings.
-- **Hang Time:** keeps the RF gate open briefly between signal drops, helping combine pauses within a transmission.
+- **Hang Time:** keeps the RF gate open briefly between signal drops, helping combine pauses within a transmission. In **Voice only** recording it is the wait after the last detected speech.
 
 Squelch and VAD change which audio is passed to live playback or recording when their respective gates are enabled. They do not improve the receiver's radio-frequency reception.
 
@@ -502,7 +550,7 @@ notification options, keywords, interval, and test button. Hide token and chat I
 
 *Telegram alerts use a bot and destination that you configure.*
 
-In this application, **QSO** is an activity segment detected by the RF squelch and hang-time logic, optionally combined with VAD. It is not a decoded contact, and the application does not verify the identity of a station or what was said.
+In this application, **QSO** is an activity segment detected by the recording gate (RF squelch and hang time, VAD, or both, depending on the chosen mode; with continuous recording, the RF squelch). It is not a decoded contact, and the application does not verify the identity of a station or what was said.
 
 To configure Telegram:
 

@@ -116,6 +116,8 @@ Possibili strade, dalla più semplice:
 
 Proposta: partire da (a) per la massima copertura dei modi con poco lavoro, poi valutare (b) per FT8/WSPR/CW/FAX/SSTV mostrati direttamente nell'app. Da chiarire con gli utenti quali modi interessano davvero.
 
+**In pianificazione:** scelta la soluzione (b), con decodifica locale di FSK e NAVTEX, riconoscimento automatico del modo e autocentraggio del segnale. Piano: [PIANO_DECODIFICA_MODI_DIGITALI.md](./PIANO_DECODIFICA_MODI_DIGITALI.md).
+
 ## English
 
 This page tracks feature requests received from users. These are proposals for future development; they do not mean the features are already available or scheduled for a specific release, unless stated.

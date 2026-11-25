@@ -5,6 +5,7 @@ import com.grabber.model.AudioFrame
 import com.grabber.model.ConnectionState
 import com.grabber.model.KiwiDxLabel
 import com.grabber.model.ModulationMode
+import com.grabber.model.Passband
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,7 +57,11 @@ class KiwiClient(
         host = cleanHost
         port = newPort
         // I canali DX appartengono al ricevitore: non mostrarli per un server diverso.
-        if (changed) _serverDxLabels.value = emptyList()
+        if (changed) {
+            _serverDxLabels.value = emptyList()
+            _receiverConfig.value = null
+            _audioSampleRate.value = null
+        }
         if (changed && _connectionState.value !is ConnectionState.Disconnected) {
             disconnect()
         }
@@ -85,6 +90,18 @@ class KiwiClient(
 
     private val _currentMode = MutableStateFlow(ModulationMode.AM)
     val currentMode: StateFlow<ModulationMode> = _currentMode.asStateFlow()
+
+    private val _currentPassband = MutableStateFlow(Passband.defaultFor(ModulationMode.AM))
+    /** Banda passante corrente (predefinita del modo, salvo sintonie dei decoder digitali). */
+    val currentPassband: StateFlow<Passband> = _currentPassband.asStateFlow()
+
+    private val _audioSampleRate = MutableStateFlow<Int?>(null)
+    /** Frequenza di campionamento negoziata con `audio_rate` (12000 o 20250); null prima della risposta. */
+    val audioSampleRate: StateFlow<Int?> = _audioSampleRate.asStateFlow()
+
+    private val _receiverConfig = MutableStateFlow<ReceiverConfig?>(null)
+    /** Parti di `load_cfg` usate dall'app (abilitazioni delle estensioni, limite connessioni app). */
+    val receiverConfig: StateFlow<ReceiverConfig?> = _receiverConfig.asStateFlow()
 
     private val _rssi = MutableStateFlow(-127.0)
     val rssi: StateFlow<Double> = _rssi.asStateFlow()
@@ -339,7 +356,16 @@ class KiwiClient(
             return
         }
 
-        // Configurazioni (load_cfg, load_dxcfg, ...) inviate dal server: grandi JSON non usati dal client.
+        if (msg.startsWith("load_cfg=")) {
+            try {
+                _receiverConfig.value = ReceiverConfig.parse(msg.substringAfter("load_cfg="))
+            } catch (e: Exception) {
+                AppLogger.warn(TAG, "Configurazione del ricevitore (load_cfg) non leggibile", e)
+            }
+            return
+        }
+
+        // Altre configurazioni (load_dxcfg, ...): grandi JSON non usati dal client.
         if (msg.startsWith("load_")) return
 
         val pairs = msg.split(" ")
@@ -352,11 +378,13 @@ class KiwiClient(
                 "audio_rate" -> {
                     value?.toIntOrNull()?.let { rate ->
                         negotiatedAudioRate = rate
+                        _audioSampleRate.value = rate
                         AppLogger.info(TAG, "Audio rate negoziato: $rate Hz. Invio handshake...")
                         sendCommand(KiwiProtocol.arOk(rate, rate))
                         sendCommand(KiwiProtocol.identUser(clientName))
                         sendCommand(KiwiProtocol.compression(false))
-                        val tuneCmd = KiwiProtocol.tune(_currentMode.value, _currentFrequencyKhz.value)
+                        val passband = _currentPassband.value
+                        val tuneCmd = KiwiProtocol.tune(_currentMode.value, _currentFrequencyKhz.value, passband.lowCut, passband.highCut)
                         sendCommand(tuneCmd)
                         AppLogger.info(TAG, "Handshake tune: $tuneCmd")
                         sendCommand(KiwiProtocol.agc(agcEnabled, agcGain))
@@ -478,10 +506,17 @@ class KiwiClient(
         }
     }
 
-    fun tune(freqKhz: Double, mode: ModulationMode = _currentMode.value) {
+    /**
+     * Sintonizza [freqKhz] (frequenza mostrata) in [mode]. Senza [passband] resta la banda corrente
+     * se il modo non cambia, altrimenti si usa quella predefinita del nuovo modo.
+     */
+    fun tune(freqKhz: Double, mode: ModulationMode = _currentMode.value, passband: Passband? = null) {
+        val targetPassband = passband
+            ?: if (mode == _currentMode.value) _currentPassband.value else Passband.defaultFor(mode)
         _currentFrequencyKhz.value = freqKhz
         _currentMode.value = mode
-        val cmd = KiwiProtocol.tune(mode, freqKhz)
+        _currentPassband.value = targetPassband
+        val cmd = KiwiProtocol.tune(mode, freqKhz, targetPassband.lowCut, targetPassband.highCut)
         AppLogger.info(TAG, "TUNE -> $cmd")
         sendCommand(cmd)
         clientScope?.launch {
@@ -492,7 +527,9 @@ class KiwiClient(
 
     fun setMode(mode: ModulationMode) {
         _currentMode.value = mode
-        val cmd = KiwiProtocol.tune(mode, _currentFrequencyKhz.value)
+        val passband = Passband.defaultFor(mode)
+        _currentPassband.value = passband
+        val cmd = KiwiProtocol.tune(mode, _currentFrequencyKhz.value, passband.lowCut, passband.highCut)
         AppLogger.info(TAG, "SET MODE -> $cmd")
         sendCommand(cmd)
         clientScope?.launch {

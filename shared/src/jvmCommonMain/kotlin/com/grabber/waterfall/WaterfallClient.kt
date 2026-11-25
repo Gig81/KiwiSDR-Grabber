@@ -47,6 +47,7 @@ class WaterfallClient(
         val changed = (host != cleanHost || port != newPort)
         host = cleanHost
         port = newPort
+        if (changed) _installedExtensions.value = null
         if (changed && _connectionState.value !is ConnectionState.Disconnected) {
             disconnect()
         }
@@ -84,6 +85,10 @@ class WaterfallClient(
 
     private val _waterfallFlow = MutableSharedFlow<WaterfallFrame>(extraBufferCapacity = 16)
     val waterfallFlow: SharedFlow<WaterfallFrame> = _waterfallFlow.asSharedFlow()
+
+    private val _installedExtensions = MutableStateFlow<Set<String>?>(null)
+    /** Estensioni installate sul ricevitore (`MSG extint_list_json=` su W/F); null finché non arriva. */
+    val installedExtensions: StateFlow<Set<String>?> = _installedExtensions.asStateFlow()
 
     private val _latestFrame = MutableStateFlow<WaterfallFrame?>(null)
     val latestFrame: StateFlow<WaterfallFrame?> = _latestFrame.asStateFlow()
@@ -277,6 +282,10 @@ class WaterfallClient(
 
     private fun handleServerText(text: String) {
         AppLogger.trace(TAG, "[WF TEXT] $text")
+        if (text.startsWith("extint_list_json=")) {
+            _installedExtensions.value = parseExtensionList(text.substringAfter("extint_list_json="))
+            return
+        }
         val authResult = Regex("(?:^|\\s)badp=(\\d+)").find(text)?.groupValues?.get(1) ?: return
         if (authResult == "0") {
             if (_connectionState.value !is ConnectionState.Connected) {
@@ -361,3 +370,15 @@ class WaterfallClient(
         _waterfallFlow.tryEmit(frame)
     }
 }
+
+/** Elenco JSON (percent-encoded) dei nomi delle estensioni: `["ALE_2G","FT8",...]`. */
+internal fun parseExtensionList(encoded: String): Set<String>? =
+    try {
+        val decoded = com.grabber.kiwi.ext.ExtMessageParser.decodeComponent(encoded.trim())
+        (kotlinx.serialization.json.Json.parseToJsonElement(decoded) as? kotlinx.serialization.json.JsonArray)
+            ?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
+            ?.toSet()
+    } catch (e: Exception) {
+        AppLogger.warn("WaterfallClient", "Elenco estensioni non leggibile", e)
+        null
+    }

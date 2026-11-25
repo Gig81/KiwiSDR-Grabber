@@ -77,3 +77,18 @@ fun configureAndroidLibraryTarget(kmp: org.jetbrains.kotlin.gradle.dsl.KotlinMul
         withHostTestBuilder { }
     }
 }
+
+/**
+ * Programma di prova del protocollo `/EXT` (fase 0 del piano dei modi digitali): non è un test
+ * automatico e non viene distribuito. Esempio: `.\gradlew.bat :shared:extProbe -PprobeArgs="freq=14074 mode=usb ext=FT8 secs=60"`.
+ */
+tasks.register<JavaExec>("extProbe") {
+    group = "verification"
+    description = "Apre SND/W/F/EXT verso un KiwiSDR e salva le tracce di protocollo in build/probe."
+    val testCompilation = kotlin.targets.getByName("desktop").compilations.getByName("test")
+    dependsOn(testCompilation.compileAllTaskName)
+    classpath = files(testCompilation.output.allOutputs, testCompilation.runtimeDependencyFiles)
+    mainClass.set((project.findProperty("probeMain") as String?) ?: "com.grabber.probe.ExtProbeKt")
+    workingDir = projectDir
+    args = (project.findProperty("probeArgs") as String?)?.split(" ")?.filter { it.isNotBlank() } ?: emptyList()
+}

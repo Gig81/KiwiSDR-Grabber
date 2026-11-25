@@ -7,7 +7,7 @@ Piano di implementazione della richiesta n. 7 di [RICHIESTE_FUNZIONALITA.md](./R
 - uno studio di fattibilità, con proposta di implementazione, del **riconoscimento automatico del modo** dal segnale audio;
 - uno studio di fattibilità, con proposta di implementazione, dell'**autocentraggio del segnale** (AFC), attivabile con un selettore on/off nella console in alto a destra, sotto i controlli esistenti.
 
-Stato: **piano approvato, implementazione non ancora avviata** (24 novembre 2026). Le decisioni prese con l'utente sono in [§10](#10-decisioni-prese); lo sviluppo procede in autonomia fase dopo fase, con un resoconto a fine fase (sezione "Stato dell'implementazione", da aggiungere qui sotto all'avvio). Commit e rilascio li esegue l'utente: a fine fase il resoconto indica i punti di commit e, alla fine, i comandi di rilascio. Tutto è predisposto per un **rilascio unico 1.4.0**.
+Stato: **implementazione in corso** (avviata il 24 novembre 2026; vedi [Stato dell'implementazione](#stato-dellimplementazione)). Le decisioni prese con l'utente sono in [§10](#10-decisioni-prese); lo sviluppo procede in autonomia fase dopo fase, con un resoconto a fine fase (sezione "Stato dell'implementazione", da aggiungere qui sotto all'avvio). Commit e rilascio li esegue l'utente: a fine fase il resoconto indica i punti di commit e, alla fine, i comandi di rilascio. Tutto è predisposto per un **rilascio unico 1.4.0**.
 
 Indice:
 
@@ -21,6 +21,51 @@ Indice:
 8. [Fasi di sviluppo](#8-fasi-di-sviluppo)
 9. [Rischi](#9-rischi)
 10. [Decisioni prese](#10-decisioni-prese)
+
+---
+
+## Stato dell'implementazione
+
+### Esiti della fase 0 (24/11/2026)
+
+Prove eseguite con il programma `shared/src/desktopTest/kotlin/com/grabber/probe/ExtProbe.kt` (task `:shared:extProbe`, fuori dai test automatici) e con `FskWavCheck.kt` per i WAV. Il ricevitore predefinito (IK7FMO) era **pieno** (`users=2/2`, `badp=1`): come previsto da D11 le prove sono state fatte su un ricevitore pubblico (F4KIY, KiwiSDR v1.902, 8 canali, `ext_api_nchans=4`). Il predefinito espone comunque `ext_api=4` in `/status`.
+
+- **`/EXT` verificato end-to-end** con FT8, WSPR, CW_decoder, CW_skimmer, FAX e SSTV: `MSG version_maj/min`, `MSG ext_client_init=0`, `MSG EXT-STOP-FLUSH-INPUT`, poi `EXT ready` (WSPR: `EXT nbins=411 ready`, FAX: `EXT ready=<canale>`). Il canale non arriva su SND ma su W/F (`MSG kiwi_up=1 rx_chan=N`); `rx_chan=-1` nello switch è accettato. Il server risponde ai keepalive con `MSG keepalive`.
+- **Chiusura del canale a 25 s** se il W/F non invia `maxdb/mindb`: il server controlla al 5° keepalive che SND abbia ricevuto frequenza, modo, banda, AGC e `AR OK` e W/F zoom, avvio, dB e velocità (`CMD_SND_ALL`/`CMD_WF_ALL`), altrimenti chiude tutto. L'app li invia già; era un difetto solo del programma di prova.
+- **CW_decoder:** `SET cw_wpm` reinizializza il decoder e ne azzera l'offset, quindi `SET cw_pboff` va inviato **per ultimo**, altrimenti il server non elabora i campioni (nessun `cw_plot`). Corretto nell'adattatore. Il decoder invia molti `cw_plot`/`cw_train` (~50/s).
+- **Formati reali** (salvati come fixture nei test `ExtMessageParserTests`): FT8 `chars=` con codici ANSI e tag `<a>`, colonne `HH:MM:SS ±SNR ±dT Hz [km] [età] tipo messaggio`; WSPR `WSPR_DECODED` in HTML con km e potenza; skimmer `cw_chars=<car><Hz>,<wpm>` con Hz a passi di 100; FAX `DAT` comando 254 + 1024 byte; elenco estensioni `extint_list_json` percent-encoded su W/F.
+- **Abilitazioni:** `load_cfg` (JSON percent-encoded su SND) contiene `<chiave>.enable` per `ft8`, `WSPR`, `cw`, `cws`, `fax`, `sstv`, `hfdl`, `ale_2g`, `navtex`, `fsk` e `ext_api_nchans`: ora letti da `KiwiClient.receiverConfig`.
+- **`ext_api_nchans` nei ricevitori pubblici** (elenco kiwisdr.com, 847 ricevitori): 132 (16 %) a 0, 131 (15 %) a 1–2 (niente `/EXT` con SND e W/F aperti), circa due terzi ≥ 3. Il valore predefinito `-1` non compare nell'elenco (19 ricevitori senza dato). Nessun ricevitore con il limite basso è stato provato dal vivo: il rifiuto (chiusura senza messaggi) è coperto dai test con trasporto finto.
+- **Latenza** tra `SET mod … freq=` e variazione dell'S-meter nei frame audio: 80–180 ms (6 misure). L'assestamento AFC usa quindi 400 ms prima della misura.
+- **Frequenza di campionamento:** 12000 Hz sul ricevitore di prova (`rx8.wf3`); i ricevitori a 20,25 kHz (`rx3.wf3`, 26 nell'elenco) sono riconosciuti da `audio_rate` e FT8/FT4/SSTV vengono mostrati come non disponibili.
+- **Sintonia CW (D5):** il server, per filtri più stretti di 1 kHz, riporta già nella lista utenti la frequenza di dial (portante + centro banda): con D5 anche la sintonia dalla scheda Utenti diventa coerente.
+- **Registrazioni reali per i decoder locali:** NAVTEX 518 kHz (7 minuti, Cullercoats) decodificato integralmente dal decoder dell'app (7 messaggi `ZCZC GAxx … NNNN`); RTTY DWD 10100,8 kHz (3 minuti, segnale debole) decodificata con errori residui dovuti all'SNR. Polarità verificate: NAVTEX in modo CW ha il mark sul tono alto; DWD richiede l'inversione (come nei menu del client web), la RTTY radioamatoriale no. Il centro reale DWD era 60 Hz sopra il nominale: aggiunta l'acquisizione automatica dei toni nel demodulatore.
+
+### Avanzamento
+
+| Fase | Stato | Note |
+|---|---|---|
+| 0 | Fatta | Esiti sopra |
+| 1 | Fatta | `ExtProtocol`, `ExtensionClient`, `ExtMessageParser`, `ReceiverConfig`, `DigitalDecoderCoordinator`, API del controller, tap di analisi; D5 in `KiwiProtocol.tune` |
+| 2 | Fatta | Scheda "Modi digitali", indicatore `DEC`, banda passante reale nello spettro |
+| 3 | Fatta | Adattatori FT8/FT4, WSPR, CW, CW Skimmer verificati con tracce reali |
+| 4 | Fatta | FAX e SSTV (formato `DAT` verificato per FAX; SSTV senza trasmissioni durante la prova) |
+| 5 | Fatta | RTTY/FSK e NAVTEX con test sintetici e prova su WAV reali |
+| 6 | Fatta | `AudioSpectrumAnalyzer`, `SignalCenterEstimator`, `AutoCenterCoordinator` con `TuneSource`; riga AFC in console, indicatore `AFC` nel VFO |
+| 7 | Fatta | `ModeClassifier` (coppie FSK con shift, CW con inviluppo on/off, FAX, contesto di frequenza, PSK31 solo segnalato), riga "Suggerito" e avvio automatico dei soli decoder locali ≥ 90 % |
+| 8 | Fatta (HFDL e DSC da collaudare dal vivo) | HFDL e ALE 2G come decoder di testo del server; DSC locale; notifiche Telegram dei decoder (`DecoderAlertCoordinator`) |
+| 9 | Fatta | Guida utente IT/EN (§9), architettura, sviluppo (collaudo 1.4.0), README, design system, terze parti, richieste, note 1.4.0 in bozza, cronologia versioni, `appVersion=1.4.0` |
+
+**Scostamenti dal piano, decisi durante lo sviluppo:**
+
+- **HFDL in USB invece che in IQ:** il server fornisce i campioni IQ (dopo filtro e AGC) a tutte le modalità tranne NBFM, quindi con USB 300–2600 Hz l'ingresso di dumphfdl coincide con quello del modo `iq` e l'app non deve gestire l'audio stereo IQ. Nella fase 0 HFDL non ha prodotto messaggi né in USB né in IQ (nessun traffico ricevuto in due prove su 8942 e 11384 kHz): resta da collaudare.
+- **ALE 2G:** solo ascolto sulla frequenza sintonizzata; la scansione del server non si usa (come previsto).
+- **DSC:** implementato dalla norma ITU-R M.493 (simboli a 10 bit, fasatura DX/RX, copia RX dopo cinque posizioni, ECC) e verificato con segnali sintetici; i messaggi di soccorso sono riconosciuti ma non decodificati nel dettaglio. Polarità: il simbolo 1 è il tono basso (come nei menu del client web), da confermare con una ricezione reale.
+- **`ext_api_nchans = 0`** non rende "non disponibili" i decoder del server: vale solo per gli IP non locali, quindi l'app prova e spiega il rifiuto.
+- **Riconoscimento:** la conferma "in prova" con il decoder locale (§6.3 punto 5) non è stata realizzata; la confidenza di NAVTEX e DSC cresce con il contesto di frequenza.
+- **Parametri del CW:** la velocità fissa e la soglia manuale reinizializzano il decoder del server; l'app reinvia sempre `cw_pboff` per ultimo.
+
+**Punti di commit suggeriti** (li esegue l'utente): un unico commit è possibile; in alternativa, nell'ordine: (1) protocollo `/EXT`, modelli, coordinatore e sintonia CW (fasi 0–1, `ExtProbe`), (2) scheda "Modi digitali" e decoder del server (fasi 2–4), (3) decoder locali FSK/NAVTEX/DSC (fasi 5 e 8), (4) AFC e riconoscimento (fasi 6–7), (5) notifiche Telegram, documentazione e versione 1.4.0 (fasi 8–9).
 
 ---
 

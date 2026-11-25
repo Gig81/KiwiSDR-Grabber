@@ -1,6 +1,6 @@
 # KiwiSDR Grabber: Guida rapida e manuale utente
 
-Questa guida descrive l'applicazione desktop per Windows; la versione Android è descritta nella [sezione 12](#12-versione-android). L'interfaccia attuale è in italiano.
+Questa guida descrive l'applicazione desktop per Windows; la versione Android è descritta nella [sezione 13](#13-versione-android). L'interfaccia attuale è in italiano.
 
 **[Italiano](#italiano) | [English](#english)**
 
@@ -239,7 +239,41 @@ Per configurare Telegram:
 
 Le notifiche Telegram richiedono l'attivazione e una connessione Internet. Gli avvisi per parola chiave richiedono un modello Vosk configurato e una trascrizione completata. Gli allegati audio e testo sono associati ai segmenti QSO registrati; le notifiche di inizio e fine trasmissione sono configurabili separatamente. L'intervallo minimo può variare da immediato a 60 minuti.
 
-### 9. Impostazioni e configurazione
+### 9. Modi digitali (Windows)
+
+<!-- SCREENSHOT (IT/EN): scheda Modi digitali con elenco dei modi a sinistra e un decoder
+NAVTEX o FT8 attivo a destra. / Digital modes tab with the mode list on the left and an
+active NAVTEX or FT8 decoder on the right. -->
+
+La scheda **Modi digitali** decodifica le trasmissioni digitali ricevute. A sinistra c'è l'elenco dei modi, diviso in due gruppi:
+
+- **Sul server:** FT8, FT4, WSPR, CW, CW Skimmer, Fax meteo, SSTV, HFDL e ALE 2G sono decodificati dalle estensioni del ricevitore KiwiSDR; l'app mostra i risultati.
+- **Nell'app:** RTTY/FSK, NAVTEX e DSC sono decodificati dall'app sull'audio ricevuto.
+
+Un modo non disponibile è indicato come tale; il motivo compare passando il mouse (estensione non installata o disabilitata dall'amministratore, ricevitore non in modalità 12 kHz per FT8, FT4 e SSTV).
+
+Per usare un decoder:
+
+1. Seleziona il modo, scegli una frequenza nota dal menu e premi **Avvia**: l'app imposta modo, banda passante e frequenza adatti e avvia il decoder. **Avvia qui** avvia il decoder senza cambiare la sintonia; **Sintonizza** cambia solo la sintonia.
+2. Regola i parametri del modo (per esempio il preset RTTY, i filtri NAVTEX, le righe al minuto del fax).
+3. Le decodifiche compaiono sotto: tabella per FT8/FT4 e WSPR (clic su una riga per copiarla), testo continuo per CW, RTTY, HFDL e ALE, una riga per segnale per il CW Skimmer (clic per sintonizzare il segnale in CW), messaggi espandibili per NAVTEX e DSC, immagini per fax e SSTV.
+4. **Salva** scrive il testo o l'immagine nella cartella `KiwiGrabberRecordings\Decodifiche`; per fax e SSTV puoi attivare il salvataggio automatico delle immagini complete. **Pulisci** svuota l'uscita.
+
+Un solo decoder è attivo alla volta e il display del VFO mostra `DEC`. Se cambi frequenza o modo a mano il decoder resta attivo; se la sintonia non è più adatta la scheda lo segnala e propone **Ripristina**. Avviare un decoder ferma la scansione e viceversa. Dopo una caduta di rete il decoder del server riparte da solo con la sessione.
+
+**Limiti dei ricevitori.** I decoder del server usano una terza connessione verso il KiwiSDR (oltre ad audio e waterfall). Molti ricevitori limitano le connessioni delle app esterne: se il decoder viene rifiutato, la scheda lo spiega e propone **Libera una connessione**, che chiude il waterfall e riprova (il waterfall si riapre con il suo pulsante). Se un altro utente usa DRM, i decoder del server sono sospesi su tutto il ricevitore.
+
+**Riconoscimento automatico.** In cima all'elenco, l'interruttore **Riconoscimento** analizza l'audio e propone il modo più probabile con una percentuale (RTTY con lo shift stimato, NAVTEX, DSC, CW, fax, FT8/FT4/WSPR in base alla frequenza; PSK31 viene solo segnalato). Servono alcuni secondi di segnale e una banda passante abbastanza larga: in CW usa **Allarga banda**. Con **Avvio automatico** l'app avvia da sola i decoder RTTY, NAVTEX e DSC quando la confidenza supera il 90 %; i decoder del server si avviano sempre a mano.
+
+**Autocentraggio (AFC).** Nella console audio, sotto la riga del VAD, l'interruttore **AFC** (spento di default) centra il segnale dopo una frequenza digitata o un clic sul waterfall o sullo spettro: il tono CW al centro della banda, la portante AM, i segnali NFM e, con i decoder attivi, i segnali RTTY, NAVTEX e fax. Accanto compare l'esito dell'ultima correzione e il display del VFO mostra `AFC`. Non agisce in USB/LSB voce, sui preferiti, sulle scansioni e sui passi di sintonia. Per CW e AM la stima dal waterfall richiede uno zoom sufficiente (CW: zoom 10 o superiore); in CW, con il tono già nella banda passante, basta l'audio.
+
+**Notifiche Telegram.** In **Impostazioni avanzate → Telegram** attiva **Notifiche dai decoder dei modi digitali** e inserisci le parole chiave da cercare nei messaggi decodificati. Al massimo una notifica ogni 30 secondi per parola chiave e nessun duplicato dello stesso messaggio NAVTEX.
+
+**Frequenza in CW.** Dalla versione 1.4.0 la frequenza mostrata in CW è quella del segnale, come nel client web KiwiSDR: il tono si sente a 500 Hz. I preferiti CW salvati con le versioni precedenti risultano spostati di 0,5 kHz.
+
+Il decoder DSC è solo informativo: non usarlo per la sicurezza della vita in mare. Tutte le funzioni dei modi digitali richiedono l'attivazione.
+
+### 10. Impostazioni e configurazione
 
 <!-- SCREENSHOT (IT/EN): pagina Impostazioni con sezioni server, nominativo, licenza
 e protezione credenziali. Nascondere password, Machine ID e token. / Settings page
@@ -256,7 +290,7 @@ Su Windows, il file delle impostazioni si trova in `C:\Users\<nome-utente>\.kiwi
 
 Per attivare le funzioni avanzate, apri la sezione **Gestione licenza**, copia il Machine ID e richiedi un codice all'autore tramite il canale indicato nell'applicazione. Inserisci il codice ricevuto e seleziona **Attiva Licenza**. L'attivazione è gratuita e verificata localmente; la licenza è legata a quel computer. Se reinstalli Windows, il Machine ID potrebbe cambiare e potrebbe essere necessario richiedere un nuovo codice.
 
-### 10. Risoluzione dei problemi
+### 11. Risoluzione dei problemi
 
 | Problema | Controlli suggeriti |
 |---|---|
@@ -270,7 +304,7 @@ Per attivare le funzioni avanzate, apri la sezione **Gestione licenza**, copia i
 
 Se il problema persiste, apri una segnalazione nelle [GitHub Issues](https://github.com/Gig81/KiwiSDR-Grabber/issues). Indica la versione dell'app e di Windows, i passaggi per riprodurre il problema e i messaggi di errore pertinenti. Prima di pubblicare log o schermate, rimuovi password, token, indirizzi privati e trascrizioni personali.
 
-### 11. Altre informazioni
+### 12. Altre informazioni
 
 - [README principale del progetto](../README.md)
 - [Licenza dell'applicazione](../LICENSE) e [permesso aggiuntivo LGPL](../LICENSE-LGPL-EXCEPTION.md)
@@ -278,7 +312,7 @@ Se il problema persiste, apri una segnalazione nelle [GitHub Issues](https://git
 - [Scarica la release attuale](https://github.com/Gig81/KiwiSDR-Grabber/releases)
 - [Segnala un problema o richiedi una funzione](https://github.com/Gig81/KiwiSDR-Grabber/issues)
 
-### 12. Versione Android
+### 13. Versione Android
 
 Dalla versione 1.2.0 è disponibile un'app Android per l'**ascolto**: con lo stesso ricevitore KiwiSDR offre radio, spettro e waterfall, preferiti, utenti connessi e registrazione WAV; dalla 1.3.0 anche tema chiaro, scansione di un intervallo di frequenze, equalizzatore e filtri DSP e collegamenti alle mappe dei ricevitori. Non include le altre funzioni di elaborazione e avviso del desktop (VAD, trascrizione, storico, scansione dei canali preferiti, Telegram, MP3).
 
@@ -328,7 +362,7 @@ Il codice vale solo per quel telefono: una licenza desktop non attiva l'app Andr
 
 ## English
 
-This guide covers the Windows desktop application; the Android version is described in [section 12](#12-android-version). The current interface is in Italian; English descriptions below include the Italian labels shown in the application where helpful.
+This guide covers the Windows desktop application; the Android version is described in [section 13](#13-android-version). The current interface is in Italian; English descriptions below include the Italian labels shown in the application where helpful.
 
 <!-- SCREENSHOT (IT/EN): finestra principale con console radio e schede dell'area di
 lavoro. Nascondere credenziali e informazioni private. / Main window with the radio
@@ -563,7 +597,37 @@ To configure Telegram:
 
 Telegram alerts require activation and an internet connection. Keyword alerts require a configured Vosk model and a completed transcription. Audio and transcript attachments are associated with recorded QSO segments; start/end event notifications can be configured separately. The minimum-message interval can be set from immediate to 60 minutes.
 
-### 9. Settings and configuration
+### 9. Digital modes (Windows)
+
+The **Digital modes** tab (`Modi digitali`) decodes digital transmissions. On the left is the list of modes, in two groups:
+
+- **On the server** (`Sul server`): FT8, FT4, WSPR, CW, CW Skimmer, weather fax, SSTV, HFDL and ALE 2G are decoded by the KiwiSDR receiver extensions; the app shows the results.
+- **In the app** (`Nell'app`): RTTY/FSK, NAVTEX and DSC are decoded by the app from the received audio.
+
+A mode that is not available is marked as such; hover to see why (extension not installed or disabled by the administrator, receiver not in 12 kHz mode for FT8, FT4 and SSTV).
+
+To use a decoder:
+
+1. Select the mode, pick a known frequency from the menu and press **Start** (`Avvia`): the app sets a suitable mode, passband and frequency and starts the decoder. **Start here** (`Avvia qui`) starts it without retuning; **Tune** (`Sintonizza`) only retunes.
+2. Adjust the mode parameters (for example the RTTY preset, NAVTEX filters, fax lines per minute).
+3. Decodes appear below: a table for FT8/FT4 and WSPR (click a row to copy it), running text for CW, RTTY, HFDL and ALE, one line per signal for the CW Skimmer (click to tune that signal in CW), expandable messages for NAVTEX and DSC, images for fax and SSTV.
+4. **Save** (`Salva`) writes the text or image to `KiwiGrabberRecordings\Decodifiche`; for fax and SSTV you can enable automatic saving of complete images. **Clear** (`Pulisci`) empties the output.
+
+Only one decoder runs at a time and the VFO display shows `DEC`. If you retune or change mode by hand the decoder keeps running; if the tuning no longer suits the mode the tab says so and offers **Restore** (`Ripristina`). Starting a decoder stops a scan and vice versa. After a network drop the server decoder restarts with the session.
+
+**Receiver limits.** Server decoders use a third connection to the KiwiSDR (besides audio and waterfall). Many receivers limit connections from external apps: if the decoder is refused, the tab explains it and offers **Free a connection** (`Libera una connessione`), which closes the waterfall and retries (reopen the waterfall with its button). If another user is using DRM, server decoders are suspended on the whole receiver.
+
+**Automatic recognition.** At the top of the list, the **Recognition** (`Riconoscimento`) switch analyses the audio and suggests the most likely mode with a percentage (RTTY with the estimated shift, NAVTEX, DSC, CW, fax, FT8/FT4/WSPR from the frequency; PSK31 is only reported). It needs a few seconds of signal and a wide enough passband: in CW use **Widen band** (`Allarga banda`). With **Automatic start** the app starts the RTTY, NAVTEX and DSC decoders on its own above 90 % confidence; server decoders are always started by hand.
+
+**Automatic centering (AFC).** In the audio console, below the VAD row, the **AFC** switch (off by default) centers the signal after a typed frequency or a click on the waterfall or spectrum: the CW tone in the middle of the passband, the AM carrier, NFM signals and, with decoders running, RTTY, NAVTEX and fax signals. The result of the last correction appears next to it and the VFO display shows `AFC`. It does not act on USB/LSB voice, favorites, scans or tuning steps. For CW and AM the waterfall estimate needs enough zoom (CW: zoom 10 or higher); in CW, with the tone already inside the passband, the audio is enough.
+
+**Telegram notifications.** In **Advanced settings → Telegram** enable **Notifications from digital mode decoders** (`Notifiche dai decoder dei modi digitali`) and enter the keywords to look for in decoded messages. At most one notification every 30 seconds per keyword and no duplicates of the same NAVTEX message.
+
+**CW frequency.** Since version 1.4.0 the frequency shown in CW is the signal frequency, as in the KiwiSDR web client: the tone is heard at 500 Hz. CW favorites saved with earlier versions are 0.5 kHz off.
+
+The DSC decoder is informational only: do not use it for safety of life at sea. All digital mode features require activation.
+
+### 10. Settings and configuration
 
 <!-- SCREENSHOT (IT/EN): pagina Impostazioni con sezioni server, nominativo, licenza
 e protezione credenziali. Nascondere password, Machine ID e token. / Settings page
@@ -580,7 +644,7 @@ On Windows, the settings file is `C:\Users\<your-name>\.kiwigrabber\settings.jso
 
 To activate advanced features, open the **License** section, copy the displayed Machine ID, and request a code from the project owner through the channel indicated in the application. Enter the received code and select **Activate License** (`Attiva Licenza`). Activation is free and checked locally; the license is tied to that machine. If Windows is reinstalled, the Machine ID may change and a new code may be required.
 
-### 10. Troubleshooting
+### 11. Troubleshooting
 
 | Problem | Things to check |
 |---|---|
@@ -594,7 +658,7 @@ To activate advanced features, open the **License** section, copy the displayed 
 
 If the problem persists, report it through [GitHub Issues](https://github.com/Gig81/KiwiSDR-Grabber/issues). Include the app version, Windows version, steps to reproduce, and relevant error text. Remove passwords, tokens, private receiver details, and personal transcripts from logs or screenshots before posting.
 
-### 11. Additional information
+### 12. Additional information
 
 - [Main project README](../README.md)
 - [Application license](../LICENSE) and [additional LGPL permission](../LICENSE-LGPL-EXCEPTION.md)
@@ -602,7 +666,7 @@ If the problem persists, report it through [GitHub Issues](https://github.com/Gi
 - [Download the current release](https://github.com/Gig81/KiwiSDR-Grabber/releases)
 - [Report an issue or request a feature](https://github.com/Gig81/KiwiSDR-Grabber/issues)
 
-### 12. Android version
+### 13. Android version
 
 Starting with version 1.2.0 an Android **listening** app is available: with the same KiwiSDR receiver it offers radio, spectrum and waterfall, favorites, connected users, and WAV recording; since 1.3.0 also the light theme, frequency range scanning, the DSP equalizer and filters, and links to receiver maps. It does not include the other desktop processing and alert features (VAD, transcription, history, scanning of favorite channels, Telegram, MP3). The interface is in Italian; Italian labels are shown in parentheses.
 

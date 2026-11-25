@@ -18,7 +18,7 @@ Release minore. Introduce la **prima versione per Android**, un'app di ascolto p
 - **Attivazione** gratuita e offline con ID dispositivo `GRAB-A-…`, come sul desktop: sblocca ascolto in background, registrazione e preferiti personali. Senza attivazione, quando l'app va in background la connessione si chiude e libera il canale del ricevitore.
 - Password del ricevitore salvata cifrata nel Keystore di Android.
 
-Istruzioni complete nella [guida utente](https://github.com/Gig81/KiwiSDR-Grabber/blob/main/docs/USER_GUIDE.md#12-versione-android).
+Istruzioni complete nella [guida utente](https://github.com/Gig81/KiwiSDR-Grabber/blob/main/docs/USER_GUIDE.md#13-versione-android).
 
 ### Correzioni (Windows)
 
@@ -58,7 +58,7 @@ Minor release. It introduces the **first Android version**, a listening app for 
 - Free offline **activation** with a `GRAB-A-…` device ID, as on the desktop: it unlocks background listening, recording, and personal favorites. Without activation, the connection is closed when the app goes to the background, freeing the receiver channel.
 - Receiver password stored encrypted in the Android Keystore.
 
-Full instructions in the [user guide](https://github.com/Gig81/KiwiSDR-Grabber/blob/main/docs/USER_GUIDE.md#12-android-version).
+Full instructions in the [user guide](https://github.com/Gig81/KiwiSDR-Grabber/blob/main/docs/USER_GUIDE.md#13-android-version).
 
 ### Fixes (Windows)
 

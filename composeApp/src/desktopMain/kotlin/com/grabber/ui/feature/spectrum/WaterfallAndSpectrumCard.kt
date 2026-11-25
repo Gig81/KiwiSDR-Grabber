@@ -28,6 +28,7 @@ fun WaterfallAndSpectrumCard(
     val currentZoom by controller.waterfallZoom.collectAsState()
     val currentVfoKhz by controller.currentFrequencyKhz.collectAsState()
     val currentMode by controller.currentMode.collectAsState()
+    val currentPassband by controller.currentPassband.collectAsState()
     val currentPalette by controller.waterfallPalette.collectAsState()
     val currentMinDb by controller.waterfallMinDb.collectAsState()
     val currentMaxDb by controller.waterfallMaxDb.collectAsState()
@@ -92,6 +93,7 @@ fun WaterfallAndSpectrumCard(
                 frameFlow = controller.latestWaterfallFrame,
                 vfoKhz = currentVfoKhz,
                 mode = currentMode,
+                passband = currentPassband,
                 minDb = currentMinDb,
                 maxDb = currentMaxDb,
                 onTune = { controller.tuneFromWaterfall(it) },

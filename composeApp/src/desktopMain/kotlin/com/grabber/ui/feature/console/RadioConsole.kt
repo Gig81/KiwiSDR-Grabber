@@ -1,5 +1,9 @@
 package com.grabber.ui.feature.console
 
+import com.grabber.app.AutoCenterResult
+import com.grabber.app.TuneSource
+import kotlinx.coroutines.delay
+import com.grabber.model.digital.DecoderState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +25,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -53,13 +61,30 @@ fun RadioConsole(
     val connectionState by controller.connectionState.collectAsState()
     val scanState by controller.scanState.collectAsState()
     val isDspActive by controller.isDspActive.collectAsState()
+    val decoderState by controller.digitalDecoderState.collectAsState()
+    val lastAutoCenter by controller.lastAutoCenter.collectAsState()
+    var afcFlash by remember { mutableStateOf(false) }
+    LaunchedEffect(lastAutoCenter) {
+        afcFlash = lastAutoCenter?.outcome == AutoCenterResult.Outcome.APPLIED
+        if (afcFlash) {
+            delay(4_000)
+            afcFlash = false
+        }
+    }
     val indicators = listOfNotNull(
         when (scanState) {
             ScanState.Idle -> null
             is ScanState.Scanning -> "SCAN" to DisplayColors.Primary
             is ScanState.SignalFound -> "SCAN" to DisplayColors.Success
         },
-        if (isDspActive) "DSP" to DisplayColors.Warning else null
+        if (isDspActive) "DSP" to DisplayColors.Warning else null,
+        when (decoderState) {
+            DecoderState.Idle -> null
+            is DecoderState.Running -> "DEC" to DisplayColors.Success
+            is DecoderState.Unavailable -> "DEC" to DisplayColors.Error
+            else -> "DEC" to DisplayColors.Warning
+        },
+        if (afcFlash) "AFC" to DisplayColors.Primary else null
     )
 
     Surface(
@@ -83,7 +108,7 @@ fun RadioConsole(
                     frequencyKhz = currentFrequency,
                     canTune = connectionState is ConnectionState.Connected,
                     currentStep = currentStep,
-                    onTune = { controller.tune(it) },
+                    onTune = { controller.tune(it, source = TuneSource.USER_TYPED) },
                     onStepDelta = controller::stepFrequency,
                     onStepChange = onStepChange,
                     indicators = indicators
@@ -91,7 +116,7 @@ fun RadioConsole(
                 ModeAndBandsCard(
                     currentMode = currentMode,
                     onSelectMode = controller::setMode,
-                    onSelectPreset = { controller.tune(it.frequencyKhz, it.defaultMode) }
+                    onSelectPreset = { controller.tune(it.frequencyKhz, it.defaultMode, TuneSource.PRESET) }
                 )
             }
             Box(modifier = Modifier.weight(1.7f).fillMaxHeight()) {

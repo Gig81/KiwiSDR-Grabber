@@ -7,6 +7,8 @@ import com.grabber.recording.RecordingNoiseFilterConfig
 import com.grabber.kiwi.KiwiServerDefaults
 import com.grabber.model.ModulationMode
 import com.grabber.model.UiThemeMode
+import com.grabber.model.digital.DigitalMode
+import com.grabber.model.digital.DigitalModeParams
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -95,8 +97,22 @@ data class SettingsData(
     // Tema dell'interfaccia (UiThemeMode): scuro predefinito per non cambiare l'aspetto a chi aggiorna
     val uiThemeName: String = UiThemeMode.DARK.name,
     // Equalizzatore e filtri DSP (spenti finché l'utente non li configura)
-    val audioDsp: AudioDspConfig = AudioDspConfig()
+    val audioDsp: AudioDspConfig = AudioDspConfig(),
+    // Modi digitali: parametri dei decoder e ultimo modo scelto nella scheda
+    val digitalModeParams: DigitalModeParams = DigitalModeParams(),
+    val lastDigitalModeName: String? = null,
+    // Autocentraggio (AFC): spento finché l'utente non lo attiva
+    val autoCenterEnabled: Boolean = false,
+    // Riconoscimento automatico del modo: suggerimento, avvio automatico dei soli decoder locali
+    val modeRecognitionEnabled: Boolean = false,
+    val modeRecognitionAutoStart: Boolean = false,
+    // Notifiche Telegram dei decoder, con parole chiave dedicate
+    val decoderAlertsEnabled: Boolean = false,
+    val decoderAlertWords: String = "mayday, pan pan, sécurité, securite"
 ) {
+    val lastDigitalMode: DigitalMode?
+        get() = DigitalMode.entries.find { it.name == lastDigitalModeName }
+
     /** Modalità del gate di ascolto; nelle versioni precedenti, con squelch e VAD attivi, decideva solo lo squelch RF. */
     val listenGateMode: GateMode
         get() = GateMode.fromName(listenGateModeName) ?: when {
@@ -588,6 +604,27 @@ class AppSettings(
 
     fun setUiTheme(mode: UiThemeMode) {
         updateAndSave { it.copy(uiThemeName = mode.name) }
+    }
+
+    fun setDigitalModeParams(params: DigitalModeParams) {
+        updateAndSave { it.copy(digitalModeParams = params.normalized()) }
+    }
+
+    fun setLastDigitalMode(mode: DigitalMode) {
+        if (_settings.value.lastDigitalModeName == mode.name) return
+        updateAndSave { it.copy(lastDigitalModeName = mode.name) }
+    }
+
+    fun setAutoCenterEnabled(enabled: Boolean) {
+        updateAndSave { it.copy(autoCenterEnabled = enabled) }
+    }
+
+    fun setModeRecognition(enabled: Boolean, autoStart: Boolean) {
+        updateAndSave { it.copy(modeRecognitionEnabled = enabled, modeRecognitionAutoStart = autoStart) }
+    }
+
+    fun setDecoderAlerts(enabled: Boolean, words: String) {
+        updateAndSave { it.copy(decoderAlertsEnabled = enabled, decoderAlertWords = words.trim()) }
     }
 }
 

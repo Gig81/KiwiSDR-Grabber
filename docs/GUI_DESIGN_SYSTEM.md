@@ -84,9 +84,10 @@ Colors always come from `GrabberColors`; feature packages do not define their ow
 The desktop radio console currently uses the shared theme and panel colors, with compact controls specialized for immediate operation:
 
 - A Power icon reflects disconnected, connecting/reconnecting, and connected states; the configured server address is displayed alongside it.
-- The editable frequency is displayed in MHz on a dark LCD surface (dark in every theme). A confirmation/check action or Enter applies a valid frequency; minus and plus tune by the currently selected channel step. The LCD shows `SCAN` while a channel or range scan runs and `DSP` while the DSP chain is processing audio.
+- The editable frequency is displayed in MHz on a dark LCD surface (dark in every theme). A confirmation/check action or Enter applies a valid frequency; minus and plus tune by the currently selected channel step. The LCD shows `SCAN` while a channel or range scan runs, `DSP` while the DSP chain is processing audio, `DEC` while a digital-mode decoder is active (green running, amber starting or waiting, red refused) and `AFC` for a few seconds after an automatic centering correction.
 - The compact waterfall reuses the full waterfall/spectrum component and renderer. Its scale summary is reserved for the dedicated spectrum/waterfall tab.
 - Audio controls reuse the existing S-Meter representation and controller state for volume, mute, Squelch, and VAD. Gate/confidence indicators use live VAD state.
+- Below the VAD telemetry row, a compact AFC row (`ConsoleAfcRow`) holds the automatic-centering switch (off by default, disabled without a license), the "Centraggio automatico" label and the result of the last correction, which fades after a few seconds. The console spacing is 4 dp so the row fits at the 960×640 minimum window size.
 
 All local color constants have been migrated to theme tokens or `DisplayColors`; keep it that way (a `grep "Color(0x" composeApp/src` outside `AppTheme.kt` must stay empty). Do not change functional behavior as part of a visual-token migration.
 
@@ -94,16 +95,17 @@ Buttons using bright semantic fills (for example `Secondary`, `Success`, `Warnin
 
 ## Desktop shell and tabs
 
-The window opens maximized by default, uses 1100×740 dp when restored to a floating window, and enforces a minimum size of 960×640 px. Its title includes the Gradle `appVersion`. The radio console stays visible above the workspace while the selected tab changes. The six workspace tabs are:
+The window opens maximized by default, uses 1100×740 dp when restored to a floating window, and enforces a minimum size of 960×640 px. Its title includes the Gradle `appVersion`. The radio console stays visible above the workspace while the selected tab changes. The seven workspace tabs are:
 
 1. Favorites
 2. Audio
 3. Recorder
 4. Spectrum & Waterfall
 5. Users & Monitor
-6. Settings
+6. Digital modes
+7. Settings
 
-Each screen lives in its own feature package under `composeApp/src/desktopMain/kotlin/com/grabber/ui/feature/<name>/` (`console`, `favorites`, `audio`, `recordings`, `spectrum`, `users`, `settings`), split into one file per panel, section or dialog; `App.kt`, `Main.kt` and `InitialSetupDialog.kt` stay in `ui/`. The Favorites tab hosts the `SCANSIONE` panel with a *Canali / Intervallo* switch (channel scan and frequency-range scan). The Audio tab shows three panels: squelch timing (`SQUELCH: ANTI-POP E HANG TIME`), `DSP` (target, presets, filters, 7-band equalizer, A/B) and VAD. The Settings tab includes an *Aspetto* section for the theme, map links that open the KiwiSDR public map and the rx-tx.info SDR map in the browser (`ExternalLinks`/`openInBrowser`), and an Information accordion with developer details and a contact form that sends to the dedicated developer Telegram bot; it does not attach the Machine ID or user credentials. Keep shared visual tokens/components in `ui/designsystem/`, use the existing controller and settings as the state source, and avoid duplicating controls or state across tabs. The compact console waterfall and full Spectrum & Waterfall view share the existing renderer and controller state.
+Each screen lives in its own feature package under `composeApp/src/desktopMain/kotlin/com/grabber/ui/feature/<name>/` (`console`, `favorites`, `audio`, `recordings`, `spectrum`, `users`, `digital`, `settings`), split into one file per panel, section or dialog; `App.kt`, `Main.kt` and `InitialSetupDialog.kt` stay in `ui/`. The Favorites tab hosts the `SCANSIONE` panel with a *Canali / Intervallo* switch (channel scan and frequency-range scan). The Audio tab shows three panels: squelch timing (`SQUELCH: ANTI-POP E HANG TIME`), `DSP` (target, presets, filters, 7-band equalizer, A/B) and VAD. The Digital modes tab (`DigitalModesTab`) has a fixed 220 dp left column (`DigitalModeList`: recognition header with switch and suggestion, then modes grouped "Sul server" / "Nell'app" with availability tooltips and a status dot) and a right detail panel (`DigitalModeDetail`: title with source chip and `DecoderStatusChip`, description, presets with "Sintonizza", Avvia/Avvia qui/Ferma/Pulisci/Salva, per-mode parameters, notices for refusals and incompatible tuning, indicators, and the output: monospace tables for FT8/FT4 and WSPR, running text, skimmer rows, expandable NAVTEX/DSC messages, or a fax/SSTV image on a `DisplayColors` dark surface). The whole tab is covered by `FeatureLockedOverlay` without a license. The Settings tab includes an *Aspetto* section for the theme, map links that open the KiwiSDR public map and the rx-tx.info SDR map in the browser (`ExternalLinks`/`openInBrowser`), and an Information accordion with developer details and a contact form that sends to the dedicated developer Telegram bot; it does not attach the Machine ID or user credentials. Keep shared visual tokens/components in `ui/designsystem/`, use the existing controller and settings as the state source, and avoid duplicating controls or state across tabs. The compact console waterfall and full Spectrum & Waterfall view share the existing renderer and controller state.
 
 The desktop UI and shared regression tests are verified with `:composeApp:compileKotlinDesktop`, `:composeApp:desktopTest` (palette contrast) and `:shared:desktopTest`. Interactive behavior against a reachable KiwiSDR, both themes and layout checks across physical display scaling/resolutions require a separate manual workstation check.
 

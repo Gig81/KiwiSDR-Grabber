@@ -78,6 +78,7 @@ Il [permesso supplementare](../LICENSE-LGPL-EXCEPTION.md) consente a chiunque ri
 
 ## 5. Componenti non inclusi
 
+- **KiwiSDR** (server e client web, [jks-prv/KiwiSDR](https://github.com/jks-prv/KiwiSDR)): l'app implementa in modo indipendente il protocollo WebSocket di KiwiSDR (`/SND`, `/W/F`, `/EXT`) e usa i decoder in esecuzione sul ricevitore; nessun codice KiwiSDR è incluso. I decoder RTTY/FSK, NAVTEX e DSC dell'app sono scritti da zero dalle specifiche ITU (M.476/M.625, M.540, M.493) e da tecniche DSP standard: i file JavaScript del client web sono serviti solo come riferimento di verifica, senza copiarne o tradurne il codice.
 - **Modelli linguistici Vosk**: l'utente li scarica separatamente da <https://alphacephei.com/vosk/models>; ciascun modello ha la propria licenza.
 - **Strumenti di build** (Gradle, compilatore Kotlin, plugin Compose, `jpackage`, WiX Toolset): non sono inclusi nell'installer e non impongono obblighi sugli artefatti prodotti. Il `gradle-wrapper.jar` presente nel repository sorgente è distribuito secondo Apache-2.0.
 

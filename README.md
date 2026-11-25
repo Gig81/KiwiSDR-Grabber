@@ -20,6 +20,7 @@ tuning controls, mini spectrum/waterfall, and tabs. Hide credentials and private
 
 - **Ricezione e sintonia:** collegamento a un KiwiSDR configurabile; modalità AM, USB, LSB, CW e NFM; passi di sintonia, preset di banda e preferiti, con scansione dei canali selezionati o di un intervallo di frequenze che si ferma sui segnali sopra la soglia dello squelch; collegamenti alle mappe dei ricevitori (KiwiSDR e rx-tx.info).
 - **Visualizzazione dei segnali:** analizzatore di spettro in tempo reale e waterfall a scorrimento, con sintonia tramite clic e controlli di visualizzazione.
+- **Modi digitali (Windows):** decodifica di FT8, FT4, WSPR, CW, CW Skimmer, fax meteo, SSTV, HFDL e ALE 2G con i decoder del ricevitore KiwiSDR, e di RTTY/FSK, NAVTEX e DSC nell'app; riconoscimento automatico del modo, autocentraggio del segnale (AFC) e notifiche Telegram con parole chiave dedicate.
 - **Ascolto e registrazione:** volume e silenziamento; registrazioni MP3 o WAV, continue o suddivise a intervalli.
 - **Controllo del rumore e della voce:** squelch RF e rilevamento dell'attività vocale (VAD) per filtrare ascolto o registrazione. Pre-buffer e hang time aiutano a preservare l'inizio e la continuità delle trasmissioni.
 - **Equalizzatore e filtri DSP:** passa-alto, passa-basso, notch, riduzione del rumore ed equalizzatore a 7 bande con preset, applicabili all'ascolto e alle nuove registrazioni, su Windows e Android.
@@ -65,7 +66,7 @@ Scarica l'installer Windows **EXE** o **MSI** dalla [release KiwiSDR Grabber 1.3
 
 L'installer non è firmato digitalmente: Windows potrebbe mostrare un avviso sul publisher o SmartScreen. Prima di scegliere se continuare, verifica la provenienza del file e il relativo hash. Le versioni successive alla 1.0.1 sono compilate da GitHub Actions e hanno anche un'attestazione di provenienza; i comandi di verifica sono nella [guida utente](docs/USER_GUIDE.md#verifica-dellinstaller).
 
-**Android:** dalla stessa release scarica sul telefono `KiwiSDRGrabber-1.3.0.apk` e aprilo, consentendo l'installazione di app sconosciute se richiesto. L'app non è sul Play Store e non si aggiorna da sola: le versioni successive si installano sopra quella esistente. Istruzioni, verifica e attivazione nella [guida utente](docs/USER_GUIDE.md#12-versione-android).
+**Android:** dalla stessa release scarica sul telefono `KiwiSDRGrabber-1.3.0.apk` e aprilo, consentendo l'installazione di app sconosciute se richiesto. L'app non è sul Play Store e non si aggiorna da sola: le versioni successive si installano sopra quella esistente. Istruzioni, verifica e attivazione nella [guida utente](docs/USER_GUIDE.md#13-versione-android).
 
 ### Avvio rapido
 
@@ -123,6 +124,7 @@ KiwiSDR Grabber is a desktop application for amateur radio enthusiasts and short
 
 - **Receive and tune:** Connect to a configured KiwiSDR, choose AM, USB, LSB, CW, or NFM, and use frequency steps, band presets, and saved favorites, with scanning of selected channels or a frequency range that stops on signals above the squelch threshold; links to receiver maps (KiwiSDR and rx-tx.info).
 - **See activity:** View a live spectrum analyzer and scrolling waterfall, with click-to-tune and display controls.
+- **Digital modes (Windows):** decode FT8, FT4, WSPR, CW, CW Skimmer, weather fax, SSTV, HFDL and ALE 2G with the KiwiSDR receiver decoders, and RTTY/FSK, NAVTEX and DSC in the app; automatic mode recognition, automatic signal centering (AFC) and Telegram notifications with dedicated keywords.
 - **Listen and record:** Adjust volume and mute audio. Save recordings as MP3 or WAV, continuously or in timed segments.
 - **Control noise and voice gates:** Use RF squelch and optional Voice Activity Detection (VAD) to gate live audio or recordings. Pre-buffering and hang time help preserve speech around transmissions.
 - **Equalizer and DSP filters:** high-pass, low-pass, notch, noise reduction and a 7-band equalizer with presets, applied to listening and new recordings, on Windows and Android.
@@ -146,7 +148,7 @@ Download the Windows **EXE** or **MSI** installer from the [KiwiSDR Grabber 1.3.
 
 The installer is not digitally signed, so Windows may display a publisher or SmartScreen warning. Check the release source and checksum before deciding whether to continue. Releases after 1.0.1 are built by GitHub Actions and also carry a build provenance attestation; see the [user guide](docs/USER_GUIDE.md#verifying-the-installer) for the verification commands.
 
-**Android:** from the same release, download `KiwiSDRGrabber-1.3.0.apk` on the phone and open it, allowing installation of unknown apps if asked. The app is not on the Play Store and does not update itself: later versions install over the existing one. Instructions, verification, and activation are in the [user guide](docs/USER_GUIDE.md#12-android-version).
+**Android:** from the same release, download `KiwiSDRGrabber-1.3.0.apk` on the phone and open it, allowing installation of unknown apps if asked. The app is not on the Play Store and does not update itself: later versions install over the existing one. Instructions, verification, and activation are in the [user guide](docs/USER_GUIDE.md#13-android-version).
 
 ### Quick start
 

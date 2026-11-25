@@ -88,6 +88,8 @@ Quando l'utente trasmette con la propria radio e contemporaneamente ascolta il p
 
 #### 7. Decodifica dei modi digitali
 
+**Stato: implementata nella 1.4.0 (soluzione b, decoder del server via `/EXT`, più RTTY/FSK, NAVTEX e DSC decodificati nell'app, riconoscimento automatico del modo e AFC).** Piano e verifiche: [PIANO_DECODIFICA_MODI_DIGITALI.md](./PIANO_DECODIFICA_MODI_DIGITALI.md).
+
 Decodificare i modi digitali (es. FT8/FT4, WSPR, RTTY, PSK31, CW, fax meteo, SSTV).
 
 Possibili strade, dalla più semplice:
@@ -205,6 +207,8 @@ When users transmit with their own radio while listening to their own signal thr
 - Also: recommend headphones in the user guide.
 
 #### 7. Digital mode decoding
+
+**Status: implemented in 1.4.0 (route b, server decoders via `/EXT`, plus RTTY/FSK, NAVTEX and DSC decoded in the app, automatic mode recognition and AFC).** Plan and checks: [PIANO_DECODIFICA_MODI_DIGITALI.md](./PIANO_DECODIFICA_MODI_DIGITALI.md).
 
 Decode digital modes (e.g. FT8/FT4, WSPR, RTTY, PSK31, CW, weather fax, SSTV).
 

@@ -3,6 +3,7 @@ package com.grabber.app
 import com.grabber.alerting.TelegramAlertService
 import com.grabber.audio.DesktopAudioPlayer
 import com.grabber.audio.AudioDspControl
+import com.grabber.audio.AudioAnalysisTap
 import com.grabber.audio.AudioPipeline
 import com.grabber.audio.FileAudioPlayer
 import com.grabber.audio.dsp.AudioDspConfig
@@ -10,13 +11,34 @@ import com.grabber.audio.dsp.DspPreset
 import com.grabber.audio.dsp.DspTarget
 import com.grabber.audio.squelch.GateMode
 import com.grabber.audio.squelch.SquelchController
+import com.grabber.decoder.DecodedOutputStore
+import com.grabber.decoder.DigitalDecoderCoordinator
+import com.grabber.decoder.DigitalModeAvailabilityRules
+import com.grabber.decoder.LocalDecoderFactory
+import com.grabber.decoder.fsk.FskDecoders
 import com.grabber.kiwi.JdkWebSocketConnector
+import com.grabber.kiwi.KiwiProtocol
+import com.grabber.kiwi.ext.ExtensionClient
 import com.grabber.kiwi.KiwiClient
 import com.grabber.kiwi.KiwiWebSocketConnector
 import com.grabber.license.LicenseManager
 import com.grabber.license.MachineIdUtil
 import com.grabber.model.ConnectionState
 import com.grabber.model.ModulationMode
+import com.grabber.model.Passband
+import com.grabber.model.digital.DecodedImage
+import com.grabber.model.digital.DecodedItem
+import com.grabber.model.digital.DecoderMetrics
+import com.grabber.model.digital.DecoderState
+import com.grabber.model.digital.DigitalMode
+import com.grabber.model.digital.DigitalModeAvailability
+import com.grabber.model.digital.DigitalModeCatalog
+import com.grabber.model.digital.DigitalModeParams
+import com.grabber.model.digital.DigitalTuning
+import com.grabber.model.digital.FskParams
+import com.grabber.model.digital.FskPreset
+import com.grabber.audio.analysis.ModeClassifier
+import com.grabber.audio.analysis.ModeSuggestion
 import com.grabber.model.TranscriptionStatus
 import com.grabber.model.UiThemeMode
 import com.grabber.monitor.HistoryDatabase
@@ -40,6 +62,8 @@ import java.io.File
 private const val TAG = "KiwiAppController"
 private const val MAX_FREQUENCY_KHZ = 30000.0
 private const val DEFAULT_MAX_USERS = 4
+private const val FREE_CONNECTION_DELAY_MS = 1500L
+private const val AUTO_START_CONFIDENCE = 0.9
 
 /**
  * Registra e segnala le eccezioni non gestite delle coroutine del controller
@@ -68,7 +92,9 @@ class KiwiAppController(
     private val squelch: SquelchController = SquelchController(),
     private val waterfallClient: WaterfallClient = WaterfallClient(connector, host = client.host, port = client.port),
     /** Buffer di pixel letto direttamente dal renderer del waterfall. */
-    val waterfallBuffer: WaterfallBuffer = WaterfallBuffer(width = 1024, height = 250)
+    val waterfallBuffer: WaterfallBuffer = WaterfallBuffer(width = 1024, height = 250),
+    /** Decoder eseguiti nell'app (RTTY/FSK, NAVTEX, DSC). */
+    private val localDecoderFactory: LocalDecoderFactory = FskDecoders
 ) {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob() + uncaughtErrorLogger())
 
@@ -79,6 +105,51 @@ class KiwiAppController(
     val connectionNotifications: SharedFlow<String> = _connectionNotifications.asSharedFlow()
 
     private val waterfall = WaterfallCoordinator(scope, client, waterfallClient, waterfallBuffer, AppSettingsWaterfallPreferences(appSettings))
+
+    // ── Modi digitali: /EXT, tap di analisi audio e decoder ──
+    private val extensionClient = ExtensionClient(connector, host = client.host, port = client.port)
+
+    /** Copia dell'audio originale per decoder locali, AFC e riconoscimento del modo. */
+    private val analysisTap = AudioAnalysisTap(scope)
+
+    private val decoders = DigitalDecoderCoordinator(
+        scope = scope,
+        extensionClient = extensionClient,
+        isAuthenticated = client.isAuthenticated,
+        sessionToken = { client.sessionToken.value },
+        carrierKhz = ::currentCarrierKhz,
+        localDecoders = localDecoderFactory
+    )
+
+    private val decodedOutputStore = DecodedOutputStore { recorder.baseDirectory }
+
+    private val decoderAlerts = DecoderAlertCoordinator(
+        scope = scope,
+        appSettings = appSettings,
+        hasAdvancedFeatures = ::hasAdvancedFeatures,
+        currentFrequencyKhz = { client.currentFrequencyKhz.value },
+        onDeliveryFailure = { _connectionNotifications.tryEmit(it) }
+    )
+
+    private val classifier = ModeClassifier()
+    private val _modeSuggestion = MutableStateFlow<ModeSuggestion?>(null)
+
+    /** Modo suggerito dall'analisi dell'audio (null se nessun candidato o riconoscimento spento). */
+    val modeSuggestion: StateFlow<ModeSuggestion?> = _modeSuggestion.asStateFlow()
+
+    /** Autocentraggio one-shot dopo una sintonia dell'utente (funzione con licenza, spento di default). */
+    private val autoCenter = AutoCenterCoordinator(
+        scope = scope,
+        isEnabled = { appSettings.settings.value.autoCenterEnabled && hasAdvancedFeatures() },
+        context = {
+            val params = appSettings.settings.value.digitalModeParams
+            val active = decoders.currentMode
+            val (fskCenter, fskShift) = afcFskParameters(active, params.rtty.centerHz, params.rtty.shiftHz)
+            AfcContext(client.currentMode.value, client.currentFrequencyKhz.value, client.currentPassband.value, active, fskCenter, fskShift)
+        },
+        latestWaterfall = { waterfallClient.latestFrame.value },
+        applyCorrection = { applyTuning(it, client.currentMode.value, source = TuneSource.AFC) }
+    )
 
     private val alerts = QsoAlertCoordinator(
         scope = scope,
@@ -113,7 +184,7 @@ class KiwiAppController(
     private val scanner = ScanCoordinator(
         scope = scope,
         signalGateOpen = squelch.isGateOpen,
-        tuneTo = { applyTuning(it.frequencyKhz, it.mode) },
+        tuneTo = { applyTuning(it.frequencyKhz, it.mode, source = TuneSource.SCAN) },
         resetSignalDetection = squelch::reset,
         onSignalFound = { kind, target -> if (kind == ScanKind.RANGE) rangeScan.recordHit(target, client.rssi.value) },
         onStoppedOnSignal = { _, target -> _connectionNotifications.tryEmit("Scansione fermata: segnale su ${target.label}") }
@@ -183,6 +254,30 @@ class KiwiAppController(
     /** Stato della scansione in corso (canali o intervallo). */
     val scanState: StateFlow<ScanState> = scanner.state
 
+    /** Banda passante corrente del canale (Hz rispetto alla portante). */
+    val currentPassband: StateFlow<Passband> = client.currentPassband
+
+    // ── Modi digitali ──
+    val digitalDecoderState: StateFlow<DecoderState> = decoders.state
+    val decodedItems: StateFlow<List<DecodedItem>> = decoders.items
+    val decodedImage: StateFlow<DecodedImage?> = decoders.image
+    val decoderMetrics: StateFlow<DecoderMetrics> = decoders.metrics
+
+    /** Modi digitali con disponibilità sul ricevitore corrente (estensioni, abilitazioni, 12 kHz). */
+    val digitalModes: StateFlow<List<DigitalModeAvailability>> = combine(
+        client.isAuthenticated,
+        waterfallClient.installedExtensions,
+        client.receiverConfig,
+        client.audioSampleRate
+    ) { authenticated, installed, config, rate ->
+        DigitalModeAvailabilityRules.compute(authenticated, installed, config, rate, implemented = ::isDigitalModeImplemented)
+    }.stateIn(scope, SharingStarted.Eagerly, DigitalModeAvailabilityRules.compute(false, null, null, null, ::isDigitalModeImplemented))
+
+    /** Limite `ext_api_nchans` del ricevitore (null se sconosciuto), mostrato come avviso nella scheda. */
+    val receiverAppConnectionLimit: StateFlow<Int?> = client.receiverConfig
+        .map { it?.extApiChannels }
+        .stateIn(scope, SharingStarted.Eagerly, null)
+
     val userLogs: StateFlow<List<UserLogEntry>> = history.userLogs
     val recordingHistory: StateFlow<List<RecordingHistoryEntry>> = history.recordingHistory
 
@@ -190,7 +285,8 @@ class KiwiAppController(
     private val audioPipeline = AudioPipeline(
         squelch = squelch,
         playbackSink = player::submitPcm,
-        recordSink = recorder::submitAudio
+        recordSink = recorder::submitAudio,
+        analysisSink = analysisTap::submit
     )
     private val dsp = AudioDspControl(
         scope = scope,
@@ -236,6 +332,7 @@ class KiwiAppController(
         initializePersistedSettings(appSettings.settings.value)
         waterfall.start()
         initializeAudioPipeline()
+        initializeDigitalModes()
         monitor.start(scope)
         observeConnectedUsers()
         observeConnectionLifecycle()
@@ -261,7 +358,9 @@ class KiwiAppController(
         applyServerConfiguration()
         client.updatePassword(settings.serverPassword)
         waterfall.updatePassword(settings.serverPassword)
+        extensionClient.password = settings.serverPassword
         client.clientName = settings.callsign
+        extensionClient.clientName = settings.callsign
         applySquelchSettings(settings)
 
         val initialFrequency = settings.lastFrequencyKhz.coerceIn(0.0, MAX_FREQUENCY_KHZ)
@@ -306,6 +405,36 @@ class KiwiAppController(
             .map { it.licenseKey }
             .distinctUntilChanged()
             .onEach { dsp.refreshLicense() }
+            .launchIn(scope)
+    }
+
+    private fun initializeDigitalModes() {
+        analysisTap.addConsumer(AudioAnalysisTap.Consumer("decoder locale", { decoders.isLocalDecoderActive }, decoders::onAudio))
+        analysisTap.addConsumer(AudioAnalysisTap.Consumer("AFC", { autoCenter.isCapturing }, autoCenter::onAudio))
+        analysisTap.addConsumer(AudioAnalysisTap.Consumer("riconoscimento", ::isRecognitionActive, ::classifyAudio))
+        decoderAlerts.start(decoders.completedItems)
+        // Salvataggio automatico facoltativo delle immagini FAX/SSTV completate.
+        decoders.completedImages
+            .onEach { image ->
+                val params = appSettings.settings.value.digitalModeParams
+                val autoSave = when (image.mode) {
+                    DigitalMode.FAX -> params.faxAutoSave
+                    DigitalMode.SSTV -> params.sstvAutoSave
+                    else -> false
+                }
+                if (!autoSave || !hasAdvancedFeatures()) return@onEach
+                try {
+                    decodedOutputStore.saveImage(image)?.let { _connectionNotifications.tryEmit("Immagine ${image.mode.displayName} salvata: ${it.name}") }
+                } catch (e: Exception) {
+                    AppLogger.error(TAG, "Salvataggio automatico dell'immagine non riuscito", e)
+                }
+            }
+            .launchIn(scope)
+        // Licenza revocata o scaduta: il decoder attivo si ferma.
+        appSettings.settings
+            .map { it.licenseKey }
+            .distinctUntilChanged()
+            .onEach { if (!hasAdvancedFeatures()) decoders.stop() }
             .launchIn(scope)
     }
 
@@ -418,6 +547,11 @@ class KiwiAppController(
         client.updateServer(host, port)
         waterfall.updateServer(host, port)
         monitor.updateServer(host, port)
+        if (extensionClient.host != host || extensionClient.port != port) {
+            decoders.stop()
+            extensionClient.host = host
+            extensionClient.port = port
+        }
     }
 
     fun setServerAddress(address: String) {
@@ -429,6 +563,7 @@ class KiwiAppController(
         appSettings.setServerPassword(password)
         client.updatePassword(password)
         waterfall.updatePassword(password)
+        extensionClient.password = password
     }
 
     fun connect() {
@@ -444,32 +579,46 @@ class KiwiAppController(
         appSettings.setResumeConnectionOnStartup(false)
         connectionResume.clear()
         scanner.stop()
+        decoders.stop()
         waterfall.stopStream()
         if (isRecording.value) stopRecording()
         client.disconnect()
     }
 
     /** Sintonia richiesta dall'utente: interrompe un'eventuale scansione (canali o intervallo). */
-    fun tune(freqKhz: Double, mode: ModulationMode? = null) {
+    fun tune(freqKhz: Double, mode: ModulationMode? = null, source: TuneSource = TuneSource.OTHER) {
         connectionResume.forgetScan()
         scanner.stop()
-        applyTuning(freqKhz, mode)
+        applyTuning(freqKhz, mode, source = source)
     }
 
-    private fun applyTuning(freqKhz: Double, mode: ModulationMode?) {
+    private fun applyTuning(
+        freqKhz: Double,
+        mode: ModulationMode?,
+        passband: Passband? = null,
+        source: TuneSource = TuneSource.OTHER
+    ) {
         val bounded = freqKhz.coerceIn(0.0, MAX_FREQUENCY_KHZ)
         val targetMode = mode ?: currentMode.value
         squelch.reset()
         audioPipeline.resetFilters()
-        client.tune(bounded, targetMode)
+        client.tune(bounded, targetMode, passband)
         appSettings.setLastTuned(bounded, targetMode)
         waterfall.followTuning(bounded)
+        decoders.onRetuned()
+        autoCenter.onTuned(source)
+    }
+
+    /** Portante corrente (in CW diversa dalla frequenza mostrata, vedi [KiwiProtocol.carrierFrequencyKhz]). */
+    private fun currentCarrierKhz(): Double {
+        val passband = client.currentPassband.value
+        return KiwiProtocol.carrierFrequencyKhz(currentMode.value, currentFrequencyKhz.value, passband.lowCut, passband.highCut)
     }
 
     /** Sintonia immediata da click o trascinamento sul waterfall o sullo spettro. */
-    fun tuneFromWaterfall(freqKhz: Double) = tune(freqKhz, currentMode.value)
+    fun tuneFromWaterfall(freqKhz: Double) = tune(freqKhz, currentMode.value, TuneSource.WATERFALL_CLICK)
 
-    fun stepFrequency(deltaKhz: Double) = tune(currentFrequencyKhz.value + deltaKhz, currentMode.value)
+    fun stepFrequency(deltaKhz: Double) = tune(currentFrequencyKhz.value + deltaKhz, currentMode.value, TuneSource.STEP)
 
     fun setMode(mode: ModulationMode) {
         client.setMode(mode)
@@ -480,6 +629,7 @@ class KiwiAppController(
 
     fun setIdentUser(name: String) {
         client.setIdentUser(name)
+        extensionClient.clientName = name
         appSettings.setCallsign(name)
     }
 
@@ -589,6 +739,7 @@ class KiwiAppController(
         }
         connectionResume.forgetScan()
         scanner.stop()
+        stopDecoderForScan()
         scanner.start(channelScanPlan, stepIndex)
     }
 
@@ -640,6 +791,7 @@ class KiwiAppController(
         }
         connectionResume.forgetScan()
         scanner.stop()
+        stopDecoderForScan()
         scanner.start(rangeScan.plan, stepIndex)
     }
 
@@ -882,6 +1034,237 @@ class KiwiAppController(
         return TelegramAlertService.sendMessage(botToken, chatId, message)
     }
 
+    // ── Modi digitali (funzione avanzata) ────────────────────────
+
+    /**
+     * Avvia il decoder di [mode] (ferma quello in corso e un'eventuale scansione). Con [tuneForMode]
+     * applica modo e banda passante richiesti, alla frequenza [presetKhz] (frequenza pubblicata) o,
+     * se assente, a quella corrente.
+     */
+    fun startDigitalDecoder(mode: DigitalMode, tuneForMode: Boolean, presetKhz: Double? = null) {
+        val availability = digitalModes.value.firstOrNull { it.mode == mode }
+        val problem = when {
+            !hasAdvancedFeatures() -> "I modi digitali richiedono l'attivazione della licenza."
+            !client.isAuthenticated.value -> "Connettiti al ricevitore per avviare un decoder."
+            availability?.isAvailable == false -> availability.reason
+            else -> null
+        }
+        if (problem != null) {
+            _connectionNotifications.tryEmit(problem)
+            return
+        }
+        connectionResume.forgetScan()
+        scanner.stop()
+        val params = appSettings.settings.value.digitalModeParams
+        val published = presetKhz ?: publishedFrequencyFor(mode)
+        if (tuneForMode) applyDigitalTuning(DigitalModeCatalog.tuningFor(mode, published, params))
+        appSettings.setLastDigitalMode(mode)
+        AppLogger.info(TAG, "Avvio decoder ${mode.displayName} a ${"%.3f".format(java.util.Locale.US, published)} kHz")
+        decoders.start(mode, params, published)
+    }
+
+    /** Ferma il decoder; la banda passante torna quella predefinita del modo corrente. */
+    fun stopDigitalDecoder() {
+        if (decoders.currentMode == null && decoders.state.value == DecoderState.Idle) return
+        decoders.stop()
+        restoreDefaultPassband()
+    }
+
+    /** Nuovi parametri dei decoder: salvati e applicati al decoder attivo. */
+    fun updateDigitalModeParams(params: DigitalModeParams) {
+        if (!hasAdvancedFeatures()) return
+        val normalized = params.normalized()
+        val previous = appSettings.settings.value.digitalModeParams
+        appSettings.setDigitalModeParams(normalized)
+        decoders.updateParams(normalized)
+        // RTTY: shift e centro audio cambiano la banda passante richiesta.
+        if (decoders.currentMode == DigitalMode.RTTY && normalized.rtty != previous.rtty) {
+            applyDigitalTuning(DigitalModeCatalog.tuningFor(DigitalMode.RTTY, currentFrequencyKhz.value, normalized))
+        }
+    }
+
+    /** Riapplica modo e banda del decoder attivo alla frequenza corrente (pulsante "Ripristina"). */
+    fun restoreTuningForDecoder() {
+        val mode = decoders.currentMode ?: return
+        val params = appSettings.settings.value.digitalModeParams
+        val tuning = DigitalModeCatalog.tuningFor(mode, publishedFrequencyFor(mode), params)
+        applyDigitalTuning(tuning)
+    }
+
+    // ── Riconoscimento automatico del modo ──
+
+    private fun isRecognitionActive(): Boolean {
+        val settings = appSettings.settings.value
+        val active = settings.modeRecognitionEnabled && client.isAuthenticated.value && hasAdvancedFeatures()
+        if (!active && _modeSuggestion.value != null) _modeSuggestion.value = null
+        return active
+    }
+
+    /** Consumatore del tap di analisi (un solo flusso): aggiorna il suggerimento a ogni finestra. */
+    private fun classifyAudio(frame: com.grabber.model.AudioFrame) {
+        val passband = client.currentPassband.value
+        classifier.setContext(ModeClassifier.Context(currentMode.value, currentFrequencyKhz.value, passband.lowCut, passband.highCut))
+        val count = frame.pcmBytes.size / 2
+        val samples = FloatArray(count) { i ->
+            ((frame.pcmBytes[2 * i].toInt() and 0xFF) or (frame.pcmBytes[2 * i + 1].toInt() shl 8)).toShort() / 32768f
+        }
+        if (!classifier.process(samples, count, frame.sampleRate)) return
+        val suggestion = classifier.suggestion
+        _modeSuggestion.value = suggestion
+        if (suggestion != null) AppLogger.debug(TAG, "Riconoscimento: ${suggestion.label} ${suggestion.percent}% ${suggestion.detail}")
+        maybeAutoStart(suggestion)
+    }
+
+    /** D3: avvio automatico solo dei decoder locali e solo con confidenza ≥ 90 %, se nessun decoder è attivo. */
+    private fun maybeAutoStart(suggestion: ModeSuggestion?) {
+        val mode = suggestion?.mode ?: return
+        val settings = appSettings.settings.value
+        if (!settings.modeRecognitionAutoStart || mode.isServer || suggestion.confidence < AUTO_START_CONFIDENCE) return
+        if (decoders.currentMode != null) return
+        if (mode == DigitalMode.RTTY) {
+            val shift = suggestion.fskShiftHz
+            val preset = when (shift) {
+                170 -> FskPreset.HAM
+                450 -> FskPreset.DWD
+                else -> null
+            }
+            val rtty = preset?.let { FskParams.forPreset(it) }
+                ?: settings.digitalModeParams.rtty.copy(preset = FskPreset.CUSTOM, shiftHz = shift ?: settings.digitalModeParams.rtty.shiftHz)
+            val center = suggestion.audioCenterHz?.toInt() ?: rtty.centerHz
+            appSettings.setDigitalModeParams(settings.digitalModeParams.copy(rtty = rtty.copy(centerHz = center)))
+        }
+        AppLogger.info(TAG, "Avvio automatico del decoder ${mode.displayName} (${suggestion.percent}%)")
+        _connectionNotifications.tryEmit("Riconosciuto ${mode.displayName} (${suggestion.percent}%): decoder avviato.")
+        startDigitalDecoder(mode, tuneForMode = false)
+    }
+
+    fun setModeRecognition(enabled: Boolean, autoStart: Boolean) {
+        if (enabled && !hasAdvancedFeatures()) {
+            _connectionNotifications.tryEmit("Il riconoscimento automatico richiede l'attivazione della licenza.")
+            return
+        }
+        appSettings.setModeRecognition(enabled, autoStart)
+        if (!enabled) {
+            classifier.reset()
+            _modeSuggestion.value = null
+        }
+    }
+
+    /** Allarga la banda per analizzare (in CW il segnale finisce a 1 kHz in USB). */
+    fun tuneForAnalysis() {
+        val freq = currentFrequencyKhz.value
+        when (currentMode.value) {
+            ModulationMode.CW -> applyTuning(freq - 1.0, ModulationMode.USB, Passband(100, 3100), TuneSource.PRESET)
+            ModulationMode.LSB -> applyTuning(freq, ModulationMode.LSB, Passband(-3100, -100), TuneSource.PRESET)
+            else -> applyTuning(freq, ModulationMode.USB, Passband(100, 3100), TuneSource.PRESET)
+        }
+    }
+
+    /** Notifiche Telegram dei decoder con parole chiave dedicate (funzione con licenza). */
+    fun setDecoderAlerts(enabled: Boolean, words: String) {
+        if (!hasAdvancedFeatures()) return
+        appSettings.setDecoderAlerts(enabled, words)
+    }
+
+    // ── Autocentraggio (AFC) ──
+
+    /** Preferenza AFC; senza licenza resta spenta in pratica (il controller la ignora). */
+    val autoCenterEnabled: StateFlow<Boolean> = appSettings.settings
+        .map { it.autoCenterEnabled }
+        .stateIn(scope, SharingStarted.Eagerly, appSettings.settings.value.autoCenterEnabled)
+
+    /** Esito dell'ultima correzione (offset, "nessun segnale", "fuori portata"…). */
+    val lastAutoCenter: StateFlow<AutoCenterResult?> = autoCenter.lastResult
+
+    fun setAutoCenterEnabled(enabled: Boolean) {
+        if (enabled && !hasAdvancedFeatures()) {
+            _connectionNotifications.tryEmit("L'autocentraggio richiede l'attivazione della licenza.")
+            return
+        }
+        appSettings.setAutoCenterEnabled(enabled)
+        if (!enabled) autoCenter.cancel()
+    }
+
+    /** Vero se modo e banda correnti vanno bene per [mode]. */
+    fun isTuningCompatible(mode: DigitalMode): Boolean =
+        DigitalModeCatalog.isTuningCompatible(mode, currentMode.value, currentPassband.value, appSettings.settings.value.digitalModeParams)
+
+    /** Sintonizza la frequenza pubblicata di un modo senza avviare il decoder. */
+    fun tuneForDigitalMode(mode: DigitalMode, presetKhz: Double) {
+        val params = appSettings.settings.value.digitalModeParams
+        connectionResume.forgetScan()
+        scanner.stop()
+        applyDigitalTuning(DigitalModeCatalog.tuningFor(mode, presetKhz, params))
+    }
+
+    fun clearDecodedOutput() = decoders.clear()
+
+    /** Salva testo o immagine del decoder attivo; restituisce il percorso, null se non c'è nulla da salvare. */
+    fun saveDecodedOutput(): String? {
+        if (!hasAdvancedFeatures()) return null
+        val mode = decoders.currentMode ?: appSettings.settings.value.lastDigitalMode ?: return null
+        return try {
+            val file = if (mode.output == com.grabber.model.digital.DecoderOutputKind.IMAGE) {
+                decoders.image.value?.let(decodedOutputStore::saveImage)
+            } else {
+                decodedOutputStore.saveText(mode, currentFrequencyKhz.value, decoders.items.value)
+            }
+            file?.absolutePath?.also { _connectionNotifications.tryEmit("Salvato: $it") }
+        } catch (e: Exception) {
+            AppLogger.error(TAG, "Salvataggio delle decodifiche non riuscito", e)
+            _connectionNotifications.tryEmit("Salvataggio non riuscito: ${e.message ?: e.javaClass.simpleName}")
+            null
+        }
+    }
+
+    /** Cartella dei file salvati dai decoder. */
+    val decodedOutputDirectory: File get() = decodedOutputStore.directory
+
+    /**
+     * Limite delle connessioni per le app raggiunto (D8): solo su richiesta dell'utente chiude il
+     * waterfall e riprova ad aprire il decoder. Il waterfall si riapre con il pulsante esistente.
+     */
+    fun freeConnectionForDecoder() {
+        if (!hasAdvancedFeatures()) return
+        waterfall.stopStream()
+        scope.launch {
+            delay(FREE_CONNECTION_DELAY_MS)
+            decoders.retry()
+        }
+    }
+
+    private fun stopDecoderForScan() {
+        if (decoders.currentMode != null) {
+            decoders.stop()
+            _connectionNotifications.tryEmit("Decoder fermato: la scansione cambia frequenza.")
+        }
+    }
+
+    private fun applyDigitalTuning(tuning: DigitalTuning) =
+        applyTuning(tuning.frequencyKhz, tuning.modulation, tuning.passband, TuneSource.PRESET)
+
+    private fun restoreDefaultPassband() {
+        val mode = currentMode.value
+        if (!currentPassband.value.isDefaultFor(mode)) {
+            applyTuning(currentFrequencyKhz.value, mode, Passband.defaultFor(mode))
+        }
+    }
+
+    /**
+     * Frequenza pubblicata corrispondente alla sintonia corrente (inverso del catalogo): WSPR e FAX
+     * hanno la frequenza mostrata diversa da quella pubblicata.
+     */
+    private fun publishedFrequencyFor(mode: DigitalMode): Double {
+        val freq = currentFrequencyKhz.value
+        val probe = DigitalModeCatalog.tuningFor(mode, freq, appSettings.settings.value.digitalModeParams)
+        return freq + (freq - probe.frequencyKhz)
+    }
+
+    private fun isDigitalModeImplemented(mode: DigitalMode): Boolean = when (mode) {
+        DigitalMode.RTTY, DigitalMode.NAVTEX, DigitalMode.DSC -> localDecoderFactory.create(mode, DigitalModeParams()) != null
+        else -> true
+    }
+
     // ── Licenza ──────────────────────────────────────────────────
 
     fun isLicenseValid(licenseKey: String): Boolean = LicenseManager.verifyLicenseForCurrentMachine(licenseKey)
@@ -898,6 +1281,7 @@ class KiwiAppController(
 
     fun shutdown() {
         scanner.stop()
+        decoders.stop()
         dsp.flush() // salva subito una modifica DSP ancora in attesa del debounce
         appSettings.setLastTuned(currentFrequencyKhz.value, currentMode.value)
         if (isRecording.value) stopRecording()

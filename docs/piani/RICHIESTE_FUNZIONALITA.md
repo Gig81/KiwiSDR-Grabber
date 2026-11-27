@@ -111,6 +111,12 @@ Possibili strade, dalla più semplice:
 
 Proposta: partire da (a) per la massima copertura dei modi con poco lavoro, poi valutare (b) per FT8/WSPR/CW/FAX/SSTV mostrati direttamente nell'app. Da chiarire con gli utenti quali modi interessano davvero.
 
+## BUG/AGGIUNTE DA SISTEMARE
+- se clicco sul waterfall in alto mi riporta sempre sulle bande CB anche se sono in 40 metri o in altre frequenze, a volte anche digitando una frequenza l'audio cambiava ma il waterfall continuava a mostrare i preferiti dell banda precedente.
+- usare lo squelch (già esistente) nei modi digitali, altrimenti decodifica anche il rumore, o almeno ci prova.
+- non spostarsi di frequenza quando si avvia la decodifica dei modi digitali, ma solo quando si preme su Sintonizza.
+- quando si clicca su un nome nella lista utenti, sintonizzarsi sulla stessa frequenza e modo dell'utente cliccato.
+
 ## English
 
 This page tracks feature requests received from users. These are proposals for future development; they do not mean the features are already available or scheduled for a specific release, unless stated.

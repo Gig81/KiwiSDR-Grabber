@@ -55,6 +55,21 @@ class PaletteContrastTests {
     }
 
     @Test
+    fun lightThemeScrollbarIsVisibleOnAllSurfaces() {
+        val p = LightPalette
+        listOf(p.background, p.surface, p.surfaceVariant).forEach { surface ->
+            assertContrast("chiaro scrollbar", p.scrollbarThumb, surface, 3.0)
+        }
+    }
+
+    @Test
+    fun splashTextIsReadableOnLogoBackground() {
+        assertContrast("splash testo", BrandColors.OnLogoBackground, BrandColors.LogoBackground, 4.5)
+        assertContrast("splash testo secondario", BrandColors.OnLogoBackgroundMuted, BrandColors.LogoBackground, 4.5)
+        assertContrast("splash pulsante", BrandColors.LogoBackground, BrandColors.LogoGreen, 4.5)
+    }
+
+    @Test
     fun displayColorsStayDarkInBothThemes() {
         assertContrast("LCD", DisplayColors.LcdPrimary, DisplayColors.LcdBackground, 7.0)
         assertContrast("righello", DisplayColors.RulerText, DisplayColors.RulerBackground, 4.5)

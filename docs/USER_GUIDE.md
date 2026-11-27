@@ -1,6 +1,6 @@
 # KiwiSDR Grabber: Guida rapida e manuale utente
 
-Questa guida descrive l'applicazione desktop per Windows; la versione Android è descritta nella [sezione 12](#12-versione-android). L'interfaccia attuale è in italiano.
+Questa guida descrive l'applicazione desktop per Windows; la versione Android è descritta nella [sezione 13](#13-versione-android). L'interfaccia attuale è in italiano.
 
 **[Italiano](#italiano) | [English](#english)**
 
@@ -74,6 +74,10 @@ server address beside the power icon and connected status. Hide private addresse
 3. L'icona è rossa quando il ricevitore è disconnesso, gialla durante il collegamento o la riconnessione e verde quando è collegato. In basso nella finestra può comparire anche una notifica sullo stato.
 4. Per modificare indirizzo o password, apri **Impostazioni avanzate**, espandi **SERVER KIWISDR / RICEVITORE REMOTO**, salva la modifica e, se necessario, ricollegati.
 
+Se chiudi l'applicazione mentre è collegata, al prossimo avvio si ricollega da sola all'ultimo ricevitore usato; se ti eri disconnesso, resta disconnessa. Se la connessione cade per un problema di rete, l'applicazione riprova ogni 10 secondi e, una volta ricollegata, riprende la registrazione (in un nuovo file) e la scansione da dove si erano interrotte.
+
+All'avvio compare una schermata con il logo e la versione in uso. L'applicazione controlla su GitHub se esiste una versione più recente: in quel caso la schermata resta aperta con il pulsante **Scarica l'aggiornamento**, che apre la pagina della nuova versione, e il pulsante **Continua**. Un clic sulla schermata o il tasto Esc la chiudono subito.
+
 Per trovare un ricevitore, nella stessa sezione usa **Mappa pubblica KiwiSDR** oppure **Mappa ricevitori SDR (rx-tx.info)**: entrambi aprono la mappa nel browser. La mappa di rx-tx.info elenca anche ricevitori WebSDR e OpenWebRX, ma l'app si collega solo ai **KiwiSDR**: copia l'indirizzo `host:porta` del ricevitore scelto nel campo **Indirizzo Server** e salva.
 
 Se il collegamento non riesce, verifica nome host e porta, che il ricevitore sia online e raggiungibile e che la password sia corretta. Potrebbero anche essere esauriti i canali utente del ricevitore. In particolare, un rifiuto `badp=1` può indicare una password errata oppure l'esaurimento dei canali: l'applicazione non può distinguere le due cause.
@@ -137,7 +141,22 @@ Recorder tab showing start/stop, format and intervals, folder button, and archiv
 5. Per trovare i file, seleziona **Apri Cartella Registrazioni**. La cartella predefinita è `C:\Users\<nome-utente>\KiwiGrabberRecordings`.
 6. L'archivio mostra le registrazioni recenti e permette di riprodurle, vedere le trascrizioni, aprire i file e cercare nell'archivio.
 
-Se è attivo lo squelch di registrazione o il gate VAD, l'avvio può armare il registratore senza iniziare subito a scrivere l'audio. Lo squelch attende un segnale sopra la soglia; il VAD attende il rilevamento della voce. Il pannello indica se la registrazione è in attesa o sta scrivendo.
+Il **GATE DI REGISTRAZIONE** decide quando scrivere l'audio (si cambia solo a registrazione ferma; il pulsante di avvio indica la modalità, per esempio **AVVIA REC (SQL)**):
+
+- **Continua:** nessun gate; vale l'intervallo di segmentazione scelto.
+- **Solo RF:** un file per ogni QSO. Parte quando il segnale supera la soglia SQL e si chiude allo scadere dell'hang time.
+- **Solo voce:** parte alla prima voce rilevata dal VAD, anche con segnale sotto la soglia, e si chiude dopo l'hang time senza voce.
+- **RF e voce:** parte quando c'è voce con il segnale sopra la soglia; si chiude con lo squelch oppure, con **Chiudi senza voce** attivo, dopo il tempo indicato senza voce (5 s predefiniti) anche se una portante o il rumore tengono aperto lo squelch.
+
+Con un gate attivo l'avvio arma il registratore senza scrivere subito: il pannello indica se è in attesa o sta scrivendo. Le modalità con voce richiedono l'attivazione.
+
+**Filtro anti-rumore.** Una scarica o un disturbo breve può aprire lo squelch e produrre file di pochi secondi, che Vosk trascrive spesso come una parola corta (per esempio "uso"). Nel pannello di registrazione, **FILTRO ANTI-RUMORE (SEGMENTI QSO)** scarta questi segmenti: il file viene **cancellato dal disco** e non entra nell'archivio, e non parte la notifica Telegram della trascrizione. I controlli:
+
+- **Durata minima** (attivo, 1,5 s): scarta i QSO la cui parte attiva, senza contare l'hang time, è più breve.
+- **Parole rumore** (attivo, "uso"): dopo la trascrizione scarta i QSO con testo vuoto o fatto solo delle parole indicate, separate da virgole. Scrivi l'elenco e premi **Applica**.
+- **Confidenza minima** (spento, 50%): dopo la trascrizione scarta i QSO in cui la confidenza media delle parole riconosciute da Vosk è sotto la soglia. Sui segnali deboli anche il parlato reale può avere confidenza bassa: attivalo con cautela.
+
+Il filtro vale solo per i segmenti di un gate (non per la registrazione continua o a intervalli) e non tocca le trascrizioni avviate a mano con **Trascrivi**. I controlli sul testo funzionano solo con la trascrizione Vosk configurata.
 
 ### 6. Elaborazione audio
 
@@ -146,17 +165,26 @@ VAD e gate SQL/VAD della console. / Audio tab showing squelch/DSP controls, VAD
 sensitivity and status, and the console gates. -->
 ![Squelch e rilevamento dell'attività vocale](images/guide-audio-processing.png)
 
-*Lo squelch RF e il VAD sono gate distinti per l'ascolto e la registrazione.*
+*Lo squelch RF e il VAD si combinano in un gate di ascolto e in un gate di registrazione indipendenti.*
 
-**Squelch RF** silenzia o mette in pausa l'audio quando il segnale ricevuto scende sotto una soglia di intensità configurabile. Seleziona **SQL** nella console per attivare o disattivare lo squelch durante l'ascolto; regola il cursore per cambiare la soglia. Nella scheda Registratore, **Squelch in Registrazione** applica un gate indipendente alle registrazioni durante i periodi di segnale debole.
+**Squelch RF** reagisce all'intensità del segnale: il gate RF si apre sopra la soglia regolata con il cursore **SQL** della console. **Voice Activity Detection (VAD)** analizza l'audio per distinguere la voce dal silenzio, dalle portanti e dal rumore impulsivo; nel pannello **VOICE ACTIVITY DETECTION (VAD)** della scheda Audio regoli sensibilità e hangover vocale. Il VAD richiede l'attivazione.
 
-**Voice Activity Detection (VAD)** analizza l'audio per distinguere la voce dal silenzio o dal rumore impulsivo. Seleziona **VAD** nella console per filtrare l'ascolto in base alla voce rilevata. Nella scheda **Audio**, regola la sensibilità e l'hangover vocale; nella scheda Registratore, **Voice-Gate in Registrazione** limita la registrazione ai segmenti con voce rilevata. Queste funzioni VAD richiedono l'attivazione.
+Ascolto e registrazione hanno ciascuno una **modalità** con quattro scelte:
+
+| Modalità | Ascolto | Registrazione |
+| --- | --- | --- |
+| **Libero / Continua** | audio sempre udibile | nessun gate |
+| **Solo RF** | si sente con segnale sopra la soglia | un file per QSO, guidato dallo squelch |
+| **Solo voce** | si sente quando c'è voce, qualunque sia il segnale | un file per QSO, guidato dalla voce |
+| **RF e voce** | servono segnale sopra soglia **e** voce | parte con voce e segnale; si chiude con lo squelch o dopo il tempo senza voce |
+
+La modalità di ascolto si sceglie in **GATE DI ASCOLTO** (pannello Squelch della scheda Audio) oppure dalla console: **SQL** e **VAD** sono le due componenti della modalità, e con entrambe accese vale **RF e voce**. Passa il mouse su **SQL** o **VAD** per vedere la modalità attiva. La modalità di registrazione si sceglie nel **Registratore** (vedi sopra).
 
 Nel pannello **SQUELCH: ANTI-POP E HANG TIME** della scheda Audio trovi inoltre:
 
 - **Soft Mute (Anti-Pop):** rende graduale l'apertura e la chiusura del gate per ridurre i clic.
 - **Pre-Buffer:** conserva in un buffer circolare un breve tratto audio per ridurre il rischio di tagliare l'inizio delle trasmissioni nelle registrazioni filtrate.
-- **Hang Time:** mantiene aperto per qualche istante il gate RF dopo un calo del segnale, aiutando a unire le pause all'interno di una trasmissione.
+- **Hang Time:** mantiene aperto per qualche istante il gate RF dopo un calo del segnale, aiutando a unire le pause all'interno di una trasmissione. In registrazione **Solo voce** è l'attesa dopo l'ultima voce rilevata.
 
 Quando abilitati, squelch e VAD cambiano l'audio inviato alla riproduzione o alla registrazione. Non migliorano la ricezione del segnale radio.
 
@@ -198,7 +226,7 @@ notification options, keywords, interval, and test button. Hide token and chat I
 
 *Le notifiche Telegram utilizzano un bot e una destinazione configurati dall'utente.*
 
-In questa applicazione, **QSO** indica un segmento di attività rilevato dalla logica dello squelch RF e dell'hang time, eventualmente combinata con il VAD. Non è un collegamento radio decodificato: l'app non identifica le stazioni e non verifica il contenuto della conversazione.
+In questa applicazione, **QSO** indica un segmento di attività rilevato dal gate di registrazione (squelch RF e hang time, VAD o entrambi, secondo la modalità scelta; con la registrazione continua, lo squelch RF). Non è un collegamento radio decodificato: l'app non identifica le stazioni e non verifica il contenuto della conversazione.
 
 Per configurare Telegram:
 
@@ -211,7 +239,41 @@ Per configurare Telegram:
 
 Le notifiche Telegram richiedono l'attivazione e una connessione Internet. Gli avvisi per parola chiave richiedono un modello Vosk configurato e una trascrizione completata. Gli allegati audio e testo sono associati ai segmenti QSO registrati; le notifiche di inizio e fine trasmissione sono configurabili separatamente. L'intervallo minimo può variare da immediato a 60 minuti.
 
-### 9. Impostazioni e configurazione
+### 9. Modi digitali (Windows)
+
+<!-- SCREENSHOT (IT/EN): scheda Modi digitali con elenco dei modi a sinistra e un decoder
+NAVTEX o FT8 attivo a destra. / Digital modes tab with the mode list on the left and an
+active NAVTEX or FT8 decoder on the right. -->
+
+La scheda **Modi digitali** decodifica le trasmissioni digitali ricevute. A sinistra c'è l'elenco dei modi, diviso in due gruppi:
+
+- **Sul server:** FT8, FT4, WSPR, CW, CW Skimmer, Fax meteo, SSTV, HFDL e ALE 2G sono decodificati dalle estensioni del ricevitore KiwiSDR; l'app mostra i risultati.
+- **Nell'app:** RTTY/FSK, NAVTEX e DSC sono decodificati dall'app sull'audio ricevuto.
+
+Un modo non disponibile è indicato come tale; il motivo compare passando il mouse (estensione non installata o disabilitata dall'amministratore, ricevitore non in modalità 12 kHz per FT8, FT4 e SSTV).
+
+Per usare un decoder:
+
+1. Seleziona il modo, scegli una frequenza nota dal menu e premi **Avvia**: l'app imposta modo, banda passante e frequenza adatti e avvia il decoder. **Avvia qui** avvia il decoder senza cambiare la sintonia; **Sintonizza** cambia solo la sintonia.
+2. Regola i parametri del modo (per esempio il preset RTTY, i filtri NAVTEX, le righe al minuto del fax).
+3. Le decodifiche compaiono sotto: tabella per FT8/FT4 e WSPR (clic su una riga per copiarla), testo continuo per CW, RTTY, HFDL e ALE, una riga per segnale per il CW Skimmer (clic per sintonizzare il segnale in CW), messaggi espandibili per NAVTEX e DSC, immagini per fax e SSTV.
+4. **Salva** scrive il testo o l'immagine nella cartella `KiwiGrabberRecordings\Decodifiche`; per fax e SSTV puoi attivare il salvataggio automatico delle immagini complete. **Pulisci** svuota l'uscita.
+
+Un solo decoder è attivo alla volta e il display del VFO mostra `DEC`. Se cambi frequenza o modo a mano il decoder resta attivo; se la sintonia non è più adatta la scheda lo segnala e propone **Ripristina**. Avviare un decoder ferma la scansione e viceversa. Dopo una caduta di rete il decoder del server riparte da solo con la sessione.
+
+**Limiti dei ricevitori.** I decoder del server usano una terza connessione verso il KiwiSDR (oltre ad audio e waterfall). Molti ricevitori limitano le connessioni delle app esterne: se il decoder viene rifiutato, la scheda lo spiega e propone **Libera una connessione**, che chiude il waterfall e riprova (il waterfall si riapre con il suo pulsante). Se un altro utente usa DRM, i decoder del server sono sospesi su tutto il ricevitore.
+
+**Riconoscimento automatico.** In cima all'elenco, l'interruttore **Riconoscimento** analizza l'audio e propone il modo più probabile con una percentuale (RTTY con lo shift stimato, NAVTEX, DSC, CW, fax, FT8/FT4/WSPR in base alla frequenza; PSK31 viene solo segnalato). Servono alcuni secondi di segnale e una banda passante abbastanza larga: in CW usa **Allarga banda**. Con **Avvio automatico** l'app avvia da sola i decoder RTTY, NAVTEX e DSC quando la confidenza supera il 90 %; i decoder del server si avviano sempre a mano.
+
+**Autocentraggio (AFC).** Nella console audio, sotto la riga del VAD, l'interruttore **AFC** (spento di default) centra il segnale dopo una frequenza digitata o un clic sul waterfall o sullo spettro: il tono CW al centro della banda, la portante AM, i segnali NFM e, con i decoder attivi, i segnali RTTY, NAVTEX e fax. Accanto compare l'esito dell'ultima correzione e il display del VFO mostra `AFC`. Non agisce in USB/LSB voce, sui preferiti, sulle scansioni e sui passi di sintonia. Per CW e AM la stima dal waterfall richiede uno zoom sufficiente (CW: zoom 10 o superiore); in CW, con il tono già nella banda passante, basta l'audio.
+
+**Notifiche Telegram.** In **Impostazioni avanzate → Telegram** attiva **Notifiche dai decoder dei modi digitali** e inserisci le parole chiave da cercare nei messaggi decodificati. Al massimo una notifica ogni 30 secondi per parola chiave e nessun duplicato dello stesso messaggio NAVTEX.
+
+**Frequenza in CW.** Dalla versione 1.4.0 la frequenza mostrata in CW è quella del segnale, come nel client web KiwiSDR: il tono si sente a 500 Hz. I preferiti CW salvati con le versioni precedenti risultano spostati di 0,5 kHz.
+
+Il decoder DSC è solo informativo: non usarlo per la sicurezza della vita in mare. Tutte le funzioni dei modi digitali richiedono l'attivazione.
+
+### 10. Impostazioni e configurazione
 
 <!-- SCREENSHOT (IT/EN): pagina Impostazioni con sezioni server, nominativo, licenza
 e protezione credenziali. Nascondere password, Machine ID e token. / Settings page
@@ -228,7 +290,7 @@ Su Windows, il file delle impostazioni si trova in `C:\Users\<nome-utente>\.kiwi
 
 Per attivare le funzioni avanzate, apri la sezione **Gestione licenza**, copia il Machine ID e richiedi un codice all'autore tramite il canale indicato nell'applicazione. Inserisci il codice ricevuto e seleziona **Attiva Licenza**. L'attivazione è gratuita e verificata localmente; la licenza è legata a quel computer. Se reinstalli Windows, il Machine ID potrebbe cambiare e potrebbe essere necessario richiedere un nuovo codice.
 
-### 10. Risoluzione dei problemi
+### 11. Risoluzione dei problemi
 
 | Problema | Controlli suggeriti |
 |---|---|
@@ -242,7 +304,7 @@ Per attivare le funzioni avanzate, apri la sezione **Gestione licenza**, copia i
 
 Se il problema persiste, apri una segnalazione nelle [GitHub Issues](https://github.com/Gig81/KiwiSDR-Grabber/issues). Indica la versione dell'app e di Windows, i passaggi per riprodurre il problema e i messaggi di errore pertinenti. Prima di pubblicare log o schermate, rimuovi password, token, indirizzi privati e trascrizioni personali.
 
-### 11. Altre informazioni
+### 12. Altre informazioni
 
 - [README principale del progetto](../README.md)
 - [Licenza dell'applicazione](../LICENSE) e [permesso aggiuntivo LGPL](../LICENSE-LGPL-EXCEPTION.md)
@@ -250,7 +312,7 @@ Se il problema persiste, apri una segnalazione nelle [GitHub Issues](https://git
 - [Scarica la release attuale](https://github.com/Gig81/KiwiSDR-Grabber/releases)
 - [Segnala un problema o richiedi una funzione](https://github.com/Gig81/KiwiSDR-Grabber/issues)
 
-### 12. Versione Android
+### 13. Versione Android
 
 Dalla versione 1.2.0 è disponibile un'app Android per l'**ascolto**: con lo stesso ricevitore KiwiSDR offre radio, spettro e waterfall, preferiti, utenti connessi e registrazione WAV; dalla 1.3.0 anche tema chiaro, scansione di un intervallo di frequenze, equalizzatore e filtri DSP e collegamenti alle mappe dei ricevitori. Non include le altre funzioni di elaborazione e avviso del desktop (VAD, trascrizione, storico, scansione dei canali preferiti, Telegram, MP3).
 
@@ -300,7 +362,7 @@ Il codice vale solo per quel telefono: una licenza desktop non attiva l'app Andr
 
 ## English
 
-This guide covers the Windows desktop application; the Android version is described in [section 12](#12-android-version). The current interface is in Italian; English descriptions below include the Italian labels shown in the application where helpful.
+This guide covers the Windows desktop application; the Android version is described in [section 13](#13-android-version). The current interface is in Italian; English descriptions below include the Italian labels shown in the application where helpful.
 
 <!-- SCREENSHOT (IT/EN): finestra principale con console radio e schede dell'area di
 lavoro. Nascondere credenziali e informazioni private. / Main window with the radio
@@ -370,6 +432,10 @@ server address beside the power icon and connected status. Hide private addresse
 3. The icon is red when disconnected, yellow while connecting or reconnecting, and green when connected. A connection notification may also appear at the bottom of the window.
 4. If you need to change the address or password, open **Settings** (`Impostazioni avanzate`), expand **KiwiSDR Server / Remote Receiver** (`SERVER KIWISDR / RICEVITORE REMOTO`), save the change, then reconnect if needed.
 
+If you close the application while connected, it reconnects to the last receiver used the next time it starts; if you had disconnected, it stays disconnected. If the connection drops because of a network problem, the application retries every 10 seconds and, once reconnected, resumes recording (in a new file) and scanning where they stopped.
+
+At startup a screen shows the logo and the installed version. The application checks GitHub for a newer version: if there is one, the screen stays open with a **Download the update** button (`Scarica l'aggiornamento`), which opens the new version's page, and a **Continue** button (`Continua`). Clicking the screen or pressing Esc closes it immediately.
+
 To find a receiver, use **KiwiSDR public map** (`Mappa pubblica KiwiSDR`) or **SDR receiver map (rx-tx.info)** (`Mappa ricevitori SDR (rx-tx.info)`) in the same section: both open the map in your browser. The rx-tx.info map also lists WebSDR and OpenWebRX receivers, but the app only connects to **KiwiSDR** receivers: copy the chosen receiver's `host:port` into **Server address** (`Indirizzo Server`) and save.
 
 If connection fails, confirm the host name and port, check that the receiver is online and reachable, and verify any required password. The receiver may also have no free user channels. In particular, a `badp=1` rejection can indicate either an incorrect password or exhausted channels; it does not distinguish between them.
@@ -433,7 +499,22 @@ Recorder tab showing start/stop, format and intervals, folder button, and archiv
 5. To locate files, select **Open Recordings Folder** (`Apri Cartella Registrazioni`). By default, recordings are saved in `C:\Users\<your-name>\KiwiGrabberRecordings`.
 6. The archive lists recent recordings and provides playback, transcript viewing, file opening, and search controls.
 
-If recording squelch or the VAD recording gate is enabled, starting a recording may arm the recorder without immediately writing audio. Squelch waits for a signal above its threshold; VAD waits for detected speech. The recorder panel shows whether it is armed or writing.
+The **Recording gate** (`GATE DI REGISTRAZIONE`) decides when audio is written (it can only be changed while recording is stopped; the start button shows the mode, for example **AVVIA REC (SQL)**):
+
+- **Continuous** (`Continua`): no gate; the chosen segment interval applies.
+- **RF only** (`Solo RF`): one file per QSO. It starts when the signal exceeds the SQL threshold and closes when the hang time expires.
+- **Voice only** (`Solo voce`): starts at the first speech detected by the VAD, even with the signal below the threshold, and closes after the hang time without speech.
+- **RF and voice** (`RF e voce`): starts when there is speech with the signal above the threshold; closes with the squelch or, with **Close without voice** (`Chiudi senza voce`) enabled, after the set time without speech (5 s by default), even if a carrier or noise keeps the squelch open.
+
+With a gate active, starting a recording arms the recorder without writing immediately; the panel shows whether it is waiting or writing. The voice modes require activation.
+
+**Noise filter.** A short static crash or burst of interference can open the squelch and produce files of a few seconds, which Vosk often transcribes as a short word (for example "uso"). In the recorder panel, **Noise filter (QSO segments)** (`FILTRO ANTI-RUMORE (SEGMENTI QSO)`) discards these segments: the file is **deleted from disk**, it is not added to the archive, and no Telegram transcription alert is sent. The controls:
+
+- **Minimum length** (`Durata minima`, on, 1.5 s): discards QSOs whose active part, excluding the hang time, is shorter.
+- **Noise words** (`Parole rumore`, on, "uso"): after transcription, discards QSOs whose text is empty or made only of the listed words, separated by commas. Type the list and select **Apply** (`Applica`).
+- **Minimum confidence** (`Confidenza minima`, off, 50%): after transcription, discards QSOs whose average Vosk word confidence is below the threshold. On weak signals real speech can also have low confidence: enable it with care.
+
+The filter only applies to segments produced by a gate (not to continuous or interval recording) and never affects transcriptions started manually with **Transcribe** (`Trascrivi`). The text checks only work when Vosk transcription is configured.
 
 ### 6. Audio processing
 
@@ -442,17 +523,26 @@ VAD e gate SQL/VAD della console. / Audio tab showing squelch/DSP controls, VAD
 sensitivity and status, and the console gates. -->
 ![Squelch and voice activity controls](images/guide-audio-processing.png)
 
-*RF squelch and VAD are separate gates for listening and recording.*
+*RF squelch and VAD combine into independent listening and recording gates.*
 
-**RF squelch** mutes or pauses audio when the received signal falls below a chosen signal-strength threshold. Select **SQL** in the console to enable or disable squelch for live listening; adjust its slider to set the threshold. In the Recorder tab, **Squelch in Recording** (`Squelch in Registrazione`) independently gates recording during weak-signal periods.
+**RF squelch** reacts to signal strength: the RF gate opens above the threshold set with the **SQL** slider in the console. **Voice Activity Detection (VAD)** analyzes audio to tell speech from silence, carriers, and impulsive noise; adjust sensitivity and vocal hangover in the **Voice Activity Detection (VAD)** panel of the Audio tab. VAD requires activation.
 
-**Voice Activity Detection (VAD)** analyzes audio to distinguish speech from silence or impulsive noise. Select **VAD** in the console to gate live listening by detected voice. In the Audio tab (`Audio`), adjust sensitivity and vocal hangover; in the Recorder tab, **Voice-Gate in Recording** (`Voice-Gate in Registrazione`) gates recordings based on detected speech. These VAD features require activation.
+Listening and recording each have a **mode** with four choices:
+
+| Mode | Listening | Recording |
+| --- | --- | --- |
+| **Open / Continuous** (`Libero` / `Continua`) | audio always audible | no gate |
+| **RF only** (`Solo RF`) | audible with the signal above the threshold | one file per QSO, driven by the squelch |
+| **Voice only** (`Solo voce`) | audible when there is speech, whatever the signal | one file per QSO, driven by speech |
+| **RF and voice** (`RF e voce`) | needs signal above the threshold **and** speech | starts with speech and signal; closes with the squelch or after the time without speech |
+
+Choose the listening mode in **Listening gate** (`GATE DI ASCOLTO`, Squelch panel of the Audio tab) or from the console: **SQL** and **VAD** are the two parts of the mode, and with both on the mode is **RF and voice**. Hover over **SQL** or **VAD** to see the active mode. Choose the recording mode in the **Recorder** (see above).
 
 The **Squelch: anti-pop and hang time** panel (`SQUELCH: ANTI-POP E HANG TIME`) in the Audio tab also provides:
 
 - **Soft Mute (Anti-Pop):** smooths the opening and closing of a gate to reduce clicks.
 - **Pre-Buffer:** keeps a short rolling audio buffer so the beginning of a transmission is less likely to be cut off in gated recordings.
-- **Hang Time:** keeps the RF gate open briefly between signal drops, helping combine pauses within a transmission.
+- **Hang Time:** keeps the RF gate open briefly between signal drops, helping combine pauses within a transmission. In **Voice only** recording it is the wait after the last detected speech.
 
 Squelch and VAD change which audio is passed to live playback or recording when their respective gates are enabled. They do not improve the receiver's radio-frequency reception.
 
@@ -494,7 +584,7 @@ notification options, keywords, interval, and test button. Hide token and chat I
 
 *Telegram alerts use a bot and destination that you configure.*
 
-In this application, **QSO** is an activity segment detected by the RF squelch and hang-time logic, optionally combined with VAD. It is not a decoded contact, and the application does not verify the identity of a station or what was said.
+In this application, **QSO** is an activity segment detected by the recording gate (RF squelch and hang time, VAD, or both, depending on the chosen mode; with continuous recording, the RF squelch). It is not a decoded contact, and the application does not verify the identity of a station or what was said.
 
 To configure Telegram:
 
@@ -507,7 +597,37 @@ To configure Telegram:
 
 Telegram alerts require activation and an internet connection. Keyword alerts require a configured Vosk model and a completed transcription. Audio and transcript attachments are associated with recorded QSO segments; start/end event notifications can be configured separately. The minimum-message interval can be set from immediate to 60 minutes.
 
-### 9. Settings and configuration
+### 9. Digital modes (Windows)
+
+The **Digital modes** tab (`Modi digitali`) decodes digital transmissions. On the left is the list of modes, in two groups:
+
+- **On the server** (`Sul server`): FT8, FT4, WSPR, CW, CW Skimmer, weather fax, SSTV, HFDL and ALE 2G are decoded by the KiwiSDR receiver extensions; the app shows the results.
+- **In the app** (`Nell'app`): RTTY/FSK, NAVTEX and DSC are decoded by the app from the received audio.
+
+A mode that is not available is marked as such; hover to see why (extension not installed or disabled by the administrator, receiver not in 12 kHz mode for FT8, FT4 and SSTV).
+
+To use a decoder:
+
+1. Select the mode, pick a known frequency from the menu and press **Start** (`Avvia`): the app sets a suitable mode, passband and frequency and starts the decoder. **Start here** (`Avvia qui`) starts it without retuning; **Tune** (`Sintonizza`) only retunes.
+2. Adjust the mode parameters (for example the RTTY preset, NAVTEX filters, fax lines per minute).
+3. Decodes appear below: a table for FT8/FT4 and WSPR (click a row to copy it), running text for CW, RTTY, HFDL and ALE, one line per signal for the CW Skimmer (click to tune that signal in CW), expandable messages for NAVTEX and DSC, images for fax and SSTV.
+4. **Save** (`Salva`) writes the text or image to `KiwiGrabberRecordings\Decodifiche`; for fax and SSTV you can enable automatic saving of complete images. **Clear** (`Pulisci`) empties the output.
+
+Only one decoder runs at a time and the VFO display shows `DEC`. If you retune or change mode by hand the decoder keeps running; if the tuning no longer suits the mode the tab says so and offers **Restore** (`Ripristina`). Starting a decoder stops a scan and vice versa. After a network drop the server decoder restarts with the session.
+
+**Receiver limits.** Server decoders use a third connection to the KiwiSDR (besides audio and waterfall). Many receivers limit connections from external apps: if the decoder is refused, the tab explains it and offers **Free a connection** (`Libera una connessione`), which closes the waterfall and retries (reopen the waterfall with its button). If another user is using DRM, server decoders are suspended on the whole receiver.
+
+**Automatic recognition.** At the top of the list, the **Recognition** (`Riconoscimento`) switch analyses the audio and suggests the most likely mode with a percentage (RTTY with the estimated shift, NAVTEX, DSC, CW, fax, FT8/FT4/WSPR from the frequency; PSK31 is only reported). It needs a few seconds of signal and a wide enough passband: in CW use **Widen band** (`Allarga banda`). With **Automatic start** the app starts the RTTY, NAVTEX and DSC decoders on its own above 90 % confidence; server decoders are always started by hand.
+
+**Automatic centering (AFC).** In the audio console, below the VAD row, the **AFC** switch (off by default) centers the signal after a typed frequency or a click on the waterfall or spectrum: the CW tone in the middle of the passband, the AM carrier, NFM signals and, with decoders running, RTTY, NAVTEX and fax signals. The result of the last correction appears next to it and the VFO display shows `AFC`. It does not act on USB/LSB voice, favorites, scans or tuning steps. For CW and AM the waterfall estimate needs enough zoom (CW: zoom 10 or higher); in CW, with the tone already inside the passband, the audio is enough.
+
+**Telegram notifications.** In **Advanced settings → Telegram** enable **Notifications from digital mode decoders** (`Notifiche dai decoder dei modi digitali`) and enter the keywords to look for in decoded messages. At most one notification every 30 seconds per keyword and no duplicates of the same NAVTEX message.
+
+**CW frequency.** Since version 1.4.0 the frequency shown in CW is the signal frequency, as in the KiwiSDR web client: the tone is heard at 500 Hz. CW favorites saved with earlier versions are 0.5 kHz off.
+
+The DSC decoder is informational only: do not use it for safety of life at sea. All digital mode features require activation.
+
+### 10. Settings and configuration
 
 <!-- SCREENSHOT (IT/EN): pagina Impostazioni con sezioni server, nominativo, licenza
 e protezione credenziali. Nascondere password, Machine ID e token. / Settings page
@@ -524,7 +644,7 @@ On Windows, the settings file is `C:\Users\<your-name>\.kiwigrabber\settings.jso
 
 To activate advanced features, open the **License** section, copy the displayed Machine ID, and request a code from the project owner through the channel indicated in the application. Enter the received code and select **Activate License** (`Attiva Licenza`). Activation is free and checked locally; the license is tied to that machine. If Windows is reinstalled, the Machine ID may change and a new code may be required.
 
-### 10. Troubleshooting
+### 11. Troubleshooting
 
 | Problem | Things to check |
 |---|---|
@@ -538,7 +658,7 @@ To activate advanced features, open the **License** section, copy the displayed 
 
 If the problem persists, report it through [GitHub Issues](https://github.com/Gig81/KiwiSDR-Grabber/issues). Include the app version, Windows version, steps to reproduce, and relevant error text. Remove passwords, tokens, private receiver details, and personal transcripts from logs or screenshots before posting.
 
-### 11. Additional information
+### 12. Additional information
 
 - [Main project README](../README.md)
 - [Application license](../LICENSE) and [additional LGPL permission](../LICENSE-LGPL-EXCEPTION.md)
@@ -546,7 +666,7 @@ If the problem persists, report it through [GitHub Issues](https://github.com/Gi
 - [Download the current release](https://github.com/Gig81/KiwiSDR-Grabber/releases)
 - [Report an issue or request a feature](https://github.com/Gig81/KiwiSDR-Grabber/issues)
 
-### 12. Android version
+### 13. Android version
 
 Starting with version 1.2.0 an Android **listening** app is available: with the same KiwiSDR receiver it offers radio, spectrum and waterfall, favorites, connected users, and WAV recording; since 1.3.0 also the light theme, frequency range scanning, the DSP equalizer and filters, and links to receiver maps. It does not include the other desktop processing and alert features (VAD, transcription, history, scanning of favorite channels, Telegram, MP3). The interface is in Italian; Italian labels are shown in parentheses.
 

@@ -12,6 +12,7 @@ Con il tema chiaro la scrollbar si nota poco: renderla più scura.
 
 - Tutte le scrollbar passano da `AppVerticalScrollbar` (`ui/designsystem/AppFeedback.kt`): a riposo usano `TextPrimary` con alpha 0.2, troppo tenue su sfondo chiaro.
 - Proposta: un token dedicato nella palette (es. `ScrollbarThumb`) con alpha più alta nel tema chiaro (0.45–0.5), coperto dal test di contrasto di `:composeApp:desktopTest`. Intervento piccolo, solo desktop.
+- **Implementata:** token `ScrollbarThumb` (`#8C1F2328` nel tema chiaro, scuro invariato), contrasto ≥ 3:1 su tutte le superfici verificato da `PaletteContrastTests`.
 
 #### 2. Pannello "Informazioni server KiwiSDR" più compatto
 
@@ -19,6 +20,7 @@ Nella scheda "Utenti & monitor" ridurre il pannello "Informazioni server KiwiSDR
 
 - Oggi la colonna sinistra divide l'altezza con pesi 1.3 (utenti) e 1 (server), ma il pannello server mostra 8 righe fisse: lo spazio assegnato è spesso troppo o troppo poco.
 - Proposta: altezza del pannello server pari al suo contenuto (niente `weight`), righe su due colonne (coppie etichetta/valore affiancate) o layout compatto; tutto lo spazio restante va alla lista degli utenti.
+- **Implementata:** pannello alto quanto il contenuto (5 righe invece di 8: stazione e antenna su riga intera, le altre voci affiancate a coppie); la lista degli utenti occupa lo spazio restante.
 
 #### 3. Registrazioni brevi con la sola parola "uso"
 
@@ -31,6 +33,7 @@ Vengono spesso registrati segmenti brevi (3–5 s) la cui trascrizione è solo "
   - scarto dopo la trascrizione se il testo è vuoto o composto solo da parole di una lista "rumore" configurabile (es. "uso"), oppure se la confidenza Vosk è bassa (dato presente nel risultato JSON);
   - registrazione con Voice Gate (VAD) attivo, così i segmenti senza voce non partono (vedi punto 4).
 - Da decidere: cancellare il file o solo nasconderlo/marcarlo nell'archivio.
+- **Implementata:** filtro anti-rumore nel pannello di registrazione, solo per i segmenti di un gate; i segmenti scartati vengono cancellati dal disco e non entrano nell'archivio (nessun avviso Telegram di trascrizione). Controlli: durata minima al netto dell'hang time (attivo, 1,5 s), parole rumore dopo la trascrizione con testo vuoto incluso (attivo, "uso"), confidenza media Vosk minima (spento, 50%). Le trascrizioni avviate a mano non sono filtrate.
 
 #### 4. Squelch e VAD: relazioni e funzionamento combinato
 
@@ -47,6 +50,8 @@ Da valutare:
 - modalità esplicite (solo RF / solo voce / RF e voce) al posto di due interruttori indipendenti;
 - chiusura anticipata del segmento quando il VAD non rileva voce per N secondi, anche con RF ancora aperto;
 - documentare il comportamento nella guida utente e nei tooltip.
+
+**Implementata:** modalità esplicite per ascolto e registrazione (Libero/Continua, Solo RF, Solo voce, RF e voce) con selettori nella scheda Audio e nel Registratore; in console SQL e VAD sono le due componenti della modalità di ascolto, con tooltip. In registrazione "Solo voce" non dipende dalla soglia RF e chiude dopo l'hang time senza voce; "RF e voce" chiude anche dopo N secondi senza voce con RF aperto (attivo, 5 s, configurabile). Le impostazioni precedenti vengono convertite mantenendo il comportamento di allora. Comportamento descritto nella guida utente.
 
 #### 5. Controllo della radio tramite cavo CAT
 
@@ -83,6 +88,8 @@ Quando l'utente trasmette con la propria radio e contemporaneamente ascolta il p
 
 #### 7. Decodifica dei modi digitali
 
+**Stato: implementata nella 1.4.0 (soluzione b, decoder del server via `/EXT`, più RTTY/FSK, NAVTEX e DSC decodificati nell'app, riconoscimento automatico del modo e AFC).** Piano e verifiche: [PIANO_DECODIFICA_MODI_DIGITALI.md](./PIANO_DECODIFICA_MODI_DIGITALI.md).
+
 Decodificare i modi digitali (es. FT8/FT4, WSPR, RTTY, PSK31, CW, fax meteo, SSTV).
 
 Possibili strade, dalla più semplice:
@@ -111,11 +118,7 @@ Possibili strade, dalla più semplice:
 
 Proposta: partire da (a) per la massima copertura dei modi con poco lavoro, poi valutare (b) per FT8/WSPR/CW/FAX/SSTV mostrati direttamente nell'app. Da chiarire con gli utenti quali modi interessano davvero.
 
-## BUG/AGGIUNTE DA SISTEMARE
-- se clicco sul waterfall in alto mi riporta sempre sulle bande CB anche se sono in 40 metri o in altre frequenze, a volte anche digitando una frequenza l'audio cambiava ma il waterfall continuava a mostrare i preferiti dell banda precedente.
-- usare lo squelch (già esistente) nei modi digitali, altrimenti decodifica anche il rumore, o almeno ci prova.
-- non spostarsi di frequenza quando si avvia la decodifica dei modi digitali, ma solo quando si preme su Sintonizza.
-- quando si clicca su un nome nella lista utenti, sintonizzarsi sulla stessa frequenza e modo dell'utente cliccato.
+**In pianificazione:** scelta la soluzione (b), con decodifica locale di FSK e NAVTEX, riconoscimento automatico del modo e autocentraggio del segnale. Piano: [PIANO_DECODIFICA_MODI_DIGITALI.md](./PIANO_DECODIFICA_MODI_DIGITALI.md).
 
 ## English
 
@@ -129,6 +132,7 @@ In the light theme the scrollbar is hard to see: make it darker.
 
 - All scrollbars go through `AppVerticalScrollbar` (`ui/designsystem/AppFeedback.kt`): when idle they use `TextPrimary` at alpha 0.2, too faint on a light background.
 - Proposal: a dedicated palette token (e.g. `ScrollbarThumb`) with a higher alpha in the light theme (0.45–0.5), covered by the contrast test in `:composeApp:desktopTest`. Small, desktop-only change.
+- **Implemented:** `ScrollbarThumb` token (`#8C1F2328` in the light theme, dark theme unchanged), contrast of at least 3:1 on every surface checked by `PaletteContrastTests`.
 
 #### 2. More compact "KiwiSDR server info" panel
 
@@ -136,6 +140,7 @@ In the "Users & monitor" tab, shrink the "KiwiSDR server info" panel so it shows
 
 - The left column currently splits its height with weights 1.3 (users) and 1 (server), but the server panel shows 8 fixed rows: the allotted space is often too much or too little.
 - Proposal: size the server panel to its content (no `weight`), with rows in two columns (label/value pairs side by side) or a compact layout; all remaining space goes to the user list.
+- **Implemented:** the panel is as tall as its content (5 rows instead of 8: station and antenna on full rows, the other items side by side in pairs); the user list takes the remaining space.
 
 #### 3. Short recordings containing only the word "uso"
 
@@ -148,6 +153,7 @@ Short segments (3–5 s) whose transcription is just "uso" are often recorded: g
   - discard after transcription when the text is empty or made only of words from a configurable "noise" list (e.g. "uso"), or when the Vosk confidence is low (available in the JSON result);
   - record with the Voice Gate (VAD) enabled, so segments without speech are not started (see item 4).
 - To decide: delete the file, or only hide/flag it in the archive.
+- **Implemented:** noise filter in the recorder panel, only for gate segments; discarded segments are deleted from disk and never enter the archive (no Telegram transcription alert). Controls: minimum length excluding the hang time (on, 1.5 s), noise words after transcription including empty text (on, "uso"), minimum average Vosk confidence (off, 50%). Manually started transcriptions are never filtered.
 
 #### 4. Squelch and VAD: how they interact
 
@@ -164,6 +170,8 @@ To evaluate:
 - explicit modes (RF only / voice only / RF and voice) instead of two independent switches;
 - closing the segment early when the VAD detects no speech for N seconds, even while RF is still open;
 - documenting the behaviour in the user guide and tooltips.
+
+**Implemented:** explicit modes for listening and recording (Open/Continuous, RF only, Voice only, RF and voice) with selectors in the Audio tab and the Recorder; in the console SQL and VAD are the two parts of the listening mode, with tooltips. In recording, "Voice only" does not depend on the RF threshold and closes after the hang time without speech; "RF and voice" also closes after N seconds without speech while RF is open (on, 5 s, configurable). Previous settings are converted keeping their old behaviour. Behaviour described in the user guide.
 
 #### 5. Radio control over a CAT cable
 
@@ -199,6 +207,8 @@ When users transmit with their own radio while listening to their own signal thr
 - Also: recommend headphones in the user guide.
 
 #### 7. Digital mode decoding
+
+**Status: implemented in 1.4.0 (route b, server decoders via `/EXT`, plus RTTY/FSK, NAVTEX and DSC decoded in the app, automatic mode recognition and AFC).** Plan and checks: [PIANO_DECODIFICA_MODI_DIGITALI.md](./PIANO_DECODIFICA_MODI_DIGITALI.md).
 
 Decode digital modes (e.g. FT8/FT4, WSPR, RTTY, PSK31, CW, weather fax, SSTV).
 

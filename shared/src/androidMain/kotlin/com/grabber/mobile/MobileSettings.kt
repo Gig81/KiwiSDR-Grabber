@@ -61,7 +61,9 @@ data class MobileSettingsData(
     val rangeScanAutoResume: Boolean = true,
     val rangeScanExcludedKhz: List<Double> = emptyList(),
     /** Equalizzatore e filtri DSP, spenti finché l'utente non li configura. */
-    val audioDsp: AudioDspConfig = AudioDspConfig()
+    val audioDsp: AudioDspConfig = AudioDspConfig(),
+    /** Connessione attiva alla chiusura dell'app: al prossimo avvio si riconnette all'ultimo server usato. */
+    val resumeConnectionOnStartup: Boolean = false
 ) {
     val lastMode: ModulationMode get() = ModulationMode.entries.find { it.code == lastModeCode } ?: ModulationMode.AM
     val uiTheme: UiThemeMode get() = UiThemeMode.fromName(uiThemeName)

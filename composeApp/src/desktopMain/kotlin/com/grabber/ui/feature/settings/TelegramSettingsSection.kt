@@ -39,6 +39,8 @@ internal fun TelegramSettingsSection(
     var tgIntervalMin by remember(settings.telegramMessageIntervalMinutes) { mutableStateOf(settings.telegramMessageIntervalMinutes) }
     var tgSendAudio by remember(settings.telegramSendAudioAttachment) { mutableStateOf(settings.telegramSendAudioAttachment) }
     var tgSendTranscription by remember(settings.telegramSendTranscription) { mutableStateOf(settings.telegramSendTranscription) }
+    var decoderAlertsEnabled by remember(settings.decoderAlertsEnabled) { mutableStateOf(settings.decoderAlertsEnabled) }
+    var decoderAlertWords by remember(settings.decoderAlertWords) { mutableStateOf(settings.decoderAlertWords) }
     var tgTestStatus by remember { mutableStateOf<String?>(null) }
     var isSendingTgTest by remember { mutableStateOf(false) }
 
@@ -154,6 +156,31 @@ internal fun TelegramSettingsSection(
             )
         }
 
+        // Parole chiave dei decoder dei modi digitali (separate da quelle delle trascrizioni)
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            AppCheckbox(
+                checked = decoderAlertsEnabled,
+                onCheckedChange = { decoderAlertsEnabled = it },
+                text = "Notifiche dai decoder dei modi digitali",
+                size = ControlSize.Compact,
+                accentColor = GrabberColors.Secondary,
+                emphasized = true
+            )
+            Text(
+                "Parole chiave cercate nei messaggi decodificati (NAVTEX, RTTY, CW, CW Skimmer, FT8/FT4, WSPR, HFDL, ALE, DSC). " +
+                    "Al massimo una notifica ogni 30 s per parola, nessun duplicato dello stesso messaggio NAVTEX.",
+                fontSize = 9.sp,
+                color = GrabberColors.TextSecondary
+            )
+            CompactTextField(
+                value = decoderAlertWords,
+                onValueChange = { decoderAlertWords = it },
+                placeholder = "mayday, pan pan, securite, IK7ABC",
+                modifier = Modifier.fillMaxWidth().height(32.dp),
+                fontSize = 10.sp
+            )
+        }
+
         // Opzioni invio allegati e frequenza minima
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -213,6 +240,7 @@ internal fun TelegramSettingsSection(
                             notifyQsoStart = tgNotifyQsoStart,
                             notifyQsoEnd = tgNotifyQsoEnd
                         )
+                        controller.setDecoderAlerts(decoderAlertsEnabled, decoderAlertWords)
                         tgTestStatus = "✓ Impostazioni Telegram salvate con successo!"
                     },
                     icon = Icons.Default.Save,

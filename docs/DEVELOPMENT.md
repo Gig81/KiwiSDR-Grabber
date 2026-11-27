@@ -52,6 +52,28 @@ I test di regressione coprono, tra l'altro, parser e trasformazioni waterfall, p
 - I test automatici condivisi coprono anche i limiti temporali del cooldown.
 - Revisione del codice e aggiornamento della toolchain (Gradle 9.9.1, Kotlin 2.4.21, Compose 1.12.2, JNA 5.19.1): verificati dall'utente con esito positivo il 10 novembre 2026, compresi connessione con password cifrata, oscuramento della password nei log, migrazione di impostazioni e database, attivazione della licenza sul nuovo Machine ID, trascrizione Vosk con la nuova JNA, registrazione e riproduzione, aspetto di tutte le schede.
 
+### Collaudo funzionale della 1.4.0 (modi digitali)
+
+Verifiche manuali da eseguire su Windows con licenza attiva e un KiwiSDR raggiungibile (meglio uno con `ext_api_nchans` ≥ 3 e canale a 12 kHz; `/status` mostra il limite come `ext_api=`). Il programma di prova `.\gradlew.bat :shared:extProbe -PprobeArgs="..."` (sorgenti in `shared/src/desktopTest/kotlin/com/grabber/probe/`) registra tracce di protocollo e WAV in `shared/build/probe/`; con `-PprobeMain=com.grabber.probe.FskWavCheckKt` decodifica un WAV con i decoder locali.
+
+1. FT8 su 14074 o 7074 kHz: decodifiche entro 30 s, coerenti con il client web sullo stesso ricevitore; filtro "Solo CQ"; clic su una riga copia il messaggio.
+2. WSPR su 10138,7 o 7038,6 kHz (preset 30m/40m): almeno uno spot in 10 minuti; nessun caricamento su wsprnet.
+3. CW su un segnale chiaro: testo leggibile e WPM coerente; CW Skimmer su un tratto affollato, clic su una riga sintonizza il segnale.
+4. Fax DWD 7880 kHz: immagine con fasatura, arresto automatico, PNG salvato (manuale e automatico).
+5. SSTV su 14230 kHz quando attivo: immagine e nome del modo.
+6. NAVTEX 518 kHz (orari delle stazioni): messaggi completi, duplicati scartati, filtri B1/B2, confronto con il decoder del client web.
+7. RTTY DWD 10100,8 kHz (preset Meteo DWD): testo meteo leggibile; RTTY radioamatoriale in contest (preset Radioamatori).
+8. AFC (interruttore in console): clic a 200 Hz da un segnale CW → centrato entro ±10 Hz; frequenza digitata 1 kHz sopra una portante AM con waterfall a zoom ≥ 8 → centrata; USB voce → "non applicabile"; preferito, passo e scansione → nessuna correzione; interruttore spento → nessuna correzione.
+9. Riconoscimento: suggerimenti corretti su fax, NAVTEX, RTTY e su un segnale CW (con banda larga); nessun suggerimento su voce e rumore; avvio automatico solo dei decoder locali sopra il 90 %.
+10. Rifiuti: ricevitore con `ext_api_nchans` basso → messaggio chiaro e "Libera una connessione" (chiude il waterfall e riprova); audio e waterfall non interrotti dal rifiuto. Caduta di rete → decoder ripreso dopo la riconnessione.
+11. Prestazioni: nessun buco audio con decoder locale, AFC e riconoscimento attivi; CPU sotto controllo.
+12. HFDL (es. 8942, 11384 kHz) e ALE 2G: messaggi ed eventi leggibili, confronto con il client web. Nella fase 0 HFDL non ha prodotto messaggi in due prove da 2 minuti (protocollo verificato, `EXT ready`, ma nessun traffico ricevuto): da verificare.
+13. DSC su 2187,5 o 8414,5 kHz: chiamate con MMSI e categoria, avviso "solo informativo" visibile (verificato solo con segnali sintetici).
+14. Telegram: parola chiave presente in un messaggio NAVTEX o RTTY → una sola notifica, nessun duplicato, limite di 30 s per parola rispettato.
+15. Sintonia CW (D5), anche su Android: stessa frequenza digitata nell'app e nel client web → stesso tono a 500 Hz; etichette DX CW centrate; sintonia dalla scheda Utenti su un utente in CW corretta.
+16. Licenza: senza attivazione la scheda è coperta, l'interruttore AFC disattivato e il controller rifiuta avvio dei decoder, AFC, riconoscimento e notifiche.
+17. Layout alla dimensione minima (960×640): riga AFC visibile senza tagliare gli slider della console; scheda in tema chiaro e scuro.
+
 ### Collaudo funzionale della 1.3.0
 
 Verifiche manuali delle novità 1.3.0 (superate dall'utente su Windows e Android il 19 novembre 2026), con un KiwiSDR raggiungibile e una licenza attiva salvo dove indicato.
@@ -140,7 +162,8 @@ Sul PC di sviluppo non c'è l'SDK Android: la build gira in un container Docker 
 
 Docker Desktop non espone KVM, quindi l'emulatore non è utilizzabile: il collaudo si fa su un dispositivo fisico con l'APK `build\android-out\apk\debug\androidApp-debug.apk` (oppure con la release firmata, che ha un ID dispositivo diverso). Criteri di collaudo:
 
-- **Connessione:** con e senza password; rifiuti `badp` mostrati senza ritentativi; riconnessione dopo un cambio Wi-Fi ↔ rete mobile.
+- **Connessione:** con e senza password; rifiuti `badp` mostrati senza ritentativi; riconnessione dopo un cambio Wi-Fi ↔ rete mobile. Chiudendo l'app connessa (rimozione dai recenti) al riavvio si ricollega all'ultimo server, dopo *Disconnetti* no; registrazione e scansione dell'intervallo attive durante una caduta di rete riprendono alla riconnessione.
+- **Avvio e icone:** splash con logo e versione; con una release più recente su GitHub resta aperto con *Scarica l'aggiornamento* (apre il browser) e *Continua*; icona del launcher, icona a tema (Android 13+) e icona della notifica dal logo ufficiale.
 - **Audio:** nessun underrun percepibile in 30 minuti; squelch e volume reattivi; pausa su chiamata in arrivo, mute allo scollegamento delle cuffie.
 - **Background:** con attivazione, audio continuo per 30 minuti a schermo spento con notifica visibile; senza attivazione, connessione chiusa e avviso al ritorno.
 - **Waterfall:** sintonia al tocco entro la risoluzione del bin; socket W/F chiuso fuori dalla schermata e in background, riaperto senza `badp=5`.

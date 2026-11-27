@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
@@ -45,6 +46,7 @@ enum class MainTab(val label: String, val icon: ImageVector) {
     RECORDER("Registratore", Icons.Default.Mic),
     SPECTRUM("Spettro & Cascata", Icons.Default.Timeline),
     USERS("Utenti & Monitor", Icons.Default.People),
+    DIGITAL("Modi digitali", Icons.Default.GraphicEq),
     SETTINGS("Impostazioni avanzate", Icons.Default.Settings)
 }
 

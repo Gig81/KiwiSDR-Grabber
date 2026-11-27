@@ -24,6 +24,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.grabber.model.ModulationMode
+import com.grabber.model.Passband
 import com.grabber.waterfall.WaterfallFrame
 import kotlinx.coroutines.flow.StateFlow
 import com.grabber.ui.designsystem.DisplayColors
@@ -33,6 +34,7 @@ internal fun SpectrumAnalyzerView(
     frameFlow: StateFlow<WaterfallFrame?>,
     vfoKhz: Double,
     mode: ModulationMode,
+    passband: Passband,
     minDb: Int,
     maxDb: Int,
     onTune: (Double) -> Unit,
@@ -173,13 +175,8 @@ internal fun SpectrumAnalyzerView(
 
             // 3. Tracciamento Passband filtro RF
             val vfoFrac = curFrame.fractionAtFrequency(vfoKhz)
-            val (lowCutKhz, highCutKhz) = when (mode) {
-                ModulationMode.AM -> -5.0 to 5.0
-                ModulationMode.USB -> 0.3 to 2.7
-                ModulationMode.LSB -> -2.7 to -0.3
-                ModulationMode.CW -> 0.6 to 0.9
-                ModulationMode.NFM -> -6.0 to 6.0
-            }
+            // Banda passante reale rispetto alla frequenza mostrata (in CW centrata sul segnale).
+            val (lowCutKhz, highCutKhz) = passband.relativeToDisplayKhz(mode)
 
             val filterLeftFrac = curFrame.fractionAtFrequency(vfoKhz + lowCutKhz)
             val filterRightFrac = curFrame.fractionAtFrequency(vfoKhz + highCutKhz)

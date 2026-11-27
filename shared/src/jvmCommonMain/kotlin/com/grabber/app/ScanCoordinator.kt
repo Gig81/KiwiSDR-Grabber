@@ -93,13 +93,16 @@ class ScanCoordinator(
     /** Tipo della scansione in corso, oppure null. */
     val activeKind: ScanKind? get() = synchronized(lock) { if (job?.isActive == true) currentKind else null }
 
-    /** Avvia la scansione; restituisce false se una scansione è già attiva o se non ci sono passi. */
-    fun start(plan: ScanPlan): Boolean = synchronized(lock) {
+    /**
+     * Avvia la scansione dal passo [startIndex] (0 = primo; oltre la fine riparte dall'inizio);
+     * restituisce false se una scansione è già attiva o se non ci sono passi.
+     */
+    fun start(plan: ScanPlan, startIndex: Int = 0): Boolean = synchronized(lock) {
         if (job?.isActive == true) return false
         val steps = plan.source().size
         if (steps == 0) return false
         // LAZY: `job` deve essere assegnato prima che la coroutine provi a sintonizzare.
-        val newJob = scope.launch(start = CoroutineStart.LAZY) { runScan(plan) }
+        val newJob = scope.launch(start = CoroutineStart.LAZY) { runScan(plan, startIndex.coerceAtLeast(0)) }
         job = newJob
         currentKind = plan.kind
         newJob.invokeOnCompletion { finishedJob(newJob) }
@@ -130,8 +133,8 @@ class ScanCoordinator(
         }
     }
 
-    private suspend fun runScan(plan: ScanPlan) {
-        var nextIndex = 0
+    private suspend fun runScan(plan: ScanPlan, startIndex: Int) {
+        var nextIndex = startIndex
         while (true) {
             val source = plan.source()
             if (source.size == 0) {

@@ -13,6 +13,7 @@ import com.grabber.ui.designsystem.FeatureLockedOverlay
 import com.grabber.ui.designsystem.GrabberColors
 import com.grabber.ui.designsystem.GrabberTheme
 import com.grabber.ui.feature.audio.AudioTab
+import com.grabber.ui.feature.digital.DigitalModesTab
 import com.grabber.ui.feature.console.RadioConsole
 import com.grabber.ui.feature.console.FrequencyStep
 import com.grabber.ui.feature.favorites.FavoritesTab
@@ -98,6 +99,11 @@ fun App(
                         }
                         MainTab.SPECTRUM -> SpectrumTab(controller = controller)
                         MainTab.USERS -> UsersTab(
+                            controller = controller,
+                            isMachineLicensed = isMachineLicensed,
+                            onActivate = openSettings
+                        )
+                        MainTab.DIGITAL -> DigitalModesTab(
                             controller = controller,
                             isMachineLicensed = isMachineLicensed,
                             onActivate = openSettings

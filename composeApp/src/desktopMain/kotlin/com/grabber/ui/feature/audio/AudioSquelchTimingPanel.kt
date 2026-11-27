@@ -24,15 +24,19 @@ import kotlinx.coroutines.flow.StateFlow
 import java.util.Locale
 import kotlin.math.roundToInt
 
-/** Soft mute, pre-buffer e hang time dello squelch, con lo stato del gate in tempo reale. */
+/**
+ * Modalità del gate di ascolto, soft mute, pre-buffer e hang time dello squelch,
+ * con lo stato del gate RF in tempo reale.
+ */
 @Composable
 internal fun AudioSquelchTimingPanel(
     controller: KiwiAppController,
+    isMachineLicensed: Boolean,
     modifier: Modifier = Modifier
 ) {
     val settings by controller.settings.collectAsState()
-    val squelchListenEnabled by controller.squelchListenEnabled.collectAsState()
-    val squelchRecordEnabled by controller.squelchRecordEnabled.collectAsState()
+    val listenGateMode by controller.listenGateMode.collectAsState()
+    val recordGateMode by controller.recordGateMode.collectAsState()
     val squelchGateOpen by controller.squelchGateOpen.collectAsState()
     val squelchState by controller.squelchState.collectAsState()
 
@@ -45,8 +49,7 @@ internal fun AudioSquelchTimingPanel(
         contentSpacing = 6.dp,
         actions = {
             SquelchStatusBadge(
-                squelchListenEnabled = squelchListenEnabled,
-                squelchRecordEnabled = squelchRecordEnabled,
+                rfInUse = listenGateMode.usesRf || recordGateMode.usesRf,
                 squelchGateOpen = squelchGateOpen,
                 squelchState = squelchState,
                 hangTimeRemainingFlow = controller.squelchHangTimeRemaining
@@ -56,6 +59,15 @@ internal fun AudioSquelchTimingPanel(
         AppDivider()
         AppScrollableColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
             Spacer(modifier = Modifier.height(2.dp))
+            GateModeSelector(
+                title = "GATE DI ASCOLTO",
+                target = GateTarget.LISTEN,
+                selected = listenGateMode,
+                voiceAllowed = isMachineLicensed,
+                note = if (isMachineLicensed) null else "voce: richiede attivazione",
+                onSelect = controller::setListenGateMode
+            )
+            AppSubtleDivider()
             AppSlider(
                 label = "Soft Mute (Anti-Pop)",
                 valueText = "${settings.softMuteMs} ms",
@@ -87,7 +99,7 @@ internal fun AudioSquelchTimingPanel(
             AppSlider(
                 label = "Hang Time (Cooldown QSO)",
                 valueText = String.format(Locale.US, "%.1f s", settings.hangTimeSeconds),
-                description = "Mantiene il gate aperto durante le pause per unire i passaggi",
+                description = "Attesa dopo la fine del segnale (o della voce) per unire i passaggi",
                 value = settings.hangTimeSeconds.toFloat(),
                 valueRange = 0.5f..10.0f,
                 steps = 94,
@@ -104,18 +116,18 @@ internal fun AudioSquelchTimingPanel(
 /** Isola la lettura del tempo di hang residuo per non ricomporre l'intero pannello. */
 @Composable
 private fun SquelchStatusBadge(
-    squelchListenEnabled: Boolean,
-    squelchRecordEnabled: Boolean,
+    rfInUse: Boolean,
     squelchGateOpen: Boolean,
     squelchState: SquelchGateState,
     hangTimeRemainingFlow: StateFlow<Double>
 ) {
     val hangTimeRemaining by hangTimeRemainingFlow.collectAsState()
+    // Il gate RF resta aperto anche durante l'hang time: lo stato HANG va controllato prima.
     val (gateBadgeText, gateBadgeColor) = when {
-        !squelchListenEnabled && !squelchRecordEnabled -> "SQUELCH OFF" to GrabberColors.TextDisabled
-        squelchGateOpen -> "GATE APERTO" to GrabberColors.Success
+        !rfInUse -> "SQUELCH OFF" to GrabberColors.TextDisabled
         squelchState == SquelchGateState.OPEN_HANG_TIME ->
             "HANG TIME (${String.format(Locale.US, "%.1f", hangTimeRemaining)}s)" to GrabberColors.Warning
+        squelchGateOpen -> "GATE APERTO" to GrabberColors.Success
         else -> "GATE CHIUSO" to GrabberColors.TextDisabled
     }
     StatusBadge(text = gateBadgeText, color = gateBadgeColor)

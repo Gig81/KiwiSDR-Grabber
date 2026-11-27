@@ -93,8 +93,8 @@ class SquelchTests {
             initialPreBufferMs = 200,
             initialHangTimeSeconds = 0.3 // Hang time breve per il test
         )
-        squelch.setListenSquelchEnabled(true)
-        squelch.setRecordSquelchEnabled(true)
+        squelch.setListenMode(GateMode.RF)
+        squelch.setRecordMode(GateMode.RF)
 
         assertEquals(SquelchGateState.CLOSED, squelch.state.value)
         assertFalse(squelch.isGateOpen.value)
@@ -148,8 +148,7 @@ class SquelchTests {
             initialThresholdDbm = -100.0,
             initialHangTimeSeconds = 0.5
         )
-        squelch.setRecordSquelchEnabled(false)
-        squelch.setVadRecordEnabled(true)
+        squelch.setRecordMode(GateMode.RF_AND_VOICE)
 
         var openedCount = 0
         squelch.onGateOpenCallback = { openedCount++ }
@@ -181,24 +180,160 @@ class SquelchTests {
     }
 
     @Test
-    fun testRfSquelchTakesPriorityOverVoiceGate() {
-        val squelch = SquelchController(
-            sampleRate = 12000,
-            initialThresholdDbm = -100.0
-        )
-        squelch.setListenSquelchEnabled(true)
-        squelch.setVadListenEnabled(true)
-        squelch.setRecordSquelchEnabled(true)
-        squelch.setVadRecordEnabled(true)
+    fun testRfModeRecordsWithoutVoice() {
+        val squelch = SquelchController(sampleRate = 12000, initialThresholdDbm = -100.0)
+        squelch.setListenMode(GateMode.RF)
+        squelch.setRecordMode(GateMode.RF)
 
         var recordingOpened = false
         squelch.onGateOpenCallback = { recordingOpened = true }
 
-        val silence = ByteArray(2400)
-        val result = squelch.processFrame(AudioFrame(1, -90.0, silence, 12000))
+        val result = squelch.processFrame(silenceFrame(rssi = -90.0))
 
         assertTrue(result.isGateOpen, "The RF gate should open above its threshold")
-        assertTrue(result.isVoiceGateOpen, "The voice gate must not override an enabled RF squelch")
-        assertTrue(recordingOpened, "RF squelch should start recording without requiring VAD voice detection")
+        assertTrue(result.isVoiceGateOpen, "RF-only listening opens on the RF gate alone")
+        assertTrue(recordingOpened, "RF-only recording should start without VAD voice detection")
+    }
+
+    @Test
+    fun testListenRfAndVoiceRequiresBoth() {
+        val squelch = SquelchController(sampleRate = 12000, initialThresholdDbm = -100.0)
+        squelch.setListenMode(GateMode.RF_AND_VOICE)
+
+        assertFalse(squelch.processFrame(silenceFrame(rssi = -90.0)).isVoiceGateOpen, "Portante senza voce: ascolto chiuso")
+        assertTrue(squelch.processFrame(voiceFrame(rssi = -90.0)).isVoiceGateOpen, "Voce con gate RF aperto: ascolto aperto")
+
+        squelch.reset()
+        assertFalse(squelch.processFrame(voiceFrame(rssi = -120.0)).isVoiceGateOpen, "Voce sotto soglia RF: ascolto chiuso")
+    }
+
+    @Test
+    fun testListenVoiceModeIgnoresRf() {
+        val squelch = SquelchController(sampleRate = 12000, initialThresholdDbm = -100.0)
+        squelch.setListenMode(GateMode.VOICE)
+
+        assertTrue(squelch.processFrame(voiceFrame(rssi = -120.0)).isVoiceGateOpen)
+        assertFalse(squelch.processFrame(silenceFrame(rssi = -90.0)).isVoiceGateOpen)
+    }
+
+    @Test
+    fun testRecordVoiceModeOpensBelowRfAndClosesAfterHangTime() {
+        var now = 0L
+        val squelch = SquelchController(sampleRate = 12000, initialThresholdDbm = -100.0, initialHangTimeSeconds = 1.0, clock = { now })
+        squelch.setRecordMode(GateMode.VOICE)
+        val closed = mutableListOf<Long>()
+        var opened = 0
+        squelch.onGateOpenCallback = { opened++ }
+        squelch.onGateCloseCallback = { closed += it }
+
+        squelch.processFrame(voiceFrame(rssi = -120.0))
+        assertEquals(1, opened, "La sola voce apre il segmento anche sotto la soglia RF")
+        assertFalse(squelch.isGateOpen.value)
+
+        now = 600
+        squelch.processFrame(voiceFrame(rssi = -120.0))
+        now = 1000
+        squelch.processFrame(silenceFrame(rssi = -120.0))
+        assertTrue(closed.isEmpty(), "Il segmento resta aperto durante l'hang time")
+
+        now = 1700
+        squelch.processFrame(silenceFrame(rssi = -120.0))
+        assertEquals(listOf(600L), closed, "Durata attiva fino all'ultima voce, senza l'hang time")
+    }
+
+    @Test
+    fun testRecordRfAndVoiceClosesAfterVoiceSilenceWithRfStillOpen() {
+        var now = 0L
+        val squelch = SquelchController(sampleRate = 12000, initialThresholdDbm = -100.0, initialHangTimeSeconds = 3.5, clock = { now })
+        squelch.setRecordMode(GateMode.RF_AND_VOICE)
+        squelch.voiceSilenceCloseSeconds = 2.0
+        val closed = mutableListOf<Long>()
+        squelch.onGateCloseCallback = { closed += it }
+
+        squelch.processFrame(voiceFrame(rssi = -90.0))
+        now = 1000
+        squelch.processFrame(silenceFrame(rssi = -90.0))
+        now = 1900
+        squelch.processFrame(silenceFrame(rssi = -90.0))
+        assertTrue(closed.isEmpty())
+
+        now = 2100
+        squelch.processFrame(silenceFrame(rssi = -90.0))
+        assertEquals(listOf(0L), closed, "Chiusura anticipata dopo 2 s senza voce")
+        assertTrue(squelch.isGateOpen.value, "Il gate RF resta aperto: la chiusura dipende dal VAD")
+    }
+
+    @Test
+    fun testRecordRfAndVoiceWithoutEarlyCloseWaitsForRf() {
+        var now = 0L
+        val squelch = SquelchController(sampleRate = 12000, initialThresholdDbm = -100.0, initialHangTimeSeconds = 0.5, clock = { now })
+        squelch.setRecordMode(GateMode.RF_AND_VOICE)
+        squelch.voiceSilenceCloseSeconds = 0.0
+        val closed = mutableListOf<Long>()
+        squelch.onGateCloseCallback = { closed += it }
+
+        squelch.processFrame(voiceFrame(rssi = -90.0))
+        now = 10_000
+        squelch.processFrame(silenceFrame(rssi = -90.0))
+        assertTrue(closed.isEmpty(), "Senza chiusura anticipata il segmento segue il gate RF")
+
+        squelch.processFrame(silenceFrame(rssi = -120.0))
+        now = 10_600
+        squelch.processFrame(silenceFrame(rssi = -120.0))
+        assertEquals(1, closed.size)
+    }
+
+    @Test
+    fun testRecordRfReportsActiveDurationWithoutHangTime() {
+        var now = 0L
+        val squelch = SquelchController(sampleRate = 12000, initialThresholdDbm = -100.0, initialHangTimeSeconds = 0.5, clock = { now })
+        squelch.setRecordMode(GateMode.RF)
+        val closed = mutableListOf<Long>()
+        squelch.onGateCloseCallback = { closed += it }
+
+        for (t in 0L..1000L step 100L) {
+            now = t
+            squelch.processFrame(silenceFrame(rssi = -90.0))
+        }
+        now = 1100
+        squelch.processFrame(silenceFrame(rssi = -120.0))
+        now = 1700
+        squelch.processFrame(silenceFrame(rssi = -120.0))
+
+        assertEquals(listOf(1000L), closed)
+    }
+
+    @Test
+    fun testOffRecordModeStillTracksQsoForAlerts() {
+        val squelch = SquelchController(sampleRate = 12000, initialThresholdDbm = -100.0, vad = null)
+        var qsoStarted = 0
+        squelch.onQsoStartedCallback = { qsoStarted++ }
+        val result = squelch.processFrame(silenceFrame(rssi = -90.0))
+        assertEquals(1, qsoStarted)
+        assertTrue(result.isVoiceGateOpen, "Ascolto libero con modalità OFF")
+    }
+
+    @Test
+    fun testGateModeComposition() {
+        assertEquals(GateMode.RF_AND_VOICE, GateMode.RF.withVoice(true))
+        assertEquals(GateMode.VOICE, GateMode.RF_AND_VOICE.withRf(false))
+        assertEquals(GateMode.OFF, GateMode.VOICE.withVoice(false))
+        assertEquals(GateMode.RF, GateMode.RF_AND_VOICE.restrictedTo(voiceAllowed = false))
+        assertEquals(GateMode.VOICE, GateMode.VOICE.restrictedTo(voiceAllowed = true))
+    }
+
+    private fun silenceFrame(rssi: Double) = AudioFrame(0, rssi, ByteArray(2400), 12000)
+
+    /** 100 ms di voce sintetica: fondamentale a 150 Hz più un'armonica a 600 Hz. */
+    private fun voiceFrame(rssi: Double): AudioFrame {
+        val pcm = ByteArray(2400)
+        for (i in 0 until 1200) {
+            val t = i.toDouble() / 12000
+            val s = (kotlin.math.sin(2.0 * Math.PI * 150.0 * t) * 0.4 + kotlin.math.sin(2.0 * Math.PI * 600.0 * t) * 0.3) * 32767.0
+            val v = s.toInt().coerceIn(-32768, 32767)
+            pcm[i * 2] = (v and 0xFF).toByte()
+            pcm[i * 2 + 1] = ((v shr 8) and 0xFF).toByte()
+        }
+        return AudioFrame(0, rssi, pcm, 12000)
     }
 }

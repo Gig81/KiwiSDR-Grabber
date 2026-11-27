@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -227,19 +228,21 @@ internal fun UserLogRow(
 }
 
 /**
- * Singola riga Chiave - Valore per il Server KiwiSDR
+ * Coppia etichetta - valore del pannello server KiwiSDR: l'etichetta resta intera, il valore
+ * occupa lo spazio restante e viene troncato se non entra.
  */
 @Composable
-internal fun ServerInfoRow(label: String, value: String) {
+internal fun ServerInfoRow(label: String, value: String, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = modifier.fillMaxWidth().padding(vertical = 1.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
             fontSize = 9.sp,
-            color = GrabberColors.TextSecondary
+            color = GrabberColors.TextSecondary,
+            maxLines = 1
         )
         Text(
             text = value.ifBlank { "N/D" },
@@ -247,7 +250,9 @@ internal fun ServerInfoRow(label: String, value: String) {
             fontWeight = FontWeight.SemiBold,
             color = GrabberColors.TextPrimary,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1f)
         )
     }
 }

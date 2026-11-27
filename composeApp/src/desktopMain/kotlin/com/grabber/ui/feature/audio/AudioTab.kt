@@ -34,6 +34,7 @@ fun AudioTab(
     ) {
         AudioSquelchTimingPanel(
             controller = controller,
+            isMachineLicensed = isMachineLicensed,
             modifier = Modifier.weight(0.9f).fillMaxHeight()
         )
         AudioDspPanel(

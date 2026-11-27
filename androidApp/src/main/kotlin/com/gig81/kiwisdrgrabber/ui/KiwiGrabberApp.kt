@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gig81.kiwisdrgrabber.ui.favorites.FavoritesScreen
 import com.gig81.kiwisdrgrabber.ui.radio.RadioScreen
 import com.gig81.kiwisdrgrabber.ui.settings.SettingsScreen
+import com.gig81.kiwisdrgrabber.ui.splash.SplashScreen
 import com.gig81.kiwisdrgrabber.ui.theme.KiwiColors
 import com.gig81.kiwisdrgrabber.ui.theme.KiwiGrabberTheme
 import com.gig81.kiwisdrgrabber.ui.users.UsersScreen
@@ -68,76 +69,87 @@ enum class AppTab(val label: String, val icon: ImageVector) {
     SETTINGS("Impostazioni", Icons.Filled.Settings)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun KiwiGrabberApp(controller: MobileAppController) {
+fun KiwiGrabberApp(controller: MobileAppController, showSplash: Boolean = false) {
     val themeMode by controller.uiTheme.collectAsStateWithLifecycle()
     KiwiGrabberTheme(mode = themeMode) {
-        var tab by rememberSaveable { mutableStateOf(AppTab.RADIO) }
-        var lockedFeature by remember { mutableStateOf<GatedFeature?>(null) }
-        val snackbar = remember { SnackbarHostState() }
-        val connection by controller.connectionState.collectAsStateWithLifecycle()
-        val requestNotifications = rememberNotificationPermissionRequest()
-
-        LaunchedEffect(controller) { controller.notifications.collect { snackbar.showSnackbar(it) } }
-        LaunchedEffect(controller) { controller.lockedFeatureRequests.collect { lockedFeature = it } }
-
-        // Il socket W/F è aperto solo mentre la schermata Waterfall è visibile.
-        DisposableEffect(tab) {
-            controller.setWaterfallVisible(tab == AppTab.WATERFALL)
-            onDispose { controller.setWaterfallVisible(false) }
+        // Splash all'avvio: resta tra le ricreazioni dell'Activity finché non si chiude.
+        var splashVisible by rememberSaveable { mutableStateOf(showSplash) }
+        if (splashVisible) {
+            SplashScreen(controller, onFinished = { splashVisible = false })
+        } else {
+            MainScaffold(controller)
         }
+    }
+}
 
-        val connect = {
-            // La notifica serve solo al servizio di ascolto in background (versione attivata).
-            if (controller.isActivated.value) requestNotifications()
-            controller.connect()
-        }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MainScaffold(controller: MobileAppController) {
+    var tab by rememberSaveable { mutableStateOf(AppTab.RADIO) }
+    var lockedFeature by remember { mutableStateOf<GatedFeature?>(null) }
+    val snackbar = remember { SnackbarHostState() }
+    val connection by controller.connectionState.collectAsStateWithLifecycle()
+    val requestNotifications = rememberNotificationPermissionRequest()
 
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
-            topBar = {
-                TopAppBar(
-                    title = { Text("KiwiSDR Grabber", style = MaterialTheme.typography.titleMedium) },
-                    actions = { ConnectionBadge(connection) },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = KiwiColors.Surface)
-                )
-            },
-            bottomBar = {
-                NavigationBar(containerColor = KiwiColors.Surface) {
-                    AppTab.entries.forEach { item ->
-                        NavigationBarItem(
-                            selected = tab == item,
-                            onClick = { tab = item },
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label, maxLines = 1, style = MaterialTheme.typography.labelSmall) }
-                        )
-                    }
-                }
-            },
-            snackbarHost = { SnackbarHost(snackbar) }
-        ) { padding ->
-            Box(Modifier.fillMaxSize().padding(padding)) {
-                when (tab) {
-                    AppTab.RADIO -> RadioScreen(controller, onConnect = connect)
-                    AppTab.WATERFALL -> WaterfallScreen(controller, onConnect = connect)
-                    AppTab.FAVORITES -> FavoritesScreen(controller)
-                    AppTab.USERS -> UsersScreen(controller)
-                    AppTab.SETTINGS -> SettingsScreen(controller)
+    LaunchedEffect(controller) { controller.notifications.collect { snackbar.showSnackbar(it) } }
+    LaunchedEffect(controller) { controller.lockedFeatureRequests.collect { lockedFeature = it } }
+
+    // Il socket W/F è aperto solo mentre la schermata Waterfall è visibile.
+    DisposableEffect(tab) {
+        controller.setWaterfallVisible(tab == AppTab.WATERFALL)
+        onDispose { controller.setWaterfallVisible(false) }
+    }
+
+    val connect = {
+        // La notifica serve solo al servizio di ascolto in background (versione attivata).
+        if (controller.isActivated.value) requestNotifications()
+        controller.connect()
+    }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                title = { Text("KiwiSDR Grabber", style = MaterialTheme.typography.titleMedium) },
+                actions = { ConnectionBadge(connection) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = KiwiColors.Surface)
+            )
+        },
+        bottomBar = {
+            NavigationBar(containerColor = KiwiColors.Surface) {
+                AppTab.entries.forEach { item ->
+                    NavigationBarItem(
+                        selected = tab == item,
+                        onClick = { tab = item },
+                        icon = { Icon(item.icon, contentDescription = item.label) },
+                        label = { Text(item.label, maxLines = 1, style = MaterialTheme.typography.labelSmall) }
+                    )
                 }
             }
+        },
+        snackbarHost = { SnackbarHost(snackbar) }
+    ) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding)) {
+            when (tab) {
+                AppTab.RADIO -> RadioScreen(controller, onConnect = connect)
+                AppTab.WATERFALL -> WaterfallScreen(controller, onConnect = connect)
+                AppTab.FAVORITES -> FavoritesScreen(controller)
+                AppTab.USERS -> UsersScreen(controller)
+                AppTab.SETTINGS -> SettingsScreen(controller)
+            }
         }
+    }
 
-        lockedFeature?.let { feature ->
-            FeatureLockedDialog(
-                feature = feature,
-                onDismiss = { lockedFeature = null },
-                onOpenLicense = {
-                    lockedFeature = null
-                    tab = AppTab.SETTINGS
-                }
-            )
-        }
+    lockedFeature?.let { feature ->
+        FeatureLockedDialog(
+            feature = feature,
+            onDismiss = { lockedFeature = null },
+            onOpenLicense = {
+                lockedFeature = null
+                tab = AppTab.SETTINGS
+            }
+        )
     }
 }
 

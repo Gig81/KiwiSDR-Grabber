@@ -10,9 +10,10 @@ import com.grabber.model.AudioFrame
  * Percorso dei frame audio SND verso altoparlante e registratore:
  *
  * ```
- * frame ─▶ [DSP pre-squelch]* ─▶ squelch ─▶ [DSP post-squelch]** ─▶ altoparlante
- *                │
- *                └──────────────▶ registratore (e pre-buffer dello squelch)
+ * frame ─┬▶ [DSP pre-squelch]* ─▶ squelch ─▶ [DSP post-squelch]** ─▶ altoparlante
+ *        │         │
+ *        │         └──────────────▶ registratore (e pre-buffer dello squelch)
+ *        └▶ analisi (copia originale: decoder locali, AFC, riconoscimento del modo)
  * ```
  * \* solo con destinazione *Ascolto e registrazione*: così pre-buffer, registrazione, ascolto e
  * allegati Telegram contengono lo stesso audio filtrato.
@@ -27,7 +28,9 @@ class AudioPipeline(
     private val playbackSink: (ByteArray) -> Unit,
     private val recordSink: (AudioFrame) -> Unit,
     private val preSquelchDsp: AudioDspChain = AudioDspChain(),
-    private val postSquelchDsp: AudioDspChain = AudioDspChain()
+    private val postSquelchDsp: AudioDspChain = AudioDspChain(),
+    /** Copia del frame originale per analisi e decoder locali (prima di DSP e squelch). */
+    private val analysisSink: ((AudioFrame) -> Unit)? = null
 ) {
     @Volatile private var config: AudioDspConfig = AudioDspConfig()
     @Volatile private var licensed: Boolean = false
@@ -51,6 +54,7 @@ class AudioPipeline(
     }
 
     fun process(frame: AudioFrame) {
+        analysisSink?.invoke(frame)
         val target = effectiveTarget
         if (target != lastTarget) {
             // La catena che entra in uso non deve partire da uno stato vecchio.

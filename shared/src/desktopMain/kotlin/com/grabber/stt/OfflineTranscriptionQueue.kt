@@ -8,7 +8,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.vosk.Model
@@ -17,11 +20,18 @@ import java.io.File
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 
+/** Testo trascritto e confidenza media delle parole riconosciute (`null` se nessuna parola). */
+data class TranscriptionResult(val text: String, val meanConfidence: Double?)
+
 class OfflineTranscriptionQueue(
     scope: CoroutineScope,
     private val database: HistoryDatabase,
     private val modelPathProvider: () -> String,
-    private val onTranscriptionUpdated: (recordingId: Long, status: TranscriptionStatus, text: String?) -> Unit
+    /**
+     * Avanzamento di una trascrizione. `text` è il testo (completata) o il motivo dell'errore (fallita);
+     * `meanConfidence` è presente solo per le trascrizioni completate con almeno una parola.
+     */
+    private val onTranscriptionUpdated: (recordingId: Long, status: TranscriptionStatus, text: String?, meanConfidence: Double?) -> Unit
 ) {
     private data class Job(val recordingId: Long, val filePath: String)
 
@@ -53,11 +63,11 @@ class OfflineTranscriptionQueue(
     private fun transcribe(job: Job) {
         try {
             database.updateTranscription(job.recordingId, TranscriptionStatus.PROCESSING)
-            onTranscriptionUpdated(job.recordingId, TranscriptionStatus.PROCESSING, null)
+            onTranscriptionUpdated(job.recordingId, TranscriptionStatus.PROCESSING, null, null)
             val modelPath = modelPathProvider()
-            val text = transcriber.transcribe(File(job.filePath), modelPath)
-            database.updateTranscription(job.recordingId, TranscriptionStatus.COMPLETED, text)
-            onTranscriptionUpdated(job.recordingId, TranscriptionStatus.COMPLETED, text)
+            val result = transcriber.transcribe(File(job.filePath), modelPath)
+            database.updateTranscription(job.recordingId, TranscriptionStatus.COMPLETED, result.text)
+            onTranscriptionUpdated(job.recordingId, TranscriptionStatus.COMPLETED, result.text, result.meanConfidence)
         } catch (e: Exception) {
             val reason = e.message ?: e::class.simpleName ?: "Errore sconosciuto"
             markFailed(job, reason, e)
@@ -71,7 +81,7 @@ class OfflineTranscriptionQueue(
         AppLogger.error("OfflineTranscriptionQueue", "Trascrizione fallita per ${job.filePath}: $reason", cause)
         try {
             database.updateTranscription(job.recordingId, TranscriptionStatus.FAILED, error = reason)
-            onTranscriptionUpdated(job.recordingId, TranscriptionStatus.FAILED, reason)
+            onTranscriptionUpdated(job.recordingId, TranscriptionStatus.FAILED, reason, null)
         } catch (e: Exception) {
             AppLogger.error(
                 "OfflineTranscriptionQueue",
@@ -87,7 +97,7 @@ private class VoskTranscriber : AutoCloseable {
     private var model: Model? = null
 
     @Synchronized
-    fun transcribe(file: File, modelPath: String): String {
+    fun transcribe(file: File, modelPath: String): TranscriptionResult {
         require(file.isFile) { "File audio non trovato: ${file.absolutePath}" }
         val modelDirectory = File(modelPath)
         require(modelDirectory.isDirectory && File(modelDirectory, "am").exists()) {
@@ -97,8 +107,11 @@ private class VoskTranscriber : AutoCloseable {
         val activeModel = getModel(modelDirectory)
         val targetFormat = AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 12000f, 16, 1, 2, 12000f, false)
         val phrases = mutableListOf<String>()
+        val wordConfidences = mutableListOf<Double>()
         val recognizer = Recognizer(activeModel, targetFormat.sampleRate)
         try {
+            // Dati per parola: servono per la confidenza media usata dal filtro anti-rumore.
+            recognizer.setWords(true)
             AudioSystem.getAudioInputStream(file).use { source ->
                 val pcmStream = if (AudioSystem.isConversionSupported(targetFormat, source.format)) {
                     AudioSystem.getAudioInputStream(targetFormat, source)
@@ -119,16 +132,25 @@ private class VoskTranscriber : AutoCloseable {
                         val count = audio.read(buffer)
                         if (count < 0) break
                         if (count > 0 && recognizer.acceptWaveForm(buffer, count)) {
-                            extractText(recognizer.result)?.takeIf(String::isNotBlank)?.let(phrases::add)
+                            collect(recognizer.result, phrases, wordConfidences)
                         }
                     }
                 }
             }
-            extractText(recognizer.finalResult)?.takeIf(String::isNotBlank)?.let(phrases::add)
+            collect(recognizer.finalResult, phrases, wordConfidences)
         } finally {
             recognizer.close()
         }
-        return phrases.joinToString(" ").replace(Regex("\\s+"), " ").trim()
+        val text = phrases.joinToString(" ").replace(Regex("\\s+"), " ").trim()
+        return TranscriptionResult(text, wordConfidences.takeIf { it.isNotEmpty() }?.average())
+    }
+
+    private fun collect(jsonText: String, phrases: MutableList<String>, wordConfidences: MutableList<Double>) {
+        val result = Json.parseToJsonElement(jsonText).jsonObject
+        result["text"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(phrases::add)
+        (result["result"] as? JsonArray)?.forEach { word ->
+            (word as? JsonObject)?.get("conf")?.jsonPrimitive?.doubleOrNull?.let(wordConfidences::add)
+        }
     }
 
     private fun getModel(directory: File): Model {
@@ -140,9 +162,6 @@ private class VoskTranscriber : AutoCloseable {
         }
         return checkNotNull(model)
     }
-
-    private fun extractText(jsonText: String): String? =
-        Json.parseToJsonElement(jsonText).jsonObject["text"]?.jsonPrimitive?.contentOrNull
 
     @Synchronized
     override fun close() {

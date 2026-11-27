@@ -46,6 +46,8 @@ compose.desktop {
 
             windows {
                 console = false
+                // Icona dal logo ufficiale (scripts/branding/Generate-Icons.ps1).
+                iconFile.set(project.file("packaging/windows/KiwiSDRRecorder.ico"))
                 menuGroup = "KiwiSDR"
                 upgradeUuid = "a60cfb90-1e5b-4c07-b35f-287714be9580"
             }

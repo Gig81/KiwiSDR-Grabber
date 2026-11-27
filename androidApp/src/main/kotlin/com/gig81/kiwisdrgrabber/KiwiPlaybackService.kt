@@ -25,7 +25,8 @@ import java.util.Locale
 /**
  * Foreground service `mediaPlayback`: tiene vivo il processo durante l'ascolto in background
  * e a schermo spento (solo versione attivata). Mostra stato e frequenza con l'azione
- * *Disconnetti*; la rimozione dell'app dai recenti chiude la sessione e libera lo slot del ricevitore.
+ * *Disconnetti*; la rimozione dell'app dai recenti chiude la sessione e libera lo slot del ricevitore
+ * (la connessione viene ripristinata al prossimo avvio).
  */
 class KiwiPlaybackService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -57,7 +58,7 @@ class KiwiPlaybackService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         AppLogger.info(TAG, "App rimossa dai recenti: chiusura della sessione")
-        controller.stopSession()
+        controller.closeSessionOnAppExit()
         stopSelf()
         super.onTaskRemoved(rootIntent)
     }

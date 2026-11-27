@@ -51,13 +51,14 @@ internal fun AudioVadPanel(
     modifier: Modifier = Modifier
 ) {
     val settings by controller.settings.collectAsState()
-    val vadListenEnabled by controller.vadListenEnabled.collectAsState()
-    val vadRecordEnabled by controller.vadRecordEnabled.collectAsState()
+    val listenGateMode by controller.listenGateMode.collectAsState()
+    val recordGateMode by controller.recordGateMode.collectAsState()
     val isVoiceDetected by controller.isVoiceDetected.collectAsState()
     val isQrnDetected by controller.isQrnDetected.collectAsState()
+    val vadInUse = listenGateMode.usesVoice || recordGateMode.usesVoice
 
     val (vadBadgeText, vadBadgeColor) = when {
-        !vadListenEnabled && !vadRecordEnabled -> "VAD DISATTIVATO" to GrabberColors.TextDisabled
+        !vadInUse -> "VAD NON USATO" to GrabberColors.TextDisabled
         isVoiceDetected -> "VOCE RILEVATA" to GrabberColors.Success
         isQrnDetected -> "SCARICA / QRN" to GrabberColors.Warning
         else -> "NESSUNA VOCE" to GrabberColors.TextDisabled
@@ -80,8 +81,16 @@ internal fun AudioVadPanel(
         AppDivider()
         AppScrollableColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
             Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "Il VAD entra in gioco con le modalità \"Solo voce\" e \"RF e voce\" del gate di ascolto " +
+                    "(pannello Squelch) e del gate di registrazione (scheda Registratore). " +
+                    "Ascolto: ${listenGateMode.label(GateTarget.LISTEN)} · Registrazione: ${recordGateMode.label(GateTarget.RECORD)}.",
+                fontSize = 9.sp,
+                color = GrabberColors.TextSecondary
+            )
+            AppSubtleDivider()
             CompactVadTelemetry(
-                vadListenEnabled = vadListenEnabled,
+                vadListenEnabled = vadInUse,
                 vadConfidenceFlow = controller.vadConfidence,
                 sensitivity = settings.vadSensitivity,
                 isVoiceDetected = isVoiceDetected,
@@ -161,7 +170,7 @@ private fun CompactVadTelemetry(
                 )
                 Text(
                     text = when {
-                        !vadListenEnabled -> "Voice-gate disattivato (flusso audio libero)"
+                        !vadListenEnabled -> "Nessun gate usa il VAD (analisi solo informativa)"
                         isVoiceDetected -> "Voce umana attiva — Gate aperto"
                         isQrnDetected -> "Scarica impulsiva o QRN — Gate bloccato"
                         else -> "In ascolto (nessuna voce)"

@@ -112,4 +112,21 @@ class AudioPipelineTests {
             buffered.copyOfRange(buffered.size - tail, buffered.size)
         )
     }
+
+    @Test
+    fun analysisSinkGetsTheOriginalFrameWithoutChangingPlaybackOrRecording() {
+        val squelch = SquelchController(initialThresholdDbm = -100.0, vad = null)
+        val played = mutableListOf<ByteArray>()
+        val recorded = mutableListOf<AudioFrame>()
+        val analysed = mutableListOf<AudioFrame>()
+        val pipeline = AudioPipeline(squelch, playbackSink = { played += it }, recordSink = { recorded += it }, analysisSink = { analysed += it })
+        pipeline.configure(AudioDspConfig(targetName = DspTarget.LISTEN_AND_RECORD.name, highPassHz = 300, lowPassHz = 2500), licensed = true)
+        val reference = Harness(DspTarget.LISTEN_AND_RECORD).also { it.pipeline.configure(AudioDspConfig(targetName = DspTarget.LISTEN_AND_RECORD.name, highPassHz = 300, lowPassHz = 2500), licensed = true) }
+        val input = frame(1)
+        pipeline.process(input)
+        reference.pipeline.process(input)
+        assertSame(input, analysed.single(), "l'analisi riceve il frame originale, prima di DSP e squelch")
+        assertContentEquals(reference.played.single(), played.single())
+        assertContentEquals(reference.recorded.single().pcmBytes, recorded.single().pcmBytes)
+    }
 }

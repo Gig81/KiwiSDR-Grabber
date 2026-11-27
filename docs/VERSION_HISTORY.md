@@ -4,6 +4,7 @@ Registro sintetico delle versioni (desktop e, dalla 1.2.0, Android) distribuite 
 
 | Versione | Stato | Tipo | Riepilogo | Note |
 |---|---|---|---|---|
+| `1.4.0` | In preparazione | Minor | Modi digitali su Windows: decoder del ricevitore (FT8, FT4, WSPR, CW, CW Skimmer, fax meteo, SSTV, HFDL, ALE 2G) e dell'app (RTTY/FSK, NAVTEX, DSC), riconoscimento automatico del modo, autocentraggio (AFC), notifiche Telegram dei decoder; frequenza CW allineata al client web KiwiSDR (anche Android). | [Note 1.4.0](./RELEASE_NOTES_1.4.0.md) |
 | `1.3.0` | Pubblicata (19/11/2026) | Minor | Tema chiaro, scansione di un intervallo di frequenze, equalizzatore e filtri DSP per ascolto e nuove registrazioni, collegamento alla mappa dei ricevitori di rx-tx.info, su Windows e Android. | [Note 1.3.0](./RELEASE_NOTES_1.3.0.md) |
 | `1.2.0` | Pubblicata (16/11/2026) | Minor | Prima versione Android (ascolto, waterfall, preferiti, utenti, registrazione WAV, attivazione `GRAB-A-…`), distribuita come APK; correzione di **Sincronizza** dei preferiti del server sul desktop. | [Archivio 1.2.0](./releases/RELEASE_NOTES_1.2.0.md) |
 | `1.1.0` | Pubblicata (16/11/2026) | Minor | Scansione dei canali preferiti selezionati con arresto sui segnali sopra la soglia dello squelch e ripresa automatica (funzione avanzata). | [Archivio 1.1.0](./releases/RELEASE_NOTES_1.1.0.md) |

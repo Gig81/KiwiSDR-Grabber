@@ -92,6 +92,11 @@ internal class QsoAlertCoordinator(
         }
     }
 
+    /** Registrazione scartata dal filtro anti-rumore: nessuna notifica di trascrizione. */
+    fun forgetRecording(recordingId: Long) {
+        alertableRecordings.remove(recordingId)
+    }
+
     fun onTranscriptionFinished(recordingId: Long, status: TranscriptionStatus, text: String?) {
         launchAlert { alertForTranscription(recordingId, status, text) }
     }
